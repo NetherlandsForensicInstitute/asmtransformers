@@ -1,0 +1,55 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "asmtransformers"
+version = "1.0.0"
+description = "Language model for semantic code search using assembly"
+license = "EUPL-1.2"
+authors = [
+    {name = "Netherlands Forensic Institute", email = "netherlandsforensicinstitute@users.github.com"},
+]
+dependencies = [
+    "accelerate",
+    "datasets",
+    "matplotlib",
+    "networkx",
+    "sentence-transformers",
+    "tensorboardx",
+    "torch",
+    "transformers",
+]
+requires-python = ">=3.12"
+readme = "README.md"
+
+[dependency-groups]
+check = [
+    "ruff>=0.11.9",
+]
+test = [
+    "pytest>=8.1.1",
+    "coverage"
+]
+
+[tool.pdm.scripts]
+all = {composite = ["check", "test", "report"]}
+check = {composite = ["format", "lint"]}
+format = {cmd = "ruff format --diff asmtransformers/"}
+lint = {cmd = "ruff check asmtransformers/"}
+reformat = {cmd = "ruff format asmtransformers/"}
+report = {cmd = "coverage xml"}
+test = {cmd = "coverage run --branch --source asmtransformers --module pytest --junit-xml pytest.xml --strict-markers tests/"}
+
+[tool.ruff]
+format.quote-style = "single"
+line-length = 120
+lint.flake8-quotes.inline-quotes = "single"
+lint.ignore = [
+    # enforced by the formatter, not ignoring this causes warnings
+    "COM812",
+    # 'r' is the default mode for builtin open(), but explicit is better than implicit
+    "UP015",
+]
+lint.isort.lines-after-imports = 2
+lint.select = ["A", "B", "COM", "C4", "DTZ", "E", "F", "I", "N", "Q", "SIM", "UP"]
