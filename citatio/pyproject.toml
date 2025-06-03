@@ -1,0 +1,55 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "citatio"
+version = "1.0.0"
+description = "REST API for the ingestion and subsequent search of Ghidra-CFG-based assembly code."
+license = "EUPL-1.2"
+authors = [
+    {name = "Netherlands Forensic Institute", email = "netherlandsforensicinstitute@users.github.com"},
+]
+requires-python = ">=3.12"
+dependencies = [
+    "asmtransformers @ file:///${PROJECT_ROOT}/../asmtransformers",
+    "datasets",
+    "fastapi[all]>=0.115.12",
+    "numpy",
+    "pydantic>=2.11.5",
+    "scipy",
+    "sqlite-vec>=0.1.6",
+    "torch",
+    "transformers",
+]
+
+[dependency-groups]
+check = [
+    "ruff>=0.11.9",
+]
+test = [
+    "coverage>=7.8.0",
+    "pytest>=8.3.5",
+]
+
+[tool.pdm.scripts]
+all = {composite = ["check", "test", "report"]}
+check = {composite = ["format", "lint"]}
+format = {cmd = "ruff format --diff citatio/"}
+lint = {cmd = "ruff check citatio/"}
+reformat = {cmd = "ruff format citatio/"}
+report = {cmd = "coverage xml"}
+test = {cmd = "coverage run --branch --source citatio --module pytest --junit-xml pytest.xml --strict-markers tests/"}
+
+[tool.ruff]
+format.quote-style = "single"
+line-length = 120
+lint.flake8-quotes.inline-quotes = "single"
+lint.ignore = [
+    # enforced by the formatter, not ignoring this causes warnings
+    "COM812",
+    # 'r' is the default mode for builtin open(), but explicit is better than implicit
+    "UP015",
+]
+lint.isort.lines-after-imports = 2
+lint.select = ["A", "B", "COM", "C4", "DTZ", "E", "F", "I", "N", "Q", "SIM", "UP"]

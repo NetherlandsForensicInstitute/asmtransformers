@@ -1,0 +1,93 @@
+[
+  {
+    "binary_name": "explorer.exe",
+    "binary_sha256": "a7e0656adae4de7a5290a6ecb9644d42b509229ee47a58110d7dc88ab163ff49",
+    "name": "FUN_00105bf0",
+    "cfg": [
+      [
+        1072112,
+        [
+          "stp x16,x30,[sp, #-0x10]!",
+          "adrp x16,0x123000",
+          "ldr x17,[x16, #0x7d0]",
+          "add x16,x16,#0x7d0",
+          "br x17",
+          "nop"
+        ]
+      ]
+    ]
+  },
+  {
+    "binary_name": "explorer.exe",
+    "binary_sha256": "a7e0656adae4de7a5290a6ecb9644d42b509229ee47a58110d7dc88ab163ff49",
+    "name": "init_have_lse_atomics",
+    "cfg": [
+      [
+        1072160,
+        [
+          "adrp x1,0x123000",
+          "ldr x1,[x1, #0xd00]",
+          "stp x29,x30,[sp, #-0x10]!",
+          "mov x0,#0x10",
+          "mov x29,sp",
+          "blr x1",
+          "ubfx w0,w0,#0x8,#0x1",
+          "adrp x1,0x124000",
+          "ldp x29,x30,[sp], #0x10",
+          "strb w0,[x1, #0x108]",
+          "ret",
+          "adrp x0,0x123000"
+        ]
+      ]
+    ]
+  },
+  {
+    "binary_name": "ghidra",
+    "binary_sha256": "26adef5c32d0879bfaa8497db71250906d412a2fa5910f36ea104efd300eafc9",
+    "name": "_init",
+    "cfg": [
+      [
+        1072088,
+        [
+          "nop",
+          "stp x29,x30,[sp, #-0x10]!",
+          "mov x29,sp",
+          "bl 0x00105c4c",
+          "ldp x29,x30,[sp], #0x10",
+          "ret",
+          "stp x16,x30,[sp, #-0x10]!"
+        ]
+      ]
+    ]
+  },
+  {
+    "binary_name": "meinkraft.dmg",
+    "binary_sha256": "19ce5d879f99ba6ba2e2989f36a786b92a2df8cf378a8f1ce566a6f0d2ed710d",
+    "name": "thunk_1234",
+    "cfg": [
+      [
+        1072204,
+        [
+          "adrp x0,0x123000",
+          "ldr x0,[x0, #0x930]",
+          "cbz x0,0x00105c5c",
+          "b 0x00105c10"
+        ]
+      ],
+      [
+        1072216,
+        [
+          "b 0x00105c10",
+          "ret"
+        ]
+      ],
+      [
+        1072220,
+        [
+          "ret",
+          "adrp x0,0x124000"
+        ]
+      ]
+    ]
+  }
+]
