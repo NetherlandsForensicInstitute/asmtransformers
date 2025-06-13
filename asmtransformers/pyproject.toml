@@ -10,6 +10,7 @@ license = "EUPL-1.2"
 authors = [
     {name = "Netherlands Forensic Institute", email = "netherlandsforensicinstitute@users.github.com"},
     {name = "Ranieri Argentini", email = "1196121+ranieri@users.noreply.github.com"},
+    {name = "Edwin Rijgersberg", email = "8604946+Rijgersberg@users.noreply.github.com"},
 ]
 dependencies = [
     "accelerate",
