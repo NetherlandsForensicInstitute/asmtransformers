@@ -9,6 +9,7 @@ description = "Language model for semantic code search using assembly"
 license = "EUPL-1.2"
 authors = [
     {name = "Netherlands Forensic Institute", email = "netherlandsforensicinstitute@users.github.com"},
+    {name = "Ranieri Argentini", email = "1196121+ranieri@users.noreply.github.com"},
 ]
 dependencies = [
     "accelerate",
