@@ -9,6 +9,7 @@ description = "REST API for the ingestion and subsequent search of Ghidra-CFG-ba
 license = "EUPL-1.2"
 authors = [
     {name = "Netherlands Forensic Institute", email = "netherlandsforensicinstitute@users.github.com"},
+    {name = "Ranieri Argentini", email = "1196121+ranieri@users.noreply.github.com"},
 ]
 requires-python = ">=3.12"
 dependencies = [
