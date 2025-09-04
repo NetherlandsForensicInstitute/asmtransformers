@@ -172,7 +172,7 @@ public class SententiaPlugin extends ProgramPlugin implements DomainObjectListen
 		while (it.hasNext()) {
 			DomainObjectChangeRecord evt = it.next();
 			// Check if we're dealing with a rename and the is applied to a function
-			if (evt.getEventType().getId() == ProgramEvent.SYMBOL_RENAMED.getId() && ((ProgramChangeRecord)evt).getObject().getClass() == FunctionSymbol.class) {				
+			if (evt.getEventType().getId() == ProgramEvent.SYMBOL_RENAMED.getId() && ((ProgramChangeRecord)evt).getObject() instanceof FunctionSymbol) {				
 				
 				Function changedFunction = currentProgram.getFunctionManager().getFunctionAt(((ProgramChangeRecord)evt).getStart());
 				
