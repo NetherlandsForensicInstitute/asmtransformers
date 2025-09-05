@@ -47,6 +47,7 @@ import ghidra.framework.options.OptionsChangeListener;
 import ghidra.framework.options.ToolOptions;
 import ghidra.framework.plugintool.*;
 import ghidra.framework.plugintool.util.PluginStatus;
+import ghidra.program.database.symbol.FunctionSymbol;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.FunctionIterator;
 import ghidra.program.model.listing.FunctionManager;
@@ -170,11 +171,13 @@ public class SententiaPlugin extends ProgramPlugin implements DomainObjectListen
 		Iterator<DomainObjectChangeRecord> it = event.iterator();
 		while (it.hasNext()) {
 			DomainObjectChangeRecord evt = it.next();
-			if (evt.getEventType().getId() == ProgramEvent.SYMBOL_RENAMED.getId()) {				
+			// Check if we're dealing with a rename that is applied to a function
+			if (evt.getEventType().getId() == ProgramEvent.SYMBOL_RENAMED.getId() && ((ProgramChangeRecord)evt).getObject() instanceof FunctionSymbol) {				
+				
+				Function changedFunction = currentProgram.getFunctionManager().getFunctionAt(((ProgramChangeRecord)evt).getStart());
 				
 				try {
-					FunctionDescriptor changedFunctionDescriptor = new FunctionDescriptor(currentProgram.getFunctionManager().getFunctionAt(((ProgramChangeRecord)evt).getStart()));
-					sententiaAPI.addSignatureToDB(changedFunctionDescriptor);
+					sententiaAPI.addSignatureToDB(new FunctionDescriptor(changedFunction));
 				} catch (InvalidInputException | CancelledException | IOException | URISyntaxException e) {
 					String errMsg = "Failed to add function to database. Is the server running? If so, check the endpoint URL!";
 					logError(errMsg, e);
