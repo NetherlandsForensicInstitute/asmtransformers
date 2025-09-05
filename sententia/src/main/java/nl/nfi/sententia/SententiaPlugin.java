@@ -177,8 +177,7 @@ public class SententiaPlugin extends ProgramPlugin implements DomainObjectListen
 				Function changedFunction = currentProgram.getFunctionManager().getFunctionAt(((ProgramChangeRecord)evt).getStart());
 				
 				try {
-					FunctionDescriptor changedFunctionDescriptor = new FunctionDescriptor(changedFunction);
-					sententiaAPI.addSignatureToDB(changedFunctionDescriptor);
+					sententiaAPI.addSignatureToDB(new FunctionDescriptor(changedFunction));
 				} catch (InvalidInputException | CancelledException | IOException | URISyntaxException e) {
 					String errMsg = "Failed to add function to database. Is the server running? If so, check the endpoint URL!";
 					logError(errMsg, e);
