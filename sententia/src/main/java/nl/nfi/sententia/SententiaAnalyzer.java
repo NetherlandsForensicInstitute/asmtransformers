@@ -75,7 +75,6 @@ public class SententiaAnalyzer extends AbstractAnalyzer {
 	@Override
 	public void optionsChanged(Options options, Program program) {
 		
-		
 		try {
 			if (this.sententiaAPI == null) {
 				this.sententiaAPI = new SententiaAPI(program, new URI(options.getString("Server URL", SententiaAPI.SENTENTIA_DEFAULT_URL)));
@@ -83,7 +82,7 @@ public class SententiaAnalyzer extends AbstractAnalyzer {
 			this.sententiaAPI.setServerURL(new URI(options.getString("Server URL", SententiaAPI.SENTENTIA_DEFAULT_URL)));
 		} catch(URISyntaxException e) {
 			Msg.showError(this, null, "Invalid endpoint URL", "The endpoint URL is invalid, please enter a valid endpoint URL.", e);
-		}		
+		}	
 	}
 
 	@Override
@@ -101,7 +100,7 @@ public class SententiaAnalyzer extends AbstractAnalyzer {
 			// Todo actually do something with the results
 			try {
 				this.sententiaAPI.getMatchingFunctions(new FunctionDescriptor(currentFunction), 25);
-			} catch (IOException | ParseException | InvalidInputException | URISyntaxException e) {
+			} catch (IOException | ParseException | InvalidInputException | URISyntaxException | InterruptedException e) {
 				e.printStackTrace();
 			}
 		}

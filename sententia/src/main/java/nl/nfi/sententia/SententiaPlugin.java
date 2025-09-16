@@ -21,6 +21,7 @@ import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -102,12 +103,7 @@ public class SententiaPlugin extends ProgramPlugin implements DomainObjectListen
 		ToolOptions options = tool.getOptions(pluginName);
 		options.registerOption("Endpoint", SententiaAPI.SENTENTIA_DEFAULT_URL, null, "The URL for the Sententia server endpoint");
 		
-		try {
-			sententiaAPI = new SententiaAPI(this.currentProgram, tool);
-		} catch (URISyntaxException e) {
-			// TODO Actually handle this.
-			sententiaAPI = new SententiaAPI(this.currentProgram, new URI(SententiaAPI.SENTENTIA_DEFAULT_URL));
-		}
+		sententiaAPI = new SententiaAPI(this.currentProgram, tool);
 		
 		optionsChangeListener = new OptionsChangeListener() {
 			  @Override
@@ -178,7 +174,7 @@ public class SententiaPlugin extends ProgramPlugin implements DomainObjectListen
 				
 				try {
 					sententiaAPI.addSignatureToDB(new FunctionDescriptor(changedFunction));
-				} catch (InvalidInputException | CancelledException | IOException | URISyntaxException e) {
+				} catch (InvalidInputException | CancelledException | IOException | URISyntaxException | InterruptedException e) {
 					String errMsg = "Failed to add function to database. Is the server running? If so, check the endpoint URL!";
 					logError(errMsg, e);
 					return;
@@ -206,7 +202,7 @@ public class SententiaPlugin extends ProgramPlugin implements DomainObjectListen
 			FunctionDescriptor functionDescriptor = new FunctionDescriptor(currentFunction);
 			ArrayList<SententiaResult> results = sententiaAPI.getMatchingFunctions(functionDescriptor, 25);
 			displayComponent.updateSimilarFunctions(results);
-		} catch (InvalidInputException | CancelledException | IOException | ParseException | URISyntaxException e) {
+		} catch (InvalidInputException | CancelledException | IOException | ParseException | URISyntaxException | InterruptedException e) {
 			String errMsg = "Failed to get similar functions. Is the server running? If so, check the endpoint URL!";
 			logError(errMsg, e);
 			return;
@@ -319,7 +315,7 @@ public class SententiaPlugin extends ProgramPlugin implements DomainObjectListen
 						if ((!functionName.toLowerCase().startsWith("fun_")) && (!functionName.toLowerCase().startsWith("thunk"))) {
 							try {
 								api.addSignatureToDB(new FunctionDescriptor(function));
-							} catch (InvalidInputException|CancelledException|IOException|URISyntaxException e) {
+							} catch (InvalidInputException|CancelledException|IOException|URISyntaxException | InterruptedException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
 							}
