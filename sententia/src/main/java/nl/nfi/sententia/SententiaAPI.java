@@ -1,14 +1,10 @@
 package nl.nfi.sententia;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -25,7 +21,7 @@ public class SententiaAPI {
     public static final String SENTENTIA_DEFAULT_URL = "http://localhost:5000";
     public static final String API_URL = "/api/v1";
     private URI serverURL;
-    private HttpClient client;
+    private DowngradingHTTPClient client;
 
     public SententiaAPI(Program currentProgram, PluginTool sententiaTool) throws URISyntaxException {
         this(currentProgram, new URI(sententiaTool.getOptions("SententiaPlugin").getString("Endpoint", SENTENTIA_DEFAULT_URL)));
@@ -34,9 +30,7 @@ public class SententiaAPI {
     public SententiaAPI(Program currentProgram, URI url) {
         this.serverURL = url;
         // Initialize HttpClient with HTTP/2 enabled and connection reuse
-        this.client = HttpClient.newBuilder()
-                                .version(HttpClient.Version.HTTP_2)  // Force HTTP/2
-                                .build();
+        this.client = new DowngradingHTTPClient();
     }
 
     public void setServerURL(URI url) {
@@ -63,14 +57,6 @@ public class SententiaAPI {
 
         // Send the request and get the response
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        
-        // If server doesn't support HTTP/2, fall back to HTTP1.1
-        if (response.statusCode() == 422) {
-        	this.client = HttpClient.newBuilder()
-                    .version(HttpClient.Version.HTTP_1_1)  // Downgrade to HTTP1.1
-                    .build();
-        	response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        }
 
         // Parse the response
         JSONParser parser = new JSONParser();
@@ -112,14 +98,6 @@ public class SententiaAPI {
 
         // Send the request
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        // If server doesn't support HTTP/2, fall back to HTTP1.1
-        if (response.statusCode() == 422) {
-        	this.client = HttpClient.newBuilder()
-                    .version(HttpClient.Version.HTTP_1_1)  // Downgrade to HTTP1.1
-                    .build();
-        	response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        }
         
         // Check if the request was successful (you can add more robust error handling here)
         if (response.statusCode() != 200) {
