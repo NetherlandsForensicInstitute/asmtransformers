@@ -9,6 +9,8 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -78,7 +80,6 @@ public class SententiaAPI {
         // Sort the results by similarity score in descending order
         results.sort(Comparator.comparing(SententiaResult::getFunctionScore, Comparator.nullsLast(Comparator.reverseOrder())));
 
-        // Return the top N results if required (default is returning all)
         return results;
 
     }

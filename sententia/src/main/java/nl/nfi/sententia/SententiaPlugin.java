@@ -200,7 +200,7 @@ public class SententiaPlugin extends ProgramPlugin implements DomainObjectListen
 		
 		try {
 			FunctionDescriptor functionDescriptor = new FunctionDescriptor(currentFunction);
-			ArrayList<SententiaResult> results = sententiaAPI.getMatchingFunctions(functionDescriptor, 25);
+			ArrayList<SententiaResult> results = (ArrayList<SententiaResult>) sententiaAPI.getMatchingFunctions(functionDescriptor, 25);
 			displayComponent.updateSimilarFunctions(results);
 		} catch (InvalidInputException | CancelledException | IOException | ParseException | URISyntaxException | InterruptedException e) {
 			String errMsg = "Failed to get similar functions. Is the server running? If so, check the endpoint URL!";
