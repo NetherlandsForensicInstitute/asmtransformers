@@ -37,7 +37,7 @@ public class SententiaAPI {
         this.serverURL = url;
     }
 
-    public ArrayList<SententiaResult> getMatchingFunctions(FunctionDescriptor descriptor, int top) 
+    public List<SententiaResult> getMatchingFunctions(FunctionDescriptor descriptor, int top) 
             throws IOException, ParseException, URISyntaxException, InterruptedException {
         
         ArrayList<SententiaResult> results = new ArrayList<>();
