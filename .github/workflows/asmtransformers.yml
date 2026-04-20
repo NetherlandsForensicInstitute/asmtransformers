@@ -5,7 +5,7 @@ on:
     branches: ['main']
     paths: ['asmtransformers/**']
   pull_request:
-    paths: ['asmtransformers/**']
+#    paths: ['asmtransformers/**']
 
 jobs:
   check:
