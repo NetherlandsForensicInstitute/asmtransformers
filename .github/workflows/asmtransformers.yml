@@ -1,0 +1,24 @@
+name: asmtransformers
+
+on:
+  push:
+    branches: ['main']
+    paths: ['asmtransformers/**']
+  pull_request:
+    paths: ['asmtransformers/**']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: asmtransformers/
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: '3.14'
+          cache: true
+          cache-dependency-path: 'pdm.lock'
+      - run: pdm install --group check
+      - run: pdm run check
