@@ -19,6 +19,6 @@ jobs:
         with:
           python-version: '3.14'
           cache: true
-          cache-dependency-path: 'pdm.lock'
+          cache-dependency-path: 'asmtransformers/pdm.lock'
       - run: pdm install --group check
       - run: pdm run check
