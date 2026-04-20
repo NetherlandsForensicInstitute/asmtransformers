@@ -15,7 +15,7 @@ authors = [
     {name = "Judith van de Wetering", email = "22766364+judithvdw@users.noreply.github.com"},
     {name = "Anne Fleur van Luenen", email = "50952036+fleurvanl@users.noreply.github.com"},
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "asmtransformers @ file:///${PROJECT_ROOT}/../asmtransformers",
     "datasets",
