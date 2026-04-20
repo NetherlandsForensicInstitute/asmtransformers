@@ -11,9 +11,9 @@ This package is currently optimized for ARM64 assembly, but not every subsystem 
 
 ## Main Subsystems
 
-### 1. ISA preprocessing
+### ISA preprocessing
 
-The ISA-specific preprocessing path is implemented in [arm64.py](../asmtransformers/arm64.py).
+The ISA-specific preprocessing path is implemented in [asmtransformers.arm64](../asmtransformers/arm64.py).
 
 Its responsibilities are:
 
@@ -25,13 +25,13 @@ Its responsibilities are:
 The central type is `Preprocessor`. It accepts either:
 
 - a `dict[int, list[str]]` mapping basic-block offsets to instruction strings
-- a `networkx.DiGraph` with jTrans-style node data containing `asm`
+- a `networkx.DiGraph` with an `asm` attribute on the (basic block) graph nodes.
 
 The output is a flat token list suitable for a tokenizer or vocabulary builder.
 
-### 2. Operand normalization
+### Operand normalization
 
-Operand normalization helpers live in [operands.py](../asmtransformers/operands.py).
+Operand normalization helpers live in [asmtransformers.operands](../asmtransformers/operands.py).
 
 These helpers reduce token explosion caused by raw numeric values. The current ARM64 path uses:
 
@@ -40,9 +40,9 @@ These helpers reduce token explosion caused by raw numeric values. The current A
 
 The `Preprocessor` accepts `operand_formatters`, so normalization policy is a pluggable step rather than being hard-coded into parsing itself.
 
-### 3. Model wrappers
+### Model wrappers
 
-Model integration lives in [models/asmbert.py](../asmtransformers/models/asmbert.py) and [models/asmsentencebert.py](../asmtransformers/models/asmsentencebert.py).
+Model integration lives in [asmtransformers.models.asmbert](../asmtransformers/models/asmbert.py) and [asmtransformers.models.asmsentencebert](../asmtransformers/models/asmsentencebert.py).
 
 There are two layers:
 
@@ -55,9 +55,9 @@ The current tokenizer integration is ARM64-specific:
 - it converts serialized CFG input into padded token batches
 - it delegates actual ID conversion to a standard `BertTokenizer` loaded from model assets
 
-### 4. Dataset and training helpers
+### Dataset and training helpers
 
-Dataset helpers live in [datasets/sentencelabel.py](../asmtransformers/datasets/sentencelabel.py).
+Dataset helpers live in [asmtransformers.datasets.sentencelabel](../asmtransformers/datasets/sentencelabel.py).
 
 `LazySentenceLabelDataset` bridges Hugging Face datasets and sentence-transformers training by:
 
@@ -67,7 +67,7 @@ Dataset helpers live in [datasets/sentencelabel.py](../asmtransformers/datasets/
 
 This layer is largely architecture-agnostic as long as the dataset schema remains consistent.
 
-### 5. Script-driven workflows
+### Script-driven workflows
 
 Operational entrypoints live in `asmtransformers/scripts/`. The most important ones are:
 
