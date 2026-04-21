@@ -19,6 +19,7 @@ class ASMSTTransformer(Transformer):
         self,
         model_name_or_path: str,
         tokenizer,
+        *,
         max_seq_length: int | None = None,
         do_lower_case: bool = False,
         model_args: Mapping[str, Any] | None = None,
@@ -87,7 +88,7 @@ class ASMSentenceTransformer(SentenceTransformer):
         tokenizer = ARM64Tokenizer.from_pretrained(model_name_or_path)
         tokenizer.set_tokenizer(BertTokenizer.from_pretrained(model_name_or_path))
 
-        embedding_model = ASMSTTransformer(model_name_or_path, tokenizer, model_args or {})
+        embedding_model = ASMSTTransformer(model_name_or_path, tokenizer, model_args=model_args or {})
         pooling_model = Pooling(embedding_model.get_word_embedding_dimension())
         return cls(embedding_model, pooling_model, tokenizer)
 
