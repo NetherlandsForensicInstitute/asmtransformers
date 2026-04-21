@@ -136,9 +136,7 @@ class ASMSentenceTransformer(SentenceTransformer):
 
         # The jTrans architecture shares weights between positional and word embeddings
         # Make sure we have done this properly.
-        if (
-            bert_model.embeddings.position_embeddings is not bert_model.embeddings.word_embeddings
-        ):
+        if bert_model.embeddings.position_embeddings is not bert_model.embeddings.word_embeddings:
             raise RuntimeError('Word embeddings and position embeddings not shared')
 
         # Now freeze layers, like jTrans. Embedding plus 10 layers is the default, so we'll use that.

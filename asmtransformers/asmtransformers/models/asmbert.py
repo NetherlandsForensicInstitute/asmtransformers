@@ -1,10 +1,8 @@
 import json
 from copy import deepcopy
-from pathlib import Path
 
 import torch
-from huggingface_hub import snapshot_download
-from safetensors.torch import load_file as load_safetensors_file
+from torch import nn
 from torch.nn import CrossEntropyLoss
 from transformers import BertForMaskedLM, BertModel, BertTokenizer
 from transformers.modeling_outputs import MaskedLMOutput
@@ -25,17 +23,19 @@ class ASMBertModel(BertModel):
 
     _tied_weights_keys = [*(BertModel._tied_weights_keys or []), 'embeddings.position_embeddings.weight']
 
-    def __init__(self, config, add_pooling_layer=True):
+    def __init__(self, config, add_pooling_layer=True, *, delay_tie_for_load=False):
         super().__init__(config, add_pooling_layer)
-        self._tie_weights()
+
+        if delay_tie_for_load:
+            # Keep a checkpoint-shaped positional table around just for loading.
+            self.embeddings.position_embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
+        else:
+            self.tie_shared_embeddings()
 
     def _tie_weights(self):
         """Declare and re-apply the custom embedding alias for HF save/load flows."""
 
-        # share parameters between position embeddings and jump target embeddings
-        # (the first 512 tokens in the vocab)
-        # https://github.com/vul337/jTrans/issues/3#issuecomment-1661876440
-        self.embeddings.position_embeddings = self.embeddings.word_embeddings
+        self.tie_shared_embeddings()
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
@@ -44,61 +44,27 @@ class ASMBertModel(BertModel):
             pretrained_model_name_or_path,
             *model_args,
             output_loading_info=True,
+            delay_tie_for_load=True,
             **kwargs,
         )
 
         if 'embeddings.word_embeddings.weight' in loading_info['missing_keys']:
-            cls._restore_shared_embeddings(model, pretrained_model_name_or_path, **kwargs)
+            model.word_embeddings_from_position_embeddings()
             loading_info['missing_keys'].discard('embeddings.word_embeddings.weight')
 
         if output_loading_info:
             return model, loading_info
         return model
 
-    @classmethod
-    def _restore_shared_embeddings(cls, model, pretrained_model_name_or_path, **kwargs):
-        checkpoint_path = cls._resolve_checkpoint_path(pretrained_model_name_or_path, **kwargs)
-        if checkpoint_path is None:
-            raise RuntimeError('Unable to locate the checkpoint file needed to restore shared embeddings')
+    def tie_shared_embeddings(self):
+        # share parameters between position embeddings and jump target embeddings
+        # (the first 512 tokens in the vocab)
+        # https://github.com/vul337/jTrans/issues/3#issuecomment-1661876440
+        self.embeddings.position_embeddings = self.embeddings.word_embeddings
 
-        if checkpoint_path.suffix == '.safetensors':
-            state_dict = load_safetensors_file(str(checkpoint_path), device='cpu')
-        else:
-            state_dict = torch.load(checkpoint_path, map_location='cpu', weights_only=True)
-
-        position_embeddings = state_dict.get('embeddings.position_embeddings.weight')
-        if position_embeddings is None:
-            raise RuntimeError('Checkpoint does not contain embeddings.position_embeddings.weight')
-
-        model.embeddings.word_embeddings.weight.data.copy_(position_embeddings)
-
-    @staticmethod
-    def _resolve_checkpoint_path(pretrained_model_name_or_path, **kwargs):
-        model_path = Path(pretrained_model_name_or_path)
-        if model_path.is_file():
-            return model_path
-
-        if model_path.is_dir():
-            for filename in ('model.safetensors', 'pytorch_model.bin'):
-                checkpoint_path = model_path / filename
-                if checkpoint_path.exists():
-                    return checkpoint_path
-            return None
-
-        snapshot_path = Path(
-            snapshot_download(
-                pretrained_model_name_or_path,
-                revision=kwargs.get('revision'),
-                token=kwargs.get('token') or kwargs.get('use_auth_token'),
-                local_files_only=kwargs.get('local_files_only', False),
-                allow_patterns=['model.safetensors', 'pytorch_model.bin'],
-            )
-        )
-        for filename in ('model.safetensors', 'pytorch_model.bin'):
-            checkpoint_path = snapshot_path / filename
-            if checkpoint_path.exists():
-                return checkpoint_path
-        return None
+    def word_embeddings_from_position_embeddings(self):
+        self.embeddings.word_embeddings.weight.data.copy_(self.embeddings.position_embeddings.weight.data)
+        self.tie_shared_embeddings()
 
 
 class ASMBertForMaskedLM(BertForMaskedLM):
