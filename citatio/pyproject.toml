@@ -29,6 +29,9 @@ dependencies = [
 ]
 
 [dependency-groups]
+dev = [
+    "-e file:///${PROJECT_ROOT}/../asmtransformers",
+]
 check = [
     "ruff>=0.11.9",
 ]
