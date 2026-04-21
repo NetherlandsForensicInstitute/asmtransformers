@@ -8,8 +8,8 @@ from asmtransformers.models.asmsentencebert import ASMSentenceTransformer
 
 @pytest.fixture
 def anchor():
-    return """
-        [[101440, ["stp x19,x20,[sp, #-0x40]!", "adrp x1,0x131000", "ldr x1,[x1, #0xc88]", "str x30,[sp, #0x10]", 
+    return """[
+        [101440,  ["stp x19,x20,[sp, #-0x40]!", "adrp x1,0x131000", "ldr x1,[x1, #0xc88]", "str x30,[sp, #0x10]", 
                    "ldr x2,[x1]", "str x2,[sp, #0x38]", "mov x2,#0x0", "cbz x0,0x0010cf1c", "ldrb w20,[x0]"]],
         [1101472, ["ldrb w20,[x0]", "mov x19,x0", "cbz w20,0x0010cf1c", "adrp x1,0x131000"]], 
         [1101484, ["adrp x1,0x131000", "ldr x1,[x1, #0xc50]", "blr x1", "cmp x0,#0x1", "b.eq 0x0010cf48", 
@@ -39,8 +39,8 @@ def anchor():
                    "adrp x3,0x131000"]], 
         [1101768, ["adrp x3,0x131000", "ldr x3,[x3, #0xe30]", "mov x0,x19", "add x2,sp,#0x28", "adrp x1,0x117000", 
                    "add x1,x1,#0x698", "blr x3", "b 0x0010cefc", "adrp x0,0x131000"]], 
-        [1101800, ["adrp x0,0x131000", "ldr x0,[x0, #0xc68]", "blr x0", "stp x19,x20,[sp, #-0x30]!"]]]
-    """
+        [1101800, ["adrp x0,0x131000", "ldr x0,[x0, #0xc68]", "blr x0", "stp x19,x20,[sp, #-0x30]!"]]
+    ]"""
 
 
 @pytest.fixture(scope='session')
