@@ -66,7 +66,7 @@ class LazySentenceLabelDataset(IterableDataset):
                 yield self.example(idx)
 
     def __len__(self):
-        return sum(len(indices) for indices in self.label2rowindices.values())
+        return len(self.label2rowindices) * self.samples_per_label
 
     def example(self, idx):
         row = self.dataset[idx]
