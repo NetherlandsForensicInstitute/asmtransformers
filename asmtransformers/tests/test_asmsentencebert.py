@@ -49,7 +49,7 @@ def model():
     return ASMSentenceTransformer.from_pretrained(path)
 
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test in GitLabCI")
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
 def test_single_embedding(anchor, model):
     """We took one sample and calculated the sum, min and max of the embedding. This should be used as reference
     material to notice if anything changed over time"""
@@ -59,7 +59,7 @@ def test_single_embedding(anchor, model):
     assert np.isclose(embedding.max(), 0.115316495)
 
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test in GitLabCI")
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
 def test_compare_identical(anchor, model):
     """This test ensures that batch size in inference does not affect the embeddings that come out
     Some variation is allowed for float rounding errors (this tolerance is based on 16 bit floating points)

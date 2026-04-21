@@ -12,13 +12,13 @@ def client():
         yield client
 
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test in GitLabCI")
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
 def test_add_function(client, functions):
     response = client.post('/api/v1/add', json=functions[0])
     assert response.status_code == 200
 
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test in GitLabCI")
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
 def test_search_known(client, functions):
     for function in functions:
         client.post('/api/v1/add', json=function)
@@ -29,7 +29,7 @@ def test_search_known(client, functions):
         assert results[0]['similarity'] == pytest.approx(1.0)
 
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test in GitLabCI")
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
 def test_search_unknown(client, functions):
     for function in functions[1:]:
         client.post('/api/v1/add', json=function)
