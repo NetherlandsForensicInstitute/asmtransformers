@@ -38,13 +38,22 @@ test = [
 ]
 
 [tool.pdm.scripts]
-all = {composite = ["check", "test", "report"]}
-check = {composite = ["format", "lint"]}
-format = {cmd = "ruff format --diff citatio/"}
-lint = {cmd = "ruff check citatio/"}
-reformat = {cmd = "ruff format citatio/"}
-report = {cmd = "coverage xml"}
-test = {cmd = "coverage run --branch --source citatio --module pytest --junit-xml pytest.xml --strict-markers tests/"}
+all = {composite = [
+    "check",
+    "test",
+    "report",
+]}
+check = {composite = [
+    "pdm lock --check",
+    "ruff format --diff citatio/",
+    "ruff check citatio/",
+]}
+fix = {composite = [
+    "ruff format citatio/",
+    "ruff check --fix citatio/",
+]}
+report = "coverage report"
+test = "coverage run --branch --source citatio --module pytest --junit-xml pytest.xml --strict-markers tests/"
 
 [tool.ruff]
 format.quote-style = "single"
