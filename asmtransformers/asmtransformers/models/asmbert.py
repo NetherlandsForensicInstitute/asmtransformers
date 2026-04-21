@@ -1,7 +1,10 @@
 import json
+from pathlib import Path
 from copy import deepcopy
 
 import torch
+from huggingface_hub import snapshot_download
+from safetensors.torch import load_file as load_safetensors_file
 from torch.nn import CrossEntropyLoss
 from transformers import BertForMaskedLM, BertModel, BertTokenizer
 from transformers.modeling_outputs import MaskedLMOutput
@@ -33,6 +36,69 @@ class ASMBertModel(BertModel):
         # (the first 512 tokens in the vocab)
         # https://github.com/vul337/jTrans/issues/3#issuecomment-1661876440
         self.embeddings.position_embeddings = self.embeddings.word_embeddings
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        output_loading_info = kwargs.pop('output_loading_info', False)
+        model, loading_info = super().from_pretrained(
+            pretrained_model_name_or_path,
+            *model_args,
+            output_loading_info=True,
+            **kwargs,
+        )
+
+        if 'embeddings.word_embeddings.weight' in loading_info['missing_keys']:
+            cls._restore_shared_embeddings(model, pretrained_model_name_or_path, **kwargs)
+            loading_info['missing_keys'].discard('embeddings.word_embeddings.weight')
+
+        if output_loading_info:
+            return model, loading_info
+        return model
+
+    @classmethod
+    def _restore_shared_embeddings(cls, model, pretrained_model_name_or_path, **kwargs):
+        checkpoint_path = cls._resolve_checkpoint_path(pretrained_model_name_or_path, **kwargs)
+        if checkpoint_path is None:
+            raise RuntimeError('Unable to locate the checkpoint file needed to restore shared embeddings')
+
+        if checkpoint_path.suffix == '.safetensors':
+            state_dict = load_safetensors_file(str(checkpoint_path), device='cpu')
+        else:
+            state_dict = torch.load(checkpoint_path, map_location='cpu', weights_only=True)
+
+        position_embeddings = state_dict.get('embeddings.position_embeddings.weight')
+        if position_embeddings is None:
+            raise RuntimeError('Checkpoint does not contain embeddings.position_embeddings.weight')
+
+        model.embeddings.word_embeddings.weight.data.copy_(position_embeddings)
+
+    @staticmethod
+    def _resolve_checkpoint_path(pretrained_model_name_or_path, **kwargs):
+        model_path = Path(pretrained_model_name_or_path)
+        if model_path.is_file():
+            return model_path
+
+        if model_path.is_dir():
+            for filename in ('model.safetensors', 'pytorch_model.bin'):
+                checkpoint_path = model_path / filename
+                if checkpoint_path.exists():
+                    return checkpoint_path
+            return None
+
+        snapshot_path = Path(
+            snapshot_download(
+                pretrained_model_name_or_path,
+                revision=kwargs.get('revision'),
+                token=kwargs.get('token') or kwargs.get('use_auth_token'),
+                local_files_only=kwargs.get('local_files_only', False),
+                allow_patterns=['model.safetensors', 'pytorch_model.bin'],
+            )
+        )
+        for filename in ('model.safetensors', 'pytorch_model.bin'):
+            checkpoint_path = snapshot_path / filename
+            if checkpoint_path.exists():
+                return checkpoint_path
+        return None
 
 
 class ASMBertForMaskedLM(BertForMaskedLM):
@@ -198,26 +264,26 @@ class ARM64Tokenizer(BertTokenizer):
         self.padding = [self.tokenizer.pad_token] * 512
 
     def tokenize(self, texts, split_special_tokens=False, **kwargs):
-        tokens_batch = []
+        encoded_inputs = []
         for text in texts:
             cfg = dict(json.loads(text))
             tokens = self.preprocessor.preprocess(cfg)
             if len(tokens) < 512:
                 tokens += self.padding[: 512 - len(tokens)]
-            tokens_batch.append(tokens)
+            encoded_inputs.append(
+                {
+                    # The assembly preprocessor already splits the function into model vocabulary tokens.
+                    'input_ids': self.tokenizer.convert_tokens_to_ids(tokens[:512]),
+                }
+            )
 
-        tokenized = self.tokenizer(
-            tokens_batch,
-            # input is pre-tokenized by the preprocessor
-            is_split_into_words=True,
-            add_special_tokens=False,
-            # truncate the encoded sequence to a maximum of max_length tokens
-            truncation=True,
-            padding=True,
+        return self.tokenizer.pad(
+            encoded_inputs,
+            padding='max_length',
             max_length=512,
+            return_attention_mask=True,
             return_tensors='pt',
         )
-        return tokenized
 
     def __call__(self, *args, **kwargs):
         return self.tokenize(*args, **kwargs)
