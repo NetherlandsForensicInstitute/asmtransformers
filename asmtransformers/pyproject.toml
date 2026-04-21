@@ -20,7 +20,7 @@ dependencies = [
     "datasets",
     "matplotlib",
     "networkx",
-    "sentence-transformers>=4,<5",
+    "sentence-transformers>=5",
     "tensorboardx",
     "torch",
     "transformers",
