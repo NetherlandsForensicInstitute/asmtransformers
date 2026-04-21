@@ -45,12 +45,12 @@ all = {composite = [
 ]}
 check = {composite = [
     "pdm lock --check",
-    "ruff format --diff citatio/",
-    "ruff check citatio/",
+    "ruff format --diff citatio/ tests/",
+    "ruff check citatio/ tests/",
 ]}
 fix = {composite = [
-    "ruff format citatio/",
-    "ruff check --fix citatio/",
+    "ruff format citatio/ tests/",
+    "ruff check --fix citatio/ tests/",
 ]}
 report = "coverage report"
 test = "coverage run --branch --source citatio --module pytest --junit-xml pytest.xml --strict-markers tests/"
