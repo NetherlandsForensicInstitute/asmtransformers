@@ -32,10 +32,12 @@ def test_str_roundtrip():
 
 
 def test_back_and_forth():
-    cfg = ControlFlowGraph([
-        Block(0, ['add x1,x1', 'ret']),
-        Block(12, ['ret']),
-        Block(34, ['b 0']),
-    ])
+    cfg = ControlFlowGraph(
+        [
+            Block(0, ['add x1,x1', 'ret']),
+            Block(12, ['ret']),
+            Block(34, ['b 0']),
+        ]
+    )
 
     assert cfg == ControlFlowGraph.from_str(json.dumps(list(cfg)))

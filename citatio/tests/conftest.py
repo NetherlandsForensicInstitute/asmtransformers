@@ -16,5 +16,4 @@ def functions():
 @pytest.fixture(scope='session')
 def embeddings(functions):
     arrays = np.load(TEST_ROOT / 'functions.npy', allow_pickle=False)
-    return {function['name']: embedding
-            for function, embedding in zip(functions, arrays)}
+    return {function['name']: embedding for function, embedding in zip(functions, arrays, strict=True)}
