@@ -1,8 +1,13 @@
 import os
+from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
+from transformers import BertConfig
 
+import asmtransformers.models.asmsentencebert as asmsentencebert_module
+from asmtransformers.models.asmbert import ARM64Tokenizer, ASMBertModel
 from asmtransformers.models.asmsentencebert import ASMSentenceTransformer
 
 
@@ -59,3 +64,28 @@ def test_compare_identical(anchor, model):
     embeddings = model.encode([anchor, anchor])
     assert np.allclose(embedding, embeddings[0], rtol=1e-3)
     assert np.allclose(embedding, embeddings[1], rtol=1e-3)
+
+
+def test_from_basemodel_uses_arm64_tokenizer_for_embedding_module(anchor, monkeypatch):
+    model_path = Path(__file__).resolve().parents[1] / 'asmtransformers' / 'models' / 'arm64bert'
+    config = BertConfig.from_json_file(str(model_path / 'arm64bert_config.json'))
+
+    # We don't have an actual pre-trained ASMBertModel, so we mock it
+    monkeypatch.setattr(
+        asmsentencebert_module.ASMBertModel,
+        'from_pretrained',
+        lambda model_name_or_path, **model_args: ASMBertModel(config),
+    )
+
+    model = ASMSentenceTransformer.from_basemodel(str(model_path))
+    embedding_model = model._first_module()
+    direct_tokenization = model.tokenizer([anchor])
+    module_tokenization = embedding_model.tokenize([anchor])
+
+    assert isinstance(embedding_model, asmsentencebert_module.ASMSTTransformer)
+    assert isinstance(model.tokenizer, ARM64Tokenizer)
+    assert model.tokenizer is embedding_model.tokenizer
+    assert model.tokenizer is embedding_model.auto_model.tokenizer
+    assert embedding_model.auto_model.config.tokenizer_class == ARM64Tokenizer.__name__
+    assert torch.equal(module_tokenization['input_ids'], direct_tokenization['input_ids'])
+    assert torch.equal(module_tokenization['attention_mask'], direct_tokenization['attention_mask'])
