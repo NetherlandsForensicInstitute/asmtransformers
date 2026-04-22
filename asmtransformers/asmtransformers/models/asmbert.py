@@ -49,8 +49,9 @@ class ASMBertModel(BertModel):
         )
 
         if 'embeddings.word_embeddings.weight' in loading_info['missing_keys']:
-            model.word_embeddings_from_position_embeddings()
+            model.embeddings.word_embeddings.weight.data.copy_(model.embeddings.position_embeddings.weight.data)
             loading_info['missing_keys'].discard('embeddings.word_embeddings.weight')
+        model.tie_shared_embeddings()
 
         if output_loading_info:
             return model, loading_info
@@ -61,10 +62,6 @@ class ASMBertModel(BertModel):
         # (the first 512 tokens in the vocab)
         # https://github.com/vul337/jTrans/issues/3#issuecomment-1661876440
         self.embeddings.position_embeddings = self.embeddings.word_embeddings
-
-    def word_embeddings_from_position_embeddings(self):
-        self.embeddings.word_embeddings.weight.data.copy_(self.embeddings.position_embeddings.weight.data)
-        self.tie_shared_embeddings()
 
 
 class ASMBertForMaskedLM(BertForMaskedLM):
