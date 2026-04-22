@@ -108,9 +108,6 @@ class ASMSentenceTransformer(SentenceTransformer):
      ASMBertModel    ARM64BertTokenizer      T.BertModel    T.BertTokenizer
     """
 
-    def __init__(self, model_name_or_path=None, *, modules=None, **kwargs):
-        super().__init__(model_name_or_path=model_name_or_path, modules=modules, **kwargs)
-
     @staticmethod
     def _build_tokenizer(model_name_or_path):
         tokenizer = ARM64Tokenizer.from_pretrained(model_name_or_path)
@@ -122,16 +119,16 @@ class ASMSentenceTransformer(SentenceTransformer):
         tokenizer = cls._build_tokenizer(model_name_or_path)
         embedding_model = ASMSTTransformer(model_name_or_path, tokenizer, model_args=model_args or {})
         pooling_model = Pooling(embedding_model.get_embedding_dimension())
-        return tokenizer, embedding_model, pooling_model
+        return embedding_model, pooling_model
 
     @classmethod
     def from_pretrained(cls, model_name_or_path, model_args=None):
-        _, embedding_model, pooling_model = cls._build_modules(model_name_or_path, model_args=model_args)
+        embedding_model, pooling_model = cls._build_modules(model_name_or_path, model_args=model_args)
         return cls(modules=[embedding_model, pooling_model])
 
     @classmethod
     def from_basemodel(cls, base_model_name_or_path, model_args=None):
-        _, embedding_model, pooling_model = cls._build_modules(base_model_name_or_path, model_args=model_args)
+        embedding_model, pooling_model = cls._build_modules(base_model_name_or_path, model_args=model_args)
         bert_model = embedding_model.model.base_model
 
         # The jTrans architecture shares weights between positional and word embeddings
