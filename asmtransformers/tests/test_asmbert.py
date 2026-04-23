@@ -6,6 +6,9 @@ from asmtransformers.models.asmbert import ASMBertForMaskedLM
 
 
 def create_model():
+    # The model is created with a fixed seed to ensure that the same initialization weights are
+    # generated for every run. It makes the test deterministic and eliminates
+    # the (already vanishingly small) chance of a random initialization causing a test failure.
     torch.manual_seed(0)
     config = BertConfig(
         vocab_size=32,
@@ -36,6 +39,8 @@ def test_forward_reports_losses_and_jtp_ignores_out_of_range_labels():
     model.eval()
 
     input_ids = torch.tensor([[1, 2, 3, 4]])
+    # The two sets of labels have the same labels/targets for jump targets (<8),
+    # and different labels/targets for non-jump targets (>=8).
     labels = torch.tensor([[7, 9, -100, 31]])
     labels_with_different_non_jtp_targets = torch.tensor([[7, 10, -100, 30]])
 
@@ -47,8 +52,11 @@ def test_forward_reports_losses_and_jtp_ignores_out_of_range_labels():
     assert output.loss is not None
     assert output.masked_lm_loss is not None
     assert output.jtp_loss is not None
+    # Total loss is the sum of the masked language model loss and the jump target prediction (JTP) loss.
     assert torch.isclose(output.loss, output.masked_lm_loss + output.jtp_loss)
+    # The two sets of labels have the same JTP targets, so the JTP loss should be the same.
     assert torch.isclose(output.jtp_loss, output_with_different_non_jtp_targets.jtp_loss)
+    # The two sets of labels have different non-JTP targets. With these inputs MLM loss should be different.
     assert not torch.isclose(output.masked_lm_loss, output_with_different_non_jtp_targets.masked_lm_loss)
 
 
