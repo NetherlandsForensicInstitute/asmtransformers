@@ -1,11 +1,12 @@
-import torch
 import pytest
+import torch
 from transformers import BertConfig
 
 from asmtransformers.models.asmbert import ASMBertForMaskedLM
 
 
-def create_model():
+@pytest.fixture(scope='function')
+def model():
     # The model is created with a fixed seed to ensure that the same initialization weights are
     # generated for every run. It makes the test deterministic and eliminates
     # the (already vanishingly small) chance of a random initialization causing a test failure.
@@ -23,9 +24,7 @@ def create_model():
     return ASMBertForMaskedLM(config)
 
 
-def test_position_and_word_embeddings_are_tied():
-    model = create_model()
-
+def test_position_and_word_embeddings_are_tied(model):
     word_embeddings = model.base_model.embeddings.word_embeddings
     position_embeddings = model.base_model.embeddings.position_embeddings
 
@@ -34,8 +33,7 @@ def test_position_and_word_embeddings_are_tied():
     assert position_embeddings.weight.data_ptr() == word_embeddings.weight.data_ptr()
 
 
-def test_forward_reports_losses_and_jtp_ignores_out_of_range_labels():
-    model = create_model()
+def test_forward_reports_losses_and_jtp_ignores_out_of_range_labels(model):
     model.eval()
 
     input_ids = torch.tensor([[1, 2, 3, 4]])
@@ -45,9 +43,7 @@ def test_forward_reports_losses_and_jtp_ignores_out_of_range_labels():
     labels_with_different_non_jtp_targets = torch.tensor([[7, 10, -100, 30]])
 
     output = model(input_ids=input_ids, labels=labels)
-    output_with_different_non_jtp_targets = model(
-        input_ids=input_ids, labels=labels_with_different_non_jtp_targets
-    )
+    output_with_different_non_jtp_targets = model(input_ids=input_ids, labels=labels_with_different_non_jtp_targets)
 
     assert output.loss is not None
     assert output.masked_lm_loss is not None
@@ -60,8 +56,7 @@ def test_forward_reports_losses_and_jtp_ignores_out_of_range_labels():
     assert not torch.isclose(output.masked_lm_loss, output_with_different_non_jtp_targets.masked_lm_loss)
 
 
-def test_training_step_updates_shared_embedding_weights():
-    model = create_model()
+def test_training_step_updates_shared_embedding_weights(model):
     model.train()
 
     input_ids = torch.tensor([[1, 2, 3, 4]])
@@ -88,9 +83,7 @@ def test_training_step_updates_shared_embedding_weights():
     assert not torch.equal(shared_weight_before, shared_weight.detach())
 
 
-def test_pickle_save_and_load_preserves_tied_embeddings(tmp_path):
-    model = create_model()
-
+def test_pickle_save_and_load_preserves_tied_embeddings(tmp_path, model):
     original_word_embeddings = model.base_model.embeddings.word_embeddings
     original_position_embeddings = model.base_model.embeddings.position_embeddings
 
@@ -107,9 +100,7 @@ def test_pickle_save_and_load_preserves_tied_embeddings(tmp_path):
     assert reloaded_position_embeddings.weight is reloaded_word_embeddings.weight
 
 
-def test_safe_serialization_rejects_tied_embeddings(tmp_path):
-    model = create_model()
-
+def test_safe_serialization_rejects_tied_embeddings(tmp_path, model):
     # The embeddings are tied at runtime, but that tie is not declared through
     # Transformers' tied-weight metadata. Safe serialization should therefore fail.
     # See:
