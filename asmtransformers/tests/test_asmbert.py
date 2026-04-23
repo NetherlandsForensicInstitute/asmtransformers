@@ -1,5 +1,5 @@
-import torch
 import pytest
+import torch
 from transformers import BertConfig
 
 from asmtransformers.models.asmbert import ASMBertForMaskedLM
@@ -45,9 +45,7 @@ def test_forward_reports_losses_and_jtp_ignores_out_of_range_labels():
     labels_with_different_non_jtp_targets = torch.tensor([[7, 10, -100, 30]])
 
     output = model(input_ids=input_ids, labels=labels)
-    output_with_different_non_jtp_targets = model(
-        input_ids=input_ids, labels=labels_with_different_non_jtp_targets
-    )
+    output_with_different_non_jtp_targets = model(input_ids=input_ids, labels=labels_with_different_non_jtp_targets)
 
     assert output.loss is not None
     assert output.masked_lm_loss is not None
