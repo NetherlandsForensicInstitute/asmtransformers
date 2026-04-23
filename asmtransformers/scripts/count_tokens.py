@@ -5,20 +5,18 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
+
 print('Loading dataset...')
 dataset = datasets.load_from_disk('')  # Path to dataset, fill in yourself
 print('Dataset loaded')
 
 lengths = []
 for row in tqdm(dataset.select(range(1_000_000))):
-    lengths.append(
-        (row['fortify'], row['optimization_level'], len(row['asm_tokenized']))
-    )
+    lengths.append((row['fortify'], row['optimization_level'], len(row['asm_tokenized'])))
 
 counts = pd.DataFrame(lengths, columns=['fortify', 'optimization_level', 'len'])
 
 for fortify, fort_df in counts.groupby('fortify'):
-
     fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(16, 10), sharex=True, sharey=True)
     axs = axs.flatten()
     for i, (opt, opt_df) in enumerate(fort_df.groupby('optimization_level')):
@@ -37,6 +35,6 @@ for fortify, fort_df in counts.groupby('fortify'):
     plt.suptitle(f'ARM64 function lengths. Fortify = {fortify}')
     fig.tight_layout()
 
-    Path("results").mkdir(parents=True, exist_ok=True)
+    Path('results').mkdir(parents=True, exist_ok=True)
     fort_string = 'fortify' if fortify else 'no-fortify'
     plt.savefig(f'results/sequence_lengths_ARM64_{fort_string}.png')

@@ -8,12 +8,14 @@ from asmtransformers import arm64, operands
 
 
 def preprocess(tokenizer, dataset):
-    preprocessor = arm64.Preprocessor(operand_formatters=(
-        # 2-log numerical values and offsets to reduce the number of unique tokens we'll generate
-        # (pre-made vocabulary used this too)
-        operands.format_immediate_log,
-        operands.format_offset_log,
-    ))
+    preprocessor = arm64.Preprocessor(
+        operand_formatters=(
+            # 2-log numerical values and offsets to reduce the number of unique tokens we'll generate
+            # (pre-made vocabulary used this too)
+            operands.format_immediate_log,
+            operands.format_offset_log,
+        )
+    )
 
     def tokenize(function):
         # control flow graph of a function is saved as a list of 2-tuples, preprocessor expects a dict

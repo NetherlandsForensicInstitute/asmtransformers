@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 from asmtransformers import arm64, operands
 
+
 DATASET = Path()  # Path to dataset, fill in yourself
 OUTPUT = Path('./results/vocab.txt')
 
@@ -19,10 +20,12 @@ if __name__ == '__main__':
     print('opening dataset ...')
     dataset = datasets.load_from_disk(DATASET)
     print('... done')
-    preprocessor = arm64.Preprocessor(operand_formatters=(
-        operands.format_immediate_log,
-        operands.format_offset_log,
-    ))
+    preprocessor = arm64.Preprocessor(
+        operand_formatters=(
+            operands.format_immediate_log,
+            operands.format_offset_log,
+        )
+    )
     tokens = set()
 
     if SAMPLE_SIZE:
