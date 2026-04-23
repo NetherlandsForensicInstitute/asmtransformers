@@ -32,6 +32,9 @@ dependencies = [
 check = [
     "ruff>=0.11.9",
 ]
+dev = [
+    "-e file:///${PROJECT_ROOT}/../asmtransformers",
+]
 test = [
     "coverage>=7.8.0",
     "pytest>=8.3.5",
