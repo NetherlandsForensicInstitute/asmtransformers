@@ -2,7 +2,7 @@ import pytest
 import torch
 from transformers import BertConfig
 
-from asmtransformers.models.asmbert import ASMBertForMaskedLM
+from asmtransformers.models.asmbert import ASMBertForMaskedLM, ASMBertModel
 
 
 @pytest.fixture(scope='function')
@@ -22,6 +22,21 @@ def model():
         attention_probs_dropout_prob=0.0,
     )
     return ASMBertForMaskedLM(config)
+
+
+def create_base_model():
+    torch.manual_seed(0)
+    config = BertConfig(
+        vocab_size=32,
+        hidden_size=16,
+        num_hidden_layers=1,
+        num_attention_heads=2,
+        intermediate_size=32,
+        max_position_embeddings=8,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+    )
+    return ASMBertModel(config)
 
 
 def test_position_and_word_embeddings_are_tied(model):
@@ -100,14 +115,36 @@ def test_pickle_save_and_load_preserves_tied_embeddings(tmp_path, model):
     assert reloaded_position_embeddings.weight is reloaded_word_embeddings.weight
 
 
-def test_safe_serialization_rejects_tied_embeddings(tmp_path, model):
-    # The embeddings are tied at runtime, but that tie is not declared through
-    # Transformers' tied-weight metadata. Safe serialization should therefore fail.
-    # See:
-    # https://huggingface.co/docs/transformers/main_classes/model#transformers.PreTrainedModel.get_expanded_tied_weights_keys
-    #
-    # If the model starts declaring this tie properly, replace this with a positive
-    # safe-serialization round-trip test.
+def test_safe_serialization_preserves_tied_embeddings(tmp_path, model):
+    original_word_embeddings = model.base_model.embeddings.word_embeddings
+    original_position_embeddings = model.base_model.embeddings.position_embeddings
 
-    with pytest.raises(RuntimeError, match='shared tensors'):
-        model.save_pretrained(tmp_path)
+    assert original_position_embeddings is original_word_embeddings
+    assert original_position_embeddings.weight is original_word_embeddings.weight
+
+    model.save_pretrained(tmp_path)
+    reloaded_model = ASMBertForMaskedLM.from_pretrained(tmp_path)
+
+    reloaded_word_embeddings = reloaded_model.base_model.embeddings.word_embeddings
+    reloaded_position_embeddings = reloaded_model.base_model.embeddings.position_embeddings
+
+    assert reloaded_position_embeddings is reloaded_word_embeddings
+    assert reloaded_position_embeddings.weight is reloaded_word_embeddings.weight
+
+
+def test_base_model_safe_serialization_preserves_tied_embeddings(tmp_path):
+    model = create_base_model()
+    original_word_embeddings = model.embeddings.word_embeddings
+    original_position_embeddings = model.embeddings.position_embeddings
+
+    assert original_position_embeddings is original_word_embeddings
+    assert original_position_embeddings.weight is original_word_embeddings.weight
+
+    model.save_pretrained(tmp_path)
+    reloaded_model = ASMBertModel.from_pretrained(tmp_path)
+
+    reloaded_word_embeddings = reloaded_model.embeddings.word_embeddings
+    reloaded_position_embeddings = reloaded_model.embeddings.position_embeddings
+
+    assert reloaded_position_embeddings is reloaded_word_embeddings
+    assert reloaded_position_embeddings.weight is reloaded_word_embeddings.weight
