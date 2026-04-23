@@ -20,8 +20,14 @@ class ASMBertModel(BertModel):
     BinBert shares parameters between the position embeddings and the jump target embeddings.
     """
 
+    _tied_weights_keys = [*(BertModel._tied_weights_keys or []), 'embeddings.position_embeddings.weight']
+
     def __init__(self, config, add_pooling_layer=True):
         super().__init__(config, add_pooling_layer)
+        self._tie_weights()
+
+    def _tie_weights(self):
+        """Declare and re-apply the custom embedding alias for HF save/load flows."""
 
         # share parameters between position embeddings and jump target embeddings
         # (the first 512 tokens in the vocab)
@@ -38,6 +44,8 @@ class ASMBertForMaskedLM(BertForMaskedLM):
 
     Additionally, BinBert shares parameters between the position embeddings and the jump target embeddings.
     """
+
+    _tied_weights_keys = [*BertForMaskedLM._tied_weights_keys, 'bert.embeddings.position_embeddings.weight']
 
     def __init__(self, config):
         """Override BertForMaskedLM's init to add Jump Target Prediction
@@ -60,6 +68,10 @@ class ASMBertForMaskedLM(BertForMaskedLM):
 
         # Initialize weights and apply final processing
         self.post_init()
+        self._tie_weights()
+
+    def _tie_weights(self):
+        """Declare and re-apply the custom embedding alias for HF save/load flows."""
 
         # share parameters between position embeddings and jump target embeddings
         # (the first 512 tokens in the vocab)
