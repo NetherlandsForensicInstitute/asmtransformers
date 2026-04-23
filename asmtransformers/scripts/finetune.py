@@ -1,21 +1,24 @@
 import argparse
+import datetime as dt
 import logging
 import os
-from datetime import datetime
 from pathlib import Path
 
 import datasets
 import torch
-from sentence_transformers import LoggingHandler, InputExample
-from sentence_transformers import losses
+from sentence_transformers import InputExample, LoggingHandler, losses
 from sentence_transformers.evaluation import TripletEvaluator
 from sentence_transformers.losses import BatchHardTripletLossDistanceFunction
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from tzlocal import get_localzone
 
-import asmtransformers.models.asmbert
-from asmtransformers.models.asmsentencebert import ASMSentenceTransformer
 from asmtransformers.datasets import LazySentenceLabelDataset
+from asmtransformers.models.asmsentencebert import ASMSentenceTransformer
+
+
+def timestamp():
+    return dt.datetime.now(tz=get_localzone()).strftime('%Y-%m-%d_%H-%M-%S')
 
 
 def wrap_method(instance, method, new_method):
@@ -55,30 +58,29 @@ def main(data_folder, model, batch_size):
     warmup_steps = 500
 
     # Save path of the model
-    model_save_path = 'output/aarch64_ft_' + model_name.replace("/", "-") + '-' + datetime.now().strftime(
-        "%Y-%m-%d_%H-%M-%S")
+    model_save_path = f'output/aarch64_ft_{model_name.replace("/", "-")}-{timestamp()}'
     Path(model_save_path).mkdir(exist_ok=True, parents=True)
 
     # Logging to a file
-    logging.basicConfig(format='%(asctime)s - %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S',
-                        level=logging.INFO,
-                        handlers=[LoggingHandler(),
-                                  logging.FileHandler(
-                                      filename=f"{model_save_path}/training_logging.log")]
-                        )
+    logging.basicConfig(
+        format='%(asctime)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        level=logging.INFO,
+        handlers=[LoggingHandler(), logging.FileHandler(filename=f'{model_save_path}/training_logging.log')],
+    )
 
-    model = ASMSentenceTransformer.from_basemodel(base_model_name_or_path=model_name_or_path,
-                                   model_args={'torch_dtype': torch.bfloat16})
-    logging.info(f"pre-trained model {model_name} loaded")
+    model = ASMSentenceTransformer.from_basemodel(
+        base_model_name_or_path=model_name_or_path, model_args={'torch_dtype': torch.bfloat16}
+    )
+    logging.info(f'pre-trained model {model_name} loaded')
 
     functions = datasets.load_from_disk(data_folder)
     train_functions = functions['train']
-    logging.info("training data loaded")
+    logging.info('training data loaded')
 
     train_data_sampler = LazySentenceLabelDataset(train_functions)
     train_data_loader = DataLoader(train_data_sampler, batch_size=batch_size)
-    logging.info("training data created")
+    logging.info('training data created')
 
     def eval_triplets(functions):
         for example in tqdm(functions, desc='making InputExamples: test'):
@@ -90,54 +92,43 @@ def main(data_folder, model, batch_size):
     # Configure the training.
     # The jTrans loss is all triplets (including easy) with a cosine metric and a margin of 0.2 (BatchAllTripletLoss)
     # BatchSemiHardTripletLoss works on all non-easy triplets. That seems to give better training losses.
-    train_loss = losses.BatchSemiHardTripletLoss(model,
-                                                 distance_metric=BatchHardTripletLossDistanceFunction.cosine_distance,
-                                                 margin=0.2)
+    train_loss = losses.BatchSemiHardTripletLoss(
+        model, distance_metric=BatchHardTripletLossDistanceFunction.cosine_distance, margin=0.2
+    )
 
     def log_loss(args, kwargs, result):
         # log it. Open and close the file to prevent loss.
         loss = result.item()
         with open(os.path.join(model_save_path, 'train_loss.log'), 'a') as loss_log:
-            loss_log.write(f"{loss}\n")
+            loss_log.write(f'{loss}\n')
         # Return the original result, unchanged.
         return result
 
-    wrap_method(train_loss, "batch_semi_hard_triplet_loss", log_loss)
+    wrap_method(train_loss, 'batch_semi_hard_triplet_loss', log_loss)
 
     # Train the model
     def train_callback(score, epoch, steps):
-        print(f"{score=}, {epoch=}, {steps=}")
+        print(f'{score=}, {epoch=}, {steps=}')
 
-    model.fit(train_objectives=[(train_data_loader, train_loss)],
-              epochs=num_epochs,
-              evaluator=dev_evaluator,
-              evaluation_steps=evaluation_steps,
-              warmup_steps=warmup_steps,
-              output_path=model_save_path,
-              use_amp=use_amp,
-              checkpoint_path=model_save_path,
-              checkpoint_save_steps=100_000 * 16 // batch_size,
-              callback=train_callback
-              )
+    model.fit(
+        train_objectives=[(train_data_loader, train_loss)],
+        epochs=num_epochs,
+        evaluator=dev_evaluator,
+        evaluation_steps=evaluation_steps,
+        warmup_steps=warmup_steps,
+        output_path=model_save_path,
+        use_amp=use_amp,
+        checkpoint_path=model_save_path,
+        checkpoint_save_steps=100_000 * 16 // batch_size,
+        callback=train_callback,
+    )
 
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-d',
-        '--data-folder',
-        type=str,
-        required=True,
-        help="folder with data"
-    )
+    parser.add_argument('-d', '--data-folder', type=str, required=True, help='folder with data')
 
-    parser.add_argument(
-        '-m',
-        '--model',
-        type=str,
-        required=True,
-        help="The name of the model used for finetuning"
-    )
+    parser.add_argument('-m', '--model', type=str, required=True, help='The name of the model used for finetuning')
 
     parser.add_argument(
         '-b',
@@ -145,7 +136,7 @@ def get_parser() -> argparse.ArgumentParser:
         type=int,
         required=False,
         default=16,
-        help="Feed the data to the model in batches for a potential speed-up"
+        help='Feed the data to the model in batches for a potential speed-up',
     )
     return parser
 

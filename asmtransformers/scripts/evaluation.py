@@ -1,17 +1,20 @@
 import argparse
 import csv
-import datetime
+import datetime as dt
 import os.path
+import random
 from itertools import groupby
 from operator import itemgetter
-import random
 
 import datasets
 import numpy as np
-
 from scipy import spatial
-
 from tqdm import tqdm
+from tzlocal import get_localzone
+
+
+def timestamp():
+    return dt.datetime.now(tz=get_localzone()).strftime('%Y-%m-%d_%H-%M-%S')
 
 
 def add_label(example):
@@ -19,10 +22,10 @@ def add_label(example):
 
     :param example: row in dataset
     :returns example with an extra column containing the label"""
-    label = example['bin_name'] + "/" + example['func_name']
+    label = example['bin_name'] + '/' + example['func_name']
     example['label'] = label
     # Ensure same labels are sorted together and in random order.
-    example['label_random'] = f"{label}\0{random.random()}"
+    example['label_random'] = f'{label}\0{random.random()}'
     return example
 
 
@@ -77,8 +80,7 @@ def generate_triplets(dataset, pool_size, static_pool):
     labels_with_indices.sort(key=itemgetter(1))
 
     label2index = {}
-    for label, tuples in tqdm(groupby(labels_with_indices, key=itemgetter(1)),
-                              desc='building anchor/pos pairs'):
+    for label, tuples in tqdm(groupby(labels_with_indices, key=itemgetter(1)), desc='building anchor/pos pairs'):
         label2index[label] = [index for index, label in tuples]
 
     anchors = []
@@ -142,10 +144,10 @@ def generate_test_pools(data_folder, pool_size, static_pool):
     Generator yielding triplets: anchor, positive, numpy.array(negative_embeddings * POOL_SIZE)"""
     dataset = datasets.load_from_disk(data_folder)  # .select(range(11000, 45000))
 
-    print("Adding columns")
+    print('Adding columns')
     # Don't use all 3M examples because sort is really slow.
     test_functions = dataset.map(add_label, batch_size=10000, num_proc=8)
-    print("Sorting dataset")
+    print('Sorting dataset')
     test_functions = test_functions.sort('label')
     yield from generate_triplets(dataset=test_functions, pool_size=pool_size, static_pool=static_pool)
 
@@ -203,22 +205,20 @@ def run_tests(data_folder, output_path, pool_size, static_pool):
     test_pools = generate_test_pools(data_folder, pool_size, static_pool=static_pool)
     print('\ncalculate cosine similarities\n')
     model_name = data_folder.split('/')[-1]
-    output_file = f"{model_name}-{pool_size}-{static_pool}-{datetime.datetime.now().strftime('%Y%m%d-%H%M')}"
+    output_file = f'{model_name}-{pool_size}-{static_pool}-{timestamp()}'
     calculate_all(test_pools, output_path, output_file)
     with open(os.path.join(output_path, output_file + '-parameters.txt'), 'w') as file:
-        file.write(f"{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=}\n")
+        file.write(f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=}\n')
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="evaluation")
-    parser.add_argument("--input-path", type=str,
-                        help='the path to the test data')
-    parser.add_argument("--output-path", type=str,
-                        help='the path to write the final scores to')
-    parser.add_argument("--pool-size", type=int,
-                        help='the poolsize to pick the positive example from')
-    parser.add_argument("--static-pool", action='store_true',
-                        help='keep the negatives pool or refresh for every anchor-pos pair')
+    parser = argparse.ArgumentParser(description='evaluation')
+    parser.add_argument('--input-path', type=str, help='the path to the test data')
+    parser.add_argument('--output-path', type=str, help='the path to write the final scores to')
+    parser.add_argument('--pool-size', type=int, help='the poolsize to pick the positive example from')
+    parser.add_argument(
+        '--static-pool', action='store_true', help='keep the negatives pool or refresh for every anchor-pos pair'
+    )
 
     args = parser.parse_args()
     run_tests(args.input_path, args.output_path, args.pool_size, args.static_pool)
