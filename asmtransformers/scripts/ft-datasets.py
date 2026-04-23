@@ -2,8 +2,8 @@ import argparse
 import os
 import random
 
-import tqdm
 from datasets import Dataset
+from tqdm import tqdm
 
 
 def generate_train(data_folder, output_folder):
@@ -69,7 +69,7 @@ def generate_eval(data_folder, output_folder):
 
     print('Building triplets')
     triplets = []
-    for anchor, pos, neg in tqdm.tqdm(zip(test_functions, test_functions_pos, test_functions_neg)):
+    for anchor, pos, neg in tqdm(zip(test_functions, test_functions_pos, test_functions_neg, strict=True)):
         if anchor['label'] != pos['label']:
             raise RuntimeError('mismatch')
         if anchor['label_random'] == pos['label_random']:

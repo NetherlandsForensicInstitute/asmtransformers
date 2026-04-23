@@ -1,12 +1,17 @@
 import argparse
+import datetime as dt
 import logging
-from datetime import datetime
 from pathlib import Path
 
 from datasets import load_from_disk
 from transformers import BertConfig, BertTokenizer, DataCollatorForLanguageModeling, Trainer, TrainingArguments
+from tzlocal import get_localzone
 
 from asmtransformers.models.asmbert import ASMBertForMaskedLM
+
+
+def timestamp():
+    return dt.datetime.now(tz=get_localzone()).strftime('%Y-%m-%d_%H-%M-%S')
 
 
 def pretrain(
@@ -21,7 +26,7 @@ def pretrain(
     logging_steps,
     mlm_prob,
 ):
-    output_dir = f'{output_dir}/pretraining_mlm_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+    output_dir = f'{output_dir}/pretraining_mlm_{timestamp()}'
     Path(output_dir).mkdir(exist_ok=True, parents=True)
 
     logging.basicConfig(

@@ -1,6 +1,6 @@
 import argparse
 import csv
-import datetime
+import datetime as dt
 import os.path
 import random
 from itertools import groupby
@@ -10,6 +10,11 @@ import datasets
 import numpy as np
 from scipy import spatial
 from tqdm import tqdm
+from tzlocal import get_localzone
+
+
+def timestamp():
+    return dt.datetime.now(tz=get_localzone()).strftime('%Y-%m-%d_%H-%M-%S')
 
 
 def add_label(example):
@@ -200,7 +205,7 @@ def run_tests(data_folder, output_path, pool_size, static_pool):
     test_pools = generate_test_pools(data_folder, pool_size, static_pool=static_pool)
     print('\ncalculate cosine similarities\n')
     model_name = data_folder.split('/')[-1]
-    output_file = f'{model_name}-{pool_size}-{static_pool}-{datetime.datetime.now().strftime("%Y%m%d-%H%M")}'
+    output_file = f'{model_name}-{pool_size}-{static_pool}-{timestamp()}'
     calculate_all(test_pools, output_path, output_file)
     with open(os.path.join(output_path, output_file + '-parameters.txt'), 'w') as file:
         file.write(f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=}\n')

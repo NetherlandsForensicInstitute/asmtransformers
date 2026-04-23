@@ -1,7 +1,7 @@
 import argparse
+import datetime as dt
 import logging
 import os
-from datetime import datetime
 from pathlib import Path
 
 import datasets
@@ -11,9 +11,14 @@ from sentence_transformers.evaluation import TripletEvaluator
 from sentence_transformers.losses import BatchHardTripletLossDistanceFunction
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from tzlocal import get_localzone
 
 from asmtransformers.datasets import LazySentenceLabelDataset
 from asmtransformers.models.asmsentencebert import ASMSentenceTransformer
+
+
+def timestamp():
+    return dt.datetime.now(tz=get_localzone()).strftime('%Y-%m-%d_%H-%M-%S')
 
 
 def wrap_method(instance, method, new_method):
@@ -53,9 +58,7 @@ def main(data_folder, model, batch_size):
     warmup_steps = 500
 
     # Save path of the model
-    model_save_path = (
-        'output/aarch64_ft_' + model_name.replace('/', '-') + '-' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    )
+    model_save_path = f'output/aarch64_ft_{model_name.replace("/", "-")}-{timestamp()}'
     Path(model_save_path).mkdir(exist_ok=True, parents=True)
 
     # Logging to a file
