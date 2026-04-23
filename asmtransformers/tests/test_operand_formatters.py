@@ -2,17 +2,21 @@ from asmtransformers import arm64, operands
 
 
 def test_full_house():
-    graph = {0x12: [
-        'add x0,x0x,#0x1234',
-        'sub w0,0x400,x1',
-        'ldr x12,[sp, #-0x20]!',
-        'mul w12,-0x123',
-    ]}
+    graph = {
+        0x12: [
+            'add x0,x0x,#0x1234',
+            'sub w0,0x400,x1',
+            'ldr x12,[sp, #-0x20]!',
+            'mul w12,-0x123',
+        ]
+    }
 
-    tokens = arm64.Preprocessor(operand_formatters=(
-        operands.format_immediate_log,
-        operands.format_offset_log,
-    )).preprocess(graph)
+    tokens = arm64.Preprocessor(
+        operand_formatters=(
+            operands.format_immediate_log,
+            operands.format_offset_log,
+        )
+    ).preprocess(graph)
     tokens_plain = arm64.Preprocessor().preprocess(graph)
 
     assert len(tokens) == len(tokens_plain)

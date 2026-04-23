@@ -1,7 +1,5 @@
-from functools import partial
-
-from networkx import DiGraph
 import pytest
+from networkx import DiGraph
 
 from asmtransformers import arm64
 
@@ -25,7 +23,10 @@ def test_parse_multiple_operands():
     assert arm64.parse_instruction('ldp x19,x20,[sp, #0x10]') == ('ldp', ('x19', 'x20', '[', 'sp', '#0x10', ']'))
     assert arm64.parse_instruction('ldp x29,x30,[sp], #0x60') == ('ldp', ('x29', 'x30', '[', 'sp', ']', '#0x60'))
     assert arm64.parse_instruction('movk x1,#0x4024, LSL #16') == ('movk', ('x1', '#0x4024', 'lsl', '#16'))
-    assert arm64.parse_instruction('stp x29,x30,[sp, #-0x60]!') == ('stp', ('x29', 'x30', '[', 'sp', '#-0x60', ']', '!'))
+    assert arm64.parse_instruction('stp x29,x30,[sp, #-0x60]!') == (
+        'stp',
+        ('x29', 'x30', '[', 'sp', '#-0x60', ']', '!'),
+    )
     assert arm64.parse_instruction('ldp x29,x30,[sp], #0x60') == ('ldp', ('x29', 'x30', '[', 'sp', ']', '#0x60'))
 
 
@@ -34,8 +35,13 @@ def test_tokenize_single_block(tokenizer):
     graph.add_node(0, asm=['ld x0,#0x1234', 'add x0,x0,#0x1234', 'ret'])
 
     assert tokenizer.preprocess(graph) == [
-        'ld', 'x0', '#0x1234',
-        'add', 'x0', 'x0', '#0x1234',
+        'ld',
+        'x0',
+        '#0x1234',
+        'add',
+        'x0',
+        'x0',
+        '#0x1234',
         'ret',
     ]
 
@@ -47,18 +53,32 @@ def test_tokenize_branching_blocks(tokenizer):
     graph.add_node(0, asm=['sub x2,x2,#0x290', 'bl 0x2a'])  # branch to offset 42
 
     assert tokenizer.preprocess(graph) == [
-        'sub', 'x2', 'x2', '#0x290', 'bl', 'JUMP_ADDR_6',
-        'add', 'x2', 'x2', '#0x290', 'b.eq', 'x2', 'JUMP_ADDR_0',
+        'sub',
+        'x2',
+        'x2',
+        '#0x290',
+        'bl',
+        'JUMP_ADDR_6',
+        'add',
+        'x2',
+        'x2',
+        '#0x290',
+        'b.eq',
+        'x2',
+        'JUMP_ADDR_0',
     ]
 
 
 def test_context_length_boundary():
-    # use a content length that would include the first two instructions, having the third instruction fall outside the scope
-    tokens = arm64.Preprocessor(context_length=10).preprocess({
-        0x12: ['ldp x19,x20,[sp, #0x10]', 'b 0x34'],
-        0x34: ['movk x1,#0x4024, LSL #16', 'b.eq 0x56'],
-        0x56: ['ldp x29,x30,[sp], #0x60', 'b.le 0x12'],
-    })
+    # use a content length that would include the first two instructions, having the third instruction fall outside the
+    # scope
+    tokens = arm64.Preprocessor(context_length=10).preprocess(
+        {
+            0x12: ['ldp x19,x20,[sp, #0x10]', 'b 0x34'],
+            0x34: ['movk x1,#0x4024, LSL #16', 'b.eq 0x56'],
+            0x56: ['ldp x29,x30,[sp], #0x60', 'b.le 0x12'],
+        }
+    )
 
     # both tokens should be present, the last block in the graph (jump to 0x56) is outside the context length
     assert tokens.index('JUMP_ADDR_EXCEEDED') - tokens.index('b.eq') == 1
@@ -106,6 +126,6 @@ def test_format_operand():
 
     # expect a jump token towards the second basic block, but expect the other two occurrences of 0x78 to have been
     # obfuscated by obfuscate_offset
-    assert f'JUMP_ADDR_6' in tokens
+    assert 'JUMP_ADDR_6' in tokens
     assert '0x78' not in tokens
     assert tokens.count('OBFUSCATED') == 2

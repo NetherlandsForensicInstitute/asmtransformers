@@ -30,10 +30,7 @@ def vec_mem_db(mem_db):
     """)
 
     for vector in ([-1.0, 0.0], [1.0, 0.0], [0.0, -1.0]):
-        mem_db.execute(
-            'INSERT INTO embeddings (embedding) VALUES (?)',
-            (sqlite_vec.serialize_float32(vector),)
-        )
+        mem_db.execute('INSERT INTO embeddings (embedding) VALUES (?)', (sqlite_vec.serialize_float32(vector),))
 
     yield mem_db
 
@@ -58,22 +55,26 @@ def filled_database(database, functions, embeddings):
 
 
 def test_vec_distance(vec_mem_db):
-    (a,), (b,), (c,) = list(vec_mem_db.execute(
-        'SELECT distance FROM embeddings WHERE embedding MATCH ? AND K = 3 ORDER BY distance',
-        (sqlite_vec.serialize_float32([-1.0, 0.0]),)
-    ))
+    (a,), (b,), (c,) = list(
+        vec_mem_db.execute(
+            'SELECT distance FROM embeddings WHERE embedding MATCH ? AND K = 3 ORDER BY distance',
+            (sqlite_vec.serialize_float32([-1.0, 0.0]),),
+        )
+    )
     # results ordered by distance, not insertion order
     assert (a, b, c) == pytest.approx((0.0, 1.0, 2.0))
 
 
 def test_vec_scaled_distance(vec_mem_db):
-    (da, ea), (db, eb), (dc, ec) = list(vec_mem_db.execute(
-        """
+    (da, ea), (db, eb), (dc, ec) = list(
+        vec_mem_db.execute(
+            """
         SELECT (2 - distance) / 2 AS similarity, embedding 
         FROM embeddings WHERE embedding MATCH ? AND K = 3 ORDER BY distance
         """,
-        (sqlite_vec.serialize_float32([1.0, 0.0]),)
-    ))
+            (sqlite_vec.serialize_float32([1.0, 0.0]),),
+        )
+    )
     # results ordered by distance, not insertion order
     assert (da, db, dc) == pytest.approx((1.0, 0.5, 0.0))
     assert struct.unpack('2f', ea) == (1.0, 0.0)
@@ -93,13 +94,16 @@ def test_add_duplicate(database, functions, embeddings):
         function['binary_sha256'],
     )
 
-    assert database.add_function(
-        function['name'],
-        function['cfg'],
-        embedding,
-        function['binary_name'],
-        function['binary_sha256'],
-    ) == function_id
+    assert (
+        database.add_function(
+            function['name'],
+            function['cfg'],
+            embedding,
+            function['binary_name'],
+            function['binary_sha256'],
+        )
+        == function_id
+    )
 
 
 def test_search_identical(filled_database, embeddings):
@@ -109,10 +113,7 @@ def test_search_identical(filled_database, embeddings):
     # similarity for that function should be 1.0
     assert results[0]['similarity'] == pytest.approx(1.0)
     # similarities should be declining throughout the results
-    assert all(
-        a['similarity'] >= b['similarity']
-        for a, b in pairwise(results)
-    )
+    assert all(a['similarity'] >= b['similarity'] for a, b in pairwise(results))
 
 
 def test_search_similar(filled_database, embeddings):
@@ -135,7 +136,9 @@ def test_search_top_1(filled_database, embeddings):
 def test_search_duplicate_label(filled_database, functions, embeddings):
     _init = next(function for function in functions if function['name'] == '_init')
     # add the same function with the same label as if it were from a different binary
-    filled_database.add_function(_init['name'], _init['cfg'], embeddings[_init['name']], 'another_binary', '1234abcd' * 16)
+    filled_database.add_function(
+        _init['name'], _init['cfg'], embeddings[_init['name']], 'another_binary', '1234abcd' * 16
+    )
 
     results = filled_database.search_function(embeddings[_init['name']], top_n=2)
 
