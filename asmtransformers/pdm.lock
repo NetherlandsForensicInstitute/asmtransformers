@@ -1703,7 +1703,7 @@ files = [
 
 [[package]]
 name = "transformers"
-version = "5.6.1"
+version = "5.6.0"
 requires_python = ">=3.10.0"
 summary = "Transformers: the model-definition framework for state-of-the-art machine learning models in text, vision, audio, and multimodal models, for both inference and training."
 groups = ["default"]
@@ -1719,8 +1719,8 @@ dependencies = [
     "typer",
 ]
 files = [
-    {file = "transformers-5.6.1-py3-none-any.whl", hash = "sha256:f41b9dbe5fcaaad577d4004dcfa14303e372429772b81c21dbf2443aa8ee61e9"},
-    {file = "transformers-5.6.1.tar.gz", hash = "sha256:178dd446d12a29583deed4b27fd229ecb3751100853deee09ff151a5ff9032c6"},
+    {file = "transformers-5.6.0-py3-none-any.whl", hash = "sha256:def5aac47b28e2f1386fa64f2f458a5474ba7733ab74c1765e7c67a79d1f1cbd"},
+    {file = "transformers-5.6.0.tar.gz", hash = "sha256:291951976b79a6f93ec06d6ab14489a99aecdbc8f05aaabab538ea1d508c9a97"},
 ]
 
 [[package]]
