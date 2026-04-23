@@ -3,9 +3,14 @@ from itertools import groupby
 from operator import itemgetter
 
 from datasets import Dataset
-from sentence_transformers import InputExample
+from sentence_transformers.sentence_transformer.readers import InputExample
 from torch.utils.data import IterableDataset
 from tqdm import tqdm
+
+
+def as_sentence_transformer_training_dataset(dataset: Dataset, text_column: str = 'cfg') -> Dataset:
+    """Return a trainer-ready dataset with the text column normalized to ``sentence``."""
+    return dataset.select_columns([text_column, 'label']).rename_column(text_column, 'sentence')
 
 
 class LazySentenceLabelDataset(IterableDataset):

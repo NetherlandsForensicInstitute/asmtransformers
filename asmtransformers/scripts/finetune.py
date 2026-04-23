@@ -6,14 +6,16 @@ from pathlib import Path
 
 import datasets
 import torch
-from sentence_transformers import InputExample, LoggingHandler, losses
-from sentence_transformers.evaluation import TripletEvaluator
-from sentence_transformers.losses import BatchHardTripletLossDistanceFunction
-from torch.utils.data import DataLoader
-from tqdm import tqdm
+from sentence_transformers import LoggingHandler, SentenceTransformerTrainer, SentenceTransformerTrainingArguments
+from sentence_transformers.sentence_transformer.evaluation import TripletEvaluator
+from sentence_transformers.sentence_transformer.losses import (
+    BatchHardTripletLossDistanceFunction,
+    BatchSemiHardTripletLoss,
+)
+from sentence_transformers.sentence_transformer.training_args import BatchSamplers
 from tzlocal import get_localzone
 
-from asmtransformers.datasets import LazySentenceLabelDataset
+from asmtransformers.datasets import as_sentence_transformer_training_dataset
 from asmtransformers.models.asmsentencebert import ASMSentenceTransformer
 
 
@@ -39,6 +41,30 @@ def wrap_method(instance, method, new_method):
     setattr(instance, method, wrapper)
 
 
+def make_train_dataset(functions):
+    return as_sentence_transformer_training_dataset(functions)
+
+
+def make_dev_evaluator(functions, batch_size):
+    return TripletEvaluator(
+        anchors=functions['anchor'],
+        positives=functions['pos'],
+        negatives=functions['neg'],
+        batch_size=batch_size,
+        name='dev',
+    )
+
+
+def get_mixed_precision_kwargs(use_amp):
+    if not use_amp or not torch.cuda.is_available():
+        return {'bf16': False, 'fp16': False}
+
+    if torch.cuda.is_bf16_supported():
+        return {'bf16': True, 'fp16': False}
+
+    return {'bf16': False, 'fp16': True}
+
+
 def main(data_folder, model, batch_size):
     """
     This script takes a language model and finetunes it for the task of semantic
@@ -53,7 +79,7 @@ def main(data_folder, model, batch_size):
     model_name_or_path = model
     model_name = Path(model_name_or_path).stem if Path(model_name_or_path).is_dir() else model_name_or_path
     num_epochs = 3
-    use_amp = True  # Set to False, if you use a CPU or your GPU does not support FP16 operations
+    use_amp = torch.cuda.is_available()
     evaluation_steps = 50_000
     warmup_steps = 500
 
@@ -69,8 +95,10 @@ def main(data_folder, model, batch_size):
         handlers=[LoggingHandler(), logging.FileHandler(filename=f'{model_save_path}/training_logging.log')],
     )
 
+    mixed_precision_kwargs = get_mixed_precision_kwargs(use_amp)
     model = ASMSentenceTransformer.from_basemodel(
-        base_model_name_or_path=model_name_or_path, model_args={'torch_dtype': torch.bfloat16}
+        base_model_name_or_path=model_name_or_path,
+        model_args={'torch_dtype': torch.bfloat16 if mixed_precision_kwargs['bf16'] else torch.float32},
     )
     logging.info(f'pre-trained model {model_name} loaded')
 
@@ -78,21 +106,15 @@ def main(data_folder, model, batch_size):
     train_functions = functions['train']
     logging.info('training data loaded')
 
-    train_data_sampler = LazySentenceLabelDataset(train_functions)
-    train_data_loader = DataLoader(train_data_sampler, batch_size=batch_size)
-    logging.info('training data created')
-
-    def eval_triplets(functions):
-        for example in tqdm(functions, desc='making InputExamples: test'):
-            yield InputExample(texts=[example['anchor'], example['pos'], example['neg']])
-
+    train_dataset = make_train_dataset(train_functions)
     test_functions = functions['test']
-    dev_evaluator = TripletEvaluator.from_input_examples(eval_triplets(test_functions))
+    dev_evaluator = make_dev_evaluator(test_functions, batch_size=batch_size)
+    logging.info('training and evaluation data created')
 
     # Configure the training.
     # The jTrans loss is all triplets (including easy) with a cosine metric and a margin of 0.2 (BatchAllTripletLoss)
     # BatchSemiHardTripletLoss works on all non-easy triplets. That seems to give better training losses.
-    train_loss = losses.BatchSemiHardTripletLoss(
+    train_loss = BatchSemiHardTripletLoss(
         model, distance_metric=BatchHardTripletLossDistanceFunction.cosine_distance, margin=0.2
     )
 
@@ -106,22 +128,36 @@ def main(data_folder, model, batch_size):
 
     wrap_method(train_loss, 'batch_semi_hard_triplet_loss', log_loss)
 
-    # Train the model
-    def train_callback(score, epoch, steps):
-        print(f'{score=}, {epoch=}, {steps=}')
-
-    model.fit(
-        train_objectives=[(train_data_loader, train_loss)],
-        epochs=num_epochs,
-        evaluator=dev_evaluator,
-        evaluation_steps=evaluation_steps,
+    training_args = SentenceTransformerTrainingArguments(
+        output_dir=model_save_path,
+        batch_sampler=BatchSamplers.GROUP_BY_LABEL,
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size,
+        num_train_epochs=num_epochs,
         warmup_steps=warmup_steps,
-        output_path=model_save_path,
-        use_amp=use_amp,
-        checkpoint_path=model_save_path,
-        checkpoint_save_steps=100_000 * 16 // batch_size,
-        callback=train_callback,
+        eval_strategy='steps',
+        eval_steps=evaluation_steps,
+        save_strategy='steps',
+        save_steps=100_000 * 16 // batch_size,
+        save_total_limit=0,
+        report_to='none',
+        **mixed_precision_kwargs,
     )
+
+    trainer = SentenceTransformerTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        evaluator=dev_evaluator,
+        loss=train_loss,
+        processing_class=model.tokenizer,
+    )
+
+    trainer.train()
+    trainer.save_model(model_save_path)
+
+    metrics = dev_evaluator(model, output_path=model_save_path)
+    logging.info(f'Final evaluation metrics: {metrics}')
 
 
 def get_parser() -> argparse.ArgumentParser:

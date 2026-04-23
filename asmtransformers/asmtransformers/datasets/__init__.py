@@ -1,1 +1,2 @@
 from .sentencelabel import LazySentenceLabelDataset as LazySentenceLabelDataset
+from .sentencelabel import as_sentence_transformer_training_dataset as as_sentence_transformer_training_dataset
