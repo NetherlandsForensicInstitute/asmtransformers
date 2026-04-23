@@ -24,7 +24,8 @@ def model():
     return ASMBertForMaskedLM(config)
 
 
-def create_base_model():
+@pytest.fixture(scope='function')
+def base_model():
     torch.manual_seed(0)
     config = BertConfig(
         vocab_size=32,
@@ -132,15 +133,14 @@ def test_safe_serialization_preserves_tied_embeddings(tmp_path, model):
     assert reloaded_position_embeddings.weight is reloaded_word_embeddings.weight
 
 
-def test_base_model_safe_serialization_preserves_tied_embeddings(tmp_path):
-    model = create_base_model()
-    original_word_embeddings = model.embeddings.word_embeddings
-    original_position_embeddings = model.embeddings.position_embeddings
+def test_base_model_safe_serialization_preserves_tied_embeddings(tmp_path, base_model):
+    original_word_embeddings = base_model.embeddings.word_embeddings
+    original_position_embeddings = base_model.embeddings.position_embeddings
 
     assert original_position_embeddings is original_word_embeddings
     assert original_position_embeddings.weight is original_word_embeddings.weight
 
-    model.save_pretrained(tmp_path)
+    base_model.save_pretrained(tmp_path)
     reloaded_model = ASMBertModel.from_pretrained(tmp_path)
 
     reloaded_word_embeddings = reloaded_model.embeddings.word_embeddings
