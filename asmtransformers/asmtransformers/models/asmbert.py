@@ -1,4 +1,5 @@
 import json
+import warnings
 from copy import deepcopy
 
 import torch
@@ -30,7 +31,9 @@ class ASMBertModel(BertModel):
         super().__init__(config, add_pooling_layer)
 
         if delay_tie_for_load:
-            # Keep a checkpoint-shaped positional table around just for loading.
+            # Keep a checkpoint-shaped positional table around just for loading
+            # legacy checkpoints that only store the shared embedding under the
+            # position-embedding key.
             self.embeddings.position_embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
         else:
             self.tie_shared_embeddings()
@@ -52,6 +55,17 @@ class ASMBertModel(BertModel):
         )
 
         if 'embeddings.word_embeddings.weight' in loading_info['missing_keys']:
+            warnings.warn(
+                (
+                    f'Loaded legacy {cls.__name__} checkpoint from {pretrained_model_name_or_path!r} '
+                    'that stores the shared embedding only under '
+                    '`embeddings.position_embeddings.weight`. This compatibility '
+                    'path will be removed in a future release; re-save the model '
+                    'with the current asmtransformers version.'
+                ),
+                UserWarning,
+                stacklevel=2,
+            )
             model.embeddings.word_embeddings.weight.data.copy_(model.embeddings.position_embeddings.weight.data)
             loading_info['missing_keys'].discard('embeddings.word_embeddings.weight')
         model.tie_shared_embeddings()
