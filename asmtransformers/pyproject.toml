@@ -24,6 +24,7 @@ dependencies = [
     "tensorboardx",
     "torch",
     "transformers",
+    "tzlocal>=5.3.1",
 ]
 requires-python = ">=3.13,<3.14"
 readme = "README.md"
