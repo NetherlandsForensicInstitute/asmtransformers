@@ -3,8 +3,6 @@ import warnings
 from copy import deepcopy
 
 import torch
-from torch import nn
-from torch.nn import CrossEntropyLoss
 from transformers import BertForMaskedLM, BertModel, BertTokenizer
 from transformers.modeling_outputs import MaskedLMOutput
 from transformers.models.bert.modeling_bert import BertOnlyMLMHead, BertPreTrainedModel
@@ -34,7 +32,7 @@ class ASMBertModel(BertModel):
             # Keep a checkpoint-shaped positional table around just for loading
             # legacy checkpoints that only store the shared embedding under the
             # position-embedding key.
-            self.embeddings.position_embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
+            self.embeddings.position_embeddings = torch.nn.Embedding(config.vocab_size, config.hidden_size)
         else:
             self.tie_shared_embeddings()
 
@@ -165,7 +163,7 @@ class ASMBertForMaskedLM(BertForMaskedLM):
         )
         sequence_output = outputs[0]
 
-        loss_fct = CrossEntropyLoss()  # -100 index = padding token
+        loss_fct = torch.nn.CrossEntropyLoss()  # -100 index = padding token
 
         # Masked Language Modelling
         prediction_scores = self.cls(sequence_output)
