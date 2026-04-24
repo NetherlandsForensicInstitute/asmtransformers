@@ -242,8 +242,6 @@ class ARM64Tokenizer(BertTokenizer):
         for text in texts:
             cfg = dict(json.loads(text))
             tokens = self.preprocessor.preprocess(cfg)
-            if len(tokens) < 512:
-                tokens += [self.pad_token] * (512 - len(tokens))
             encoded_inputs.append(
                 {
                     # The assembly preprocessor already splits the function into model vocabulary tokens.

@@ -1,7 +1,11 @@
+import json
+
 import pytest
 from networkx import DiGraph
+from transformers import BertTokenizer
 
 from asmtransformers import arm64
+from asmtransformers.models.asmbert import ARM64Tokenizer
 
 
 @pytest.fixture
@@ -129,3 +133,20 @@ def test_format_operand():
     assert 'JUMP_ADDR_6' in tokens
     assert '0x78' not in tokens
     assert tokens.count('OBFUSCATED') == 2
+
+
+def test_arm64_tokenizer_masks_padding_tokens():
+    tokenizer_path = 'asmtransformers/models/arm64bert'
+    wrapped_tokenizer = BertTokenizer.from_pretrained(tokenizer_path)
+    tokenizer = ARM64Tokenizer.from_pretrained(tokenizer_path)
+    tokenizer.set_tokenizer(wrapped_tokenizer)
+
+    encoded = tokenizer([json.dumps([[0, ['ret']]])])
+    input_ids = encoded['input_ids'][0]
+    attention_mask = encoded['attention_mask'][0]
+
+    assert input_ids.shape[0] == 512
+    assert attention_mask.shape[0] == 512
+    assert attention_mask.sum().item() == 1
+    assert (input_ids[1:] == wrapped_tokenizer.pad_token_id).all()
+    assert (attention_mask[1:] == 0).all()
