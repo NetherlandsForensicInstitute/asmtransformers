@@ -54,9 +54,9 @@ def test_single_embedding(anchor, model):
     """We took one sample and calculated the sum, min and max of the embedding. This should be used as reference
     material to notice if anything changed over time"""
     embedding = model.encode(anchor)
-    assert np.isclose(embedding.sum(), -0.05649805)
-    assert np.isclose(embedding.min(), -0.11195006)
-    assert np.isclose(embedding.max(), 0.115316495)
+    assert np.isclose(embedding.sum(), -0.09272218)
+    assert np.isclose(embedding.min(), -0.10641833)
+    assert np.isclose(embedding.max(), 0.116405316)
 
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
