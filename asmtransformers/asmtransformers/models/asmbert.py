@@ -1,8 +1,8 @@
 import json
+import warnings
 from copy import deepcopy
 
 import torch
-from torch.nn import CrossEntropyLoss
 from transformers import BertForMaskedLM, BertModel, BertTokenizer
 from transformers.modeling_outputs import MaskedLMOutput
 from transformers.models.bert.modeling_bert import BertOnlyMLMHead, BertPreTrainedModel
@@ -20,15 +20,59 @@ class ASMBertModel(BertModel):
     BinBert shares parameters between the position embeddings and the jump target embeddings.
     """
 
-    _tied_weights_keys = [*(BertModel._tied_weights_keys or []), 'embeddings.position_embeddings.weight']
+    _tied_weights_keys = {
+        **(BertModel._tied_weights_keys or {}),
+        'embeddings.position_embeddings.weight': 'embeddings.word_embeddings.weight',
+    }
 
-    def __init__(self, config, add_pooling_layer=True):
+    def __init__(self, config, add_pooling_layer=True, *, delay_tie_for_load=False):
         super().__init__(config, add_pooling_layer)
-        self._tie_weights()
+
+        if delay_tie_for_load:
+            # Keep a checkpoint-shaped positional table around just for loading
+            # legacy checkpoints that only store the shared embedding under the
+            # position-embedding key.
+            self.embeddings.position_embeddings = torch.nn.Embedding(config.vocab_size, config.hidden_size)
+        else:
+            self.tie_shared_embeddings()
 
     def _tie_weights(self):
         """Declare and re-apply the custom embedding alias for HF save/load flows."""
 
+        self.tie_shared_embeddings()
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        output_loading_info = kwargs.pop('output_loading_info', False)
+        model, loading_info = super().from_pretrained(
+            pretrained_model_name_or_path,
+            *model_args,
+            output_loading_info=True,
+            delay_tie_for_load=True,
+            **kwargs,
+        )
+
+        if 'embeddings.word_embeddings.weight' in loading_info['missing_keys']:
+            warnings.warn(
+                (
+                    f'Loaded legacy {cls.__name__} checkpoint from {pretrained_model_name_or_path!r} '
+                    'that stores the shared embedding only under '
+                    '`embeddings.position_embeddings.weight`. This compatibility '
+                    'path will be removed in a future release; re-save the model '
+                    'with the current asmtransformers version.'
+                ),
+                UserWarning,
+                stacklevel=2,
+            )
+            model.embeddings.word_embeddings.weight.data.copy_(model.embeddings.position_embeddings.weight.data)
+            loading_info['missing_keys'].discard('embeddings.word_embeddings.weight')
+        model.tie_shared_embeddings()
+
+        if output_loading_info:
+            return model, loading_info
+        return model
+
+    def tie_shared_embeddings(self):
         # share parameters between position embeddings and jump target embeddings
         # (the first 512 tokens in the vocab)
         # https://github.com/vul337/jTrans/issues/3#issuecomment-1661876440
@@ -45,7 +89,10 @@ class ASMBertForMaskedLM(BertForMaskedLM):
     Additionally, BinBert shares parameters between the position embeddings and the jump target embeddings.
     """
 
-    _tied_weights_keys = [*BertForMaskedLM._tied_weights_keys, 'bert.embeddings.position_embeddings.weight']
+    _tied_weights_keys = {
+        **BertForMaskedLM._tied_weights_keys,
+        'bert.embeddings.position_embeddings.weight': 'bert.embeddings.word_embeddings.weight',
+    }
 
     def __init__(self, config):
         """Override BertForMaskedLM's init to add Jump Target Prediction
@@ -116,7 +163,7 @@ class ASMBertForMaskedLM(BertForMaskedLM):
         )
         sequence_output = outputs[0]
 
-        loss_fct = CrossEntropyLoss()  # -100 index = padding token
+        loss_fct = torch.nn.CrossEntropyLoss()  # -100 index = padding token
 
         # Masked Language Modelling
         prediction_scores = self.cls(sequence_output)
@@ -198,26 +245,26 @@ class ARM64Tokenizer(BertTokenizer):
         self.padding = [self.tokenizer.pad_token] * 512
 
     def tokenize(self, texts, split_special_tokens=False, **kwargs):
-        tokens_batch = []
+        encoded_inputs = []
         for text in texts:
             cfg = dict(json.loads(text))
             tokens = self.preprocessor.preprocess(cfg)
             if len(tokens) < 512:
                 tokens += self.padding[: 512 - len(tokens)]
-            tokens_batch.append(tokens)
+            encoded_inputs.append(
+                {
+                    # The assembly preprocessor already splits the function into model vocabulary tokens.
+                    'input_ids': self.tokenizer.convert_tokens_to_ids(tokens[:512]),
+                }
+            )
 
-        tokenized = self.tokenizer(
-            tokens_batch,
-            # input is pre-tokenized by the preprocessor
-            is_split_into_words=True,
-            add_special_tokens=False,
-            # truncate the encoded sequence to a maximum of max_length tokens
-            truncation=True,
-            padding=True,
+        return self.tokenizer.pad(
+            encoded_inputs,
+            padding='max_length',
             max_length=512,
+            return_attention_mask=True,
             return_tensors='pt',
         )
-        return tokenized
 
     def __call__(self, *args, **kwargs):
         return self.tokenize(*args, **kwargs)

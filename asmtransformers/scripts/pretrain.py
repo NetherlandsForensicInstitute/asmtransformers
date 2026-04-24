@@ -62,12 +62,11 @@ def pretrain(
 
     training_args = TrainingArguments(
         output_dir=output_dir,
-        overwrite_output_dir=True,
         learning_rate=1e-4,
         lr_scheduler_type='cosine',
         warmup_ratio=0.06,
         num_train_epochs=epoch,
-        evaluation_strategy='steps' if eval_tokenized is not None else 'no',
+        eval_strategy='steps' if eval_tokenized is not None else 'no',
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         eval_steps=save_steps // 3,
