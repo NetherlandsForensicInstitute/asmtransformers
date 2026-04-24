@@ -29,4 +29,3 @@ if __name__ == '__main__':
         dataset[subset] = preprocess(tokenizer, dataset[subset])
 
     dataset.save_to_disk(data_out)
-
