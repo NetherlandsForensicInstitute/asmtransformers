@@ -222,9 +222,6 @@ class ARM64Tokenizer(BertTokenizer):
             )
         )
 
-        self.tokenizer = None
-        self.padding = None
-
         super().__init__(
             vocab_file=vocab_file,
             do_lower_case=do_lower_case,
@@ -240,25 +237,21 @@ class ARM64Tokenizer(BertTokenizer):
             **kwargs,
         )
 
-    def set_tokenizer(self, tokenizer):
-        self.tokenizer = tokenizer
-        self.padding = [self.tokenizer.pad_token] * 512
-
     def tokenize(self, texts, split_special_tokens=False, **kwargs):
         encoded_inputs = []
         for text in texts:
             cfg = dict(json.loads(text))
             tokens = self.preprocessor.preprocess(cfg)
             if len(tokens) < 512:
-                tokens += self.padding[: 512 - len(tokens)]
+                tokens += [self.pad_token] * (512 - len(tokens))
             encoded_inputs.append(
                 {
                     # The assembly preprocessor already splits the function into model vocabulary tokens.
-                    'input_ids': self.tokenizer.convert_tokens_to_ids(tokens[:512]),
+                    'input_ids': self.convert_tokens_to_ids(tokens[:512]),
                 }
             )
 
-        return self.tokenizer.pad(
+        return self.pad(
             encoded_inputs,
             padding='max_length',
             max_length=512,

@@ -53,7 +53,7 @@ The current tokenizer integration is ARM64-specific:
 
 - `ARM64Tokenizer` owns the preprocessing step
 - it converts serialized CFG input into padded token batches
-- it delegates actual ID conversion to a standard `BertTokenizer` loaded from model assets
+- it uses the inherited `BertTokenizer` vocabulary and padding machinery for ID conversion
 
 ### Dataset and training helpers
 
