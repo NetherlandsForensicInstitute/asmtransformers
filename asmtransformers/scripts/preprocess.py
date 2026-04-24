@@ -1,41 +1,20 @@
-import json
 import sys
 
 from datasets import Dataset
-from transformers import BertTokenizer
 
-from asmtransformers import arm64, operands
+from asmtransformers.models.asmbert import ARM64Tokenizer
 
 
-def preprocess(tokenizer, dataset):
-    preprocessor = arm64.Preprocessor(
-        operand_formatters=(
-            # 2-log numerical values and offsets to reduce the number of unique tokens we'll generate
-            # (pre-made vocabulary used this too)
-            operands.format_immediate_log,
-            operands.format_offset_log,
-        )
-    )
-
+def preprocess(tokenizer, dataset, *, num_proc=10):
     def tokenize(function):
-        # control flow graph of a function is saved as a list of 2-tuples, preprocessor expects a dict
-        cfg = dict(json.loads(function['cfg']))
-        # apply the bert tokenizer on the preprocessed version of the function's control flow graph
-        return tokenizer(
-            preprocessor.preprocess(cfg),
-            # input is pre-tokenized by the preprocessor
-            is_split_into_words=True,
-            # TODO: is this needed (which special tokens do we need it to add)?
-            #       (as the tokenizer is pre-configured with a vocab, we might at least need [UNK]?)
-            add_special_tokens=True,
-            # truncate the encoded sequence to a maximum of max_length tokens
-            truncation=True,
-            max_length=512,
-            # TODO: ???
-            return_special_tokens_mask=True,
-        )
+        encoded = tokenizer([function['cfg']])
+        return {key: value[0].tolist() for key, value in encoded.items()}
 
-    return dataset.map(tokenize, batched=False, num_proc=10)
+    map_kwargs = {'batched': False}
+    if num_proc is not None:
+        map_kwargs['num_proc'] = num_proc
+
+    return dataset.map(tokenize, **map_kwargs)
 
 
 if __name__ == '__main__':
@@ -44,6 +23,6 @@ if __name__ == '__main__':
 
     # let the tokenizer preprocess data from data_in, write the result to data_out
     preprocess(
-        BertTokenizer.from_pretrained(tokenizer),
+        ARM64Tokenizer.from_pretrained(tokenizer),
         Dataset.load_from_disk(data_in),
     ).save_to_disk(data_out)
