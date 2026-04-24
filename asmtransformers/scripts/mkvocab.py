@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 
 import datasets
@@ -7,7 +8,7 @@ from tqdm import tqdm
 from asmtransformers import arm64, operands
 
 
-DATASET = Path()  # Path to dataset, fill in yourself
+DATASET = Path(sys.argv[1])  # Path to dataset, fill in yourself
 OUTPUT = Path('./results/vocab.txt')
 
 CONTEXT_LENGTH = 512
@@ -28,10 +29,10 @@ if __name__ == '__main__':
     )
     tokens = set()
 
-    if SAMPLE_SIZE:
-        dataset = dataset.select(range(SAMPLE_SIZE))
-
     for subset in dataset:
+        if SAMPLE_SIZE:
+            dataset[subset] = dataset[subset].select(range(SAMPLE_SIZE))
+
         for sample in tqdm(dataset[subset], desc=f'processing {subset} subset'):
             function = dict(json.loads(sample['cfg']))
             tokens.update(preprocessor.preprocess(function))
