@@ -173,10 +173,8 @@ def parse_operands(operands: str) -> Iterator[str]:
                 yield '}'
                 # next offset is after the set
                 offset = end + 1
-            # treat both spaces and commas as separators (skip these tokens)
-            case ' ':
-                offset += 1
-            case ',':
+            case ' ' | ',':
+                # treat both spaces and commas as separators (skip these tokens)
                 offset += 1
             case _:
                 # any other case is 'just an operand'
