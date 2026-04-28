@@ -1,5 +1,4 @@
 import json
-import warnings
 from copy import deepcopy
 
 import torch
@@ -25,52 +24,14 @@ class ASMBertModel(BertModel):
         'embeddings.position_embeddings.weight': 'embeddings.word_embeddings.weight',
     }
 
-    def __init__(self, config, add_pooling_layer=True, *, delay_tie_for_load=False):
+    def __init__(self, config, add_pooling_layer=True):
         super().__init__(config, add_pooling_layer)
-
-        if delay_tie_for_load:
-            # Keep a checkpoint-shaped positional table around just for loading
-            # legacy checkpoints that only store the shared embedding under the
-            # position-embedding key.
-            self.embeddings.position_embeddings = torch.nn.Embedding(config.vocab_size, config.hidden_size)
-        else:
-            self.tie_shared_embeddings()
+        self.tie_shared_embeddings()
 
     def _tie_weights(self):
         """Declare and re-apply the custom embedding alias for HF save/load flows."""
 
         self.tie_shared_embeddings()
-
-    @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
-        output_loading_info = kwargs.pop('output_loading_info', False)
-        model, loading_info = super().from_pretrained(
-            pretrained_model_name_or_path,
-            *model_args,
-            output_loading_info=True,
-            delay_tie_for_load=True,
-            **kwargs,
-        )
-
-        if 'embeddings.word_embeddings.weight' in loading_info['missing_keys']:
-            warnings.warn(
-                (
-                    f'Loaded legacy {cls.__name__} checkpoint from {pretrained_model_name_or_path!r} '
-                    'that stores the shared embedding only under '
-                    '`embeddings.position_embeddings.weight`. This compatibility '
-                    'path will be removed in a future release; re-save the model '
-                    'with the current asmtransformers version.'
-                ),
-                UserWarning,
-                stacklevel=2,
-            )
-            model.embeddings.word_embeddings.weight.data.copy_(model.embeddings.position_embeddings.weight.data)
-            loading_info['missing_keys'].discard('embeddings.word_embeddings.weight')
-        model.tie_shared_embeddings()
-
-        if output_loading_info:
-            return model, loading_info
-        return model
 
     def tie_shared_embeddings(self):
         # share parameters between position embeddings and jump target embeddings

@@ -1,7 +1,6 @@
 import pytest
 import torch
-from safetensors.torch import save_file
-from transformers import BertConfig, BertModel
+from transformers import BertConfig
 
 from asmtransformers.models.asmbert import ASMBertForMaskedLM, ASMBertModel
 
@@ -159,53 +158,3 @@ def test_base_model_load_reports_no_missing_or_unexpected_keys(tmp_path, base_mo
     assert loading_info['missing_keys'] == set()
     assert loading_info['unexpected_keys'] == set()
     assert loading_info['mismatched_keys'] == set()
-
-
-def test_base_model_loads_legacy_checkpoint_with_shared_embedding_only_in_position_key(tmp_path, base_model):
-    config = base_model.config
-    config.save_pretrained(tmp_path)
-
-    state_dict = base_model.state_dict()
-    shared_weight = state_dict['embeddings.word_embeddings.weight'].clone()
-    del state_dict['embeddings.word_embeddings.weight']
-    state_dict['embeddings.position_embeddings.weight'] = shared_weight
-    save_file(state_dict, tmp_path / 'model.safetensors')
-
-    reloaded_model, loading_info = ASMBertModel.from_pretrained(tmp_path, output_loading_info=True)
-
-    reloaded_word_embeddings = reloaded_model.embeddings.word_embeddings.weight.detach()
-    reloaded_position_embeddings = reloaded_model.embeddings.position_embeddings.weight.detach()
-
-    assert loading_info['missing_keys'] == set()
-    assert loading_info['unexpected_keys'] == set()
-    assert loading_info['mismatched_keys'] == set()
-    assert torch.equal(reloaded_word_embeddings, shared_weight)
-    assert torch.equal(reloaded_position_embeddings, shared_weight)
-
-
-def test_base_model_warns_when_legacy_compatibility_path_is_used(monkeypatch, base_model):
-    delayed_model = ASMBertModel(base_model.config, delay_tie_for_load=True)
-    shared_weight = base_model.embeddings.word_embeddings.weight.detach().clone()
-    delayed_model.embeddings.position_embeddings.weight.data.copy_(shared_weight)
-
-    loading_info = {
-        'missing_keys': {'embeddings.word_embeddings.weight'},
-        'unexpected_keys': set(),
-        'mismatched_keys': set(),
-        'error_msgs': [],
-    }
-
-    @classmethod
-    def fake_from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
-        assert kwargs['output_loading_info'] is True
-        assert kwargs['delay_tie_for_load'] is True
-        return delayed_model, loading_info
-
-    monkeypatch.setattr(BertModel, 'from_pretrained', fake_from_pretrained)
-
-    with pytest.warns(UserWarning, match='Loaded legacy ASMBertModel checkpoint'):
-        reloaded_model, reloaded_info = ASMBertModel.from_pretrained('legacy-model', output_loading_info=True)
-
-    assert reloaded_info['missing_keys'] == set()
-    assert torch.equal(reloaded_model.embeddings.word_embeddings.weight.detach(), shared_weight)
-    assert reloaded_model.embeddings.position_embeddings is reloaded_model.embeddings.word_embeddings
