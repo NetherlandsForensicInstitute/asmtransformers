@@ -7,7 +7,7 @@ from transformers.modeling_outputs import MaskedLMOutput
 from transformers.models.bert.modeling_bert import BertOnlyMLMHead, BertPreTrainedModel
 
 from asmtransformers import operands
-from asmtransformers.arm64 import Preprocessor
+from asmtransformers.arm64 import ARM64Preprocessor
 
 
 class ASMBertModel(BertModel):
@@ -174,7 +174,7 @@ class ARM64Tokenizer(BertTokenizer):
         strip_accents=None,
         **kwargs,
     ):
-        self.preprocessor = Preprocessor(
+        self.preprocessor = ARM64Preprocessor(
             operand_formatters=(
                 # 2-log numerical values and offsets to reduce the number of unique tokens we'll generate
                 # (pre-made vocabulary used this too)

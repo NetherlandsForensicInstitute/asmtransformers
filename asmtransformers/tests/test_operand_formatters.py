@@ -11,13 +11,13 @@ def test_full_house():
         ]
     }
 
-    tokens = arm64.Preprocessor(
+    tokens = arm64.ARM64Preprocessor(
         operand_formatters=(
             operands.format_immediate_log,
             operands.format_offset_log,
         )
     ).preprocess(graph)
-    tokens_plain = arm64.Preprocessor().preprocess(graph)
+    tokens_plain = arm64.ARM64Preprocessor().preprocess(graph)
 
     assert len(tokens) == len(tokens_plain)
     assert tokens != tokens_plain

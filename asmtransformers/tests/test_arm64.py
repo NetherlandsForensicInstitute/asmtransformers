@@ -10,7 +10,7 @@ from asmtransformers.models.asmbert import ARM64Tokenizer
 
 @pytest.fixture
 def tokenizer():
-    return arm64.Preprocessor()
+    return arm64.ARM64Preprocessor()
 
 
 def test_parse_no_operands():
@@ -76,7 +76,7 @@ def test_tokenize_branching_blocks(tokenizer):
 def test_context_length_boundary():
     # use a content length that would include the first two instructions, having the third instruction fall outside the
     # scope
-    tokens = arm64.Preprocessor(context_length=10).preprocess(
+    tokens = arm64.ARM64Preprocessor(context_length=10).preprocess(
         {
             0x12: ['ldp x19,x20,[sp, #0x10]', 'b 0x34'],
             0x34: ['movk x1,#0x4024, LSL #16', 'b.eq 0x56'],
@@ -115,7 +115,7 @@ def test_offset_prefix_tokens(tokenizer):
 
 
 def test_format_operand():
-    class ObfuscatingTokenizer(arm64.Preprocessor):
+    class ObfuscatingTokenizer(arm64.ARM64Preprocessor):
         def format_operand(self, operand):
             if arm64.is_offset(operand):
                 return 'OBFUSCATED'

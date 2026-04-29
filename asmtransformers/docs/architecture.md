@@ -96,12 +96,12 @@ The current end-to-end flow is:
 
 The following parts are tightly coupled to ARM64:
 
-- `asmtransformers.arm64.Preprocessor`
+- `asmtransformers.arm64.ARM64Preprocessor`
 - ARM64 branch instruction lists and condition-code handling
 - operand assumptions embodied in the current parser
 - `ARM64Tokenizer`
 - packaged model assets in `models/arm64bert/`
-- scripts that directly instantiate `arm64.Preprocessor`
+- scripts that directly instantiate `arm64.ARM64Preprocessor`
 
 These elements would need to be replaced or generalized for additional instruction sets.
 
