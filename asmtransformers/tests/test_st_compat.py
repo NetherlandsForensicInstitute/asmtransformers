@@ -1,9 +1,62 @@
+import json
 import os
 
 import numpy as np
 import pytest
+import torch
+from transformers import BertConfig
 
-from asmtransformers.models.asmsentencebert import ASMSentenceTransformer
+from asmtransformers.models.asmbert import ASMBertModel
+from asmtransformers.models.embedder import ASMEmbedder
+from asmtransformers.models.st_compat import build_sentence_transformer, load_st_embedding_as_native_embedder
+
+
+@pytest.fixture
+def cfg():
+    return json.dumps([[4096, ['mov x0,#0x0', 'ret']]])
+
+
+@pytest.fixture
+def checkpoint_path(tmp_path):
+    vocab = [f'JUMP_ADDR_{index}' for index in range(512)] + [
+        '[PAD]',
+        '[UNK]',
+        '[CLS]',
+        '[SEP]',
+        '[MASK]',
+        'mov',
+        'x0',
+        '#0x0',
+        'ret',
+    ]
+    (tmp_path / 'vocab.txt').write_text('\n'.join(vocab))
+    (tmp_path / 'tokenizer_config.json').write_text(
+        json.dumps(
+            {
+                'do_lower_case': False,
+                'do_basic_tokenize': False,
+                'tokenize_chinese_chars': False,
+                'tokenizer_class': 'ARM64Tokenizer',
+                'model_max_length': 512,
+            }
+        )
+    )
+
+    torch.manual_seed(0)
+    config = BertConfig(
+        vocab_size=len(vocab),
+        hidden_size=8,
+        num_hidden_layers=2,
+        num_attention_heads=2,
+        intermediate_size=16,
+        max_position_embeddings=512,
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+        pad_token_id=vocab.index('[PAD]'),
+    )
+    model = ASMBertModel(config)
+    model.save_pretrained(tmp_path)
+    return tmp_path
 
 
 @pytest.fixture
@@ -46,7 +99,32 @@ def anchor():
 @pytest.fixture(scope='session')
 def model():
     path = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
-    return ASMSentenceTransformer.from_pretrained(path)
+    return build_sentence_transformer(path)
+
+
+@pytest.fixture(scope='session')
+def native_model():
+    path = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
+    return load_st_embedding_as_native_embedder(path)
+
+
+def test_st_compat_pooling_matches_native_embedder(checkpoint_path, cfg):
+    native = ASMEmbedder.from_pretrained(checkpoint_path)
+    sentence_transformer = build_sentence_transformer(checkpoint_path)
+
+    native_embedding = native.encode(cfg)
+    st_embedding = sentence_transformer.encode(cfg)
+
+    assert np.allclose(native_embedding, st_embedding)
+
+
+def test_st_compat_loader_returns_native_embedder(checkpoint_path, cfg):
+    embedder = load_st_embedding_as_native_embedder(checkpoint_path)
+
+    embedding = embedder.encode(cfg)
+
+    assert embedding.shape == (8,)
+    assert np.isclose(np.linalg.norm(embedding), 1.0)
 
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
@@ -54,6 +132,15 @@ def test_single_embedding(anchor, model):
     """We took one sample and calculated the sum, min and max of the embedding. This should be used as reference
     material to notice if anything changed over time"""
     embedding = model.encode(anchor)
+    assert np.isclose(embedding.sum(), -0.09272218)
+    assert np.isclose(embedding.min(), -0.10641833)
+    assert np.isclose(embedding.max(), 0.116405316)
+
+
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
+def test_native_embedder_single_embedding(anchor, native_model):
+    """Native inference should reproduce the published model's golden embedding."""
+    embedding = native_model.encode(anchor)
     assert np.isclose(embedding.sum(), -0.09272218)
     assert np.isclose(embedding.min(), -0.10641833)
     assert np.isclose(embedding.max(), 0.116405316)

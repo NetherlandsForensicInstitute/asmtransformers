@@ -3,7 +3,7 @@ import argparse
 import torch
 from datasets import Dataset, concatenate_datasets
 
-from asmtransformers.models.asmsentencebert import ASMSentenceTransformer
+from asmtransformers.models.st_compat import load_st_embedding_as_native_embedder
 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -14,7 +14,7 @@ def main(data_folder, output_folder, model_path):
     print('Opening dataset')
     eval_functions = Dataset.load_from_disk(data_folder)
     print('Load model')
-    model = ASMSentenceTransformer.from_pretrained(model_path)
+    model = load_st_embedding_as_native_embedder(model_path)
     print('Start creating embeddings')
     embedded_functions = Dataset.from_dict({'embeddings': model.encode(eval_functions['cfg'])})
     embedded_dataset = concatenate_datasets([eval_functions, embedded_functions], axis=1)

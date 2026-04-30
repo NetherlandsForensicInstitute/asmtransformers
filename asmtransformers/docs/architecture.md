@@ -47,7 +47,10 @@ Model integration lives in [asmtransformers.models.asmbert](../asmtransformers/m
 There are two layers:
 
 - `ASMBertForMaskedLM` and `ASMBertModel` adapt Hugging Face BERT classes to the jTrans-style setup, including shared word/position embeddings and jump-target prediction support during pretraining.
-- `ASMSentenceTransformer` adapts the pretrained transformer into a sentence-transformers style embedding model for finetuning and inference.
+- `build_finetuning_model()` adapts the pretrained transformer into a plain `SentenceTransformer` model for triplet-loss finetuning.
+- `ASMEmbedder` provides native inference without requiring sentence-transformers at deployment time.
+- `st_compat` contains temporary compatibility shims for old sentence-transformers checkpoints/imports.
+- `asmsentencebert.__getattr__` only exists because old ST checkpoints reference `asmtransformers.models.asmsentencebert.ASMSTTransformer`; remove it after checkpoint conversion.
 
 The current tokenizer integration is ARM64-specific:
 
@@ -90,7 +93,7 @@ The current end-to-end flow is:
 4. A tokenizer converts the token stream into model inputs with the expected context length.
 5. Pretraining uses those inputs for masked language modeling plus jump target prediction.
 6. Finetuning wraps the transformer in a sentence-transformers pipeline and optimizes embedding similarity.
-7. Inference encodes previously unseen functions into embeddings for downstream similarity search.
+7. Inference uses the native embedder to encode previously unseen functions for downstream similarity search.
 
 ## What Is ARM64-Specific Today
 
@@ -112,7 +115,8 @@ The following patterns are reusable across instruction sets:
 - the general CFG-to-token-to-transformer pipeline
 - the `Preprocessor` hook model for custom operand formatting
 - Hugging Face BERT wrapping in `ASMBertModel` and `ASMBertForMaskedLM`
-- sentence-transformers integration in `ASMSentenceTransformer`
+- sentence-transformers finetuning integration via `build_finetuning_model()`
+- native embedding inference in `ASMEmbedder`
 - label-grouped dataset sampling in `LazySentenceLabelDataset`
 - the script-level workflow stages: preprocess, vocab build, pretrain, finetune, evaluate, infer
 
