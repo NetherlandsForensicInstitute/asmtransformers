@@ -158,7 +158,7 @@ class ASMBertForMaskedLM(BertForMaskedLM):
         return output
 
 
-class ARM64Tokenizer(BertTokenizer):
+class ASMTokenizer(BertTokenizer):
     def __init__(
         self,
         vocab_file,

@@ -6,7 +6,7 @@ from sentence_transformers.base.modality import InputFormatter
 from sentence_transformers.sentence_transformer.modules import Pooling, Transformer
 from torch import nn
 
-from .asmbert import ARM64Tokenizer, ASMBertModel
+from .asmbert import ASMTokenizer, ASMBertModel
 
 
 class ASMSTTransformer(Transformer):
@@ -109,7 +109,7 @@ class ASMSentenceTransformer(SentenceTransformer):
 
     @staticmethod
     def _build_tokenizer(model_name_or_path):
-        return ARM64Tokenizer.from_pretrained(model_name_or_path)
+        return ASMTokenizer.from_pretrained(model_name_or_path)
 
     @classmethod
     def _build_modules(cls, model_name_or_path, model_args=None):
