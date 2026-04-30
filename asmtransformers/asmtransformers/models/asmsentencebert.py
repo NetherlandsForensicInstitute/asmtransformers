@@ -6,7 +6,7 @@ from sentence_transformers.base.modality import InputFormatter
 from sentence_transformers.sentence_transformer.modules import Pooling, Transformer
 from torch import nn
 
-from .asmbert import ASMTokenizer, ASMBertModel
+from .asmbert import ASMBertModel, ASMTokenizer
 
 
 class ASMSTTransformer(Transformer):

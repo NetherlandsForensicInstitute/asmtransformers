@@ -174,14 +174,16 @@ class ASMTokenizer(BertTokenizer):
         strip_accents=None,
         **kwargs,
     ):
-        self.preprocessor = ARM64Preprocessor(
-            operand_formatters=(
-                # 2-log numerical values and offsets to reduce the number of unique tokens we'll generate
-                # (pre-made vocabulary used this too)
-                operands.format_immediate_log,
-                operands.format_offset_log,
-            )
-        )
+        self.preprocessors = {
+            'arm64': ARM64Preprocessor(
+                operand_formatters=(
+                    # 2-log numerical values and offsets to reduce the number of unique tokens we'll generate
+                    # (pre-made vocabulary used this too)
+                    operands.format_immediate_log,
+                    operands.format_offset_log,
+                )
+            ),
+        }
 
         super().__init__(
             vocab_file=vocab_file,
@@ -203,7 +205,7 @@ class ASMTokenizer(BertTokenizer):
         texts = [texts] if isinstance(texts, str) else texts
         for text in texts:
             cfg = dict(json.loads(text))
-            tokens = self.preprocessor.preprocess(cfg)
+            tokens = self.preprocessors['arm64'].preprocess(cfg)
             encoded_inputs.append(
                 {
                     # The assembly preprocessor already splits the function into model vocabulary tokens.
