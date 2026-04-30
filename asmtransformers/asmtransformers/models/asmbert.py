@@ -200,12 +200,13 @@ class ASMTokenizer(BertTokenizer):
             **kwargs,
         )
 
-    def tokenize(self, texts, split_special_tokens=False, **kwargs):
+    def tokenize(self, texts, architecture='arm64', split_special_tokens=False, **kwargs):
         encoded_inputs = []
         texts = [texts] if isinstance(texts, str) else texts
+        preprocessor = self.preprocessors[architecture]
         for text in texts:
             cfg = dict(json.loads(text))
-            tokens = self.preprocessors['arm64'].preprocess(cfg)
+            tokens = preprocessor.preprocess(cfg)
             encoded_inputs.append(
                 {
                     # The assembly preprocessor already splits the function into model vocabulary tokens.

@@ -7,7 +7,7 @@ from asmtransformers.models.asmbert import ASMTokenizer
 
 def preprocess(tokenizer, dataset, *, num_proc=10):
     def tokenize(function):
-        encoded = tokenizer([function['cfg']])
+        encoded = tokenizer([function['cfg']], architecture=function.get('architecture', 'arm64'))
         return {key: value[0].tolist() for key, value in encoded.items()}
 
     map_kwargs = {'batched': False}
