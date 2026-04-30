@@ -145,6 +145,15 @@ class ASMSentenceTransformer(SentenceTransformer):
 
         return cls(modules=[embedding_model, pooling_model])
 
-    def encode(self, sentences, *args, normalize_embeddings=True, **kwargs):
+    def get_model_kwargs(self):
+        return super().get_model_kwargs() + ['architecture']
+
+    def encode(self, sentences, *args, architecture='arm64', normalize_embeddings=True, **kwargs):
         # Change the default for normalize_embeddings.
-        return super().encode(sentences, *args, normalize_embeddings=normalize_embeddings, **kwargs)
+        return super().encode(
+            sentences,
+            *args,
+            architecture=architecture,
+            normalize_embeddings=normalize_embeddings,
+            **kwargs,
+        )
