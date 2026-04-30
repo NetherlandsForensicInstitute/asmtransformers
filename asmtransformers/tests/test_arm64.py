@@ -4,7 +4,7 @@ import json
 import pytest
 
 from asmtransformers import arm64
-from asmtransformers.models.asmbert import ARM64Tokenizer
+from asmtransformers.models.asmbert import ASMTokenizer
 
 
 @pytest.fixture
@@ -131,7 +131,7 @@ def test_format_operand():
 
 def test_arm64_tokenizer_masks_padding_tokens():
     tokenizer_path = importlib.resources.files('asmtransformers.models').joinpath('arm64bert')
-    tokenizer = ARM64Tokenizer.from_pretrained(tokenizer_path)
+    tokenizer = ASMTokenizer.from_pretrained(tokenizer_path)
 
     encoded = tokenizer([json.dumps([[0, ['ret']]])])
     input_ids = encoded['input_ids'][0]

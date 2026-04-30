@@ -4,7 +4,7 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.sentence_transformer.modules import Pooling
 from torch import nn
 
-from .asmbert import ARM64Tokenizer, ASMBertModel
+from .asmbert import ASMTokenizer, ASMBertModel
 
 
 class ASMTransformerModule(nn.Module):
@@ -18,7 +18,7 @@ class ASMTransformerModule(nn.Module):
     ):
         super().__init__()
         self.model = ASMBertModel.from_pretrained(model_name_or_path, **(model_args or {}))
-        self.tokenizer = ARM64Tokenizer.from_pretrained(model_name_or_path)
+        self.tokenizer = ASMTokenizer.from_pretrained(model_name_or_path)
 
         self.model.tokenizer = self.tokenizer
         self.model.config.tokenizer_class = self.tokenizer.__class__.__name__
