@@ -4,7 +4,7 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.sentence_transformer.modules import Pooling
 from torch import nn
 
-from .asmbert import ASMTokenizer, ASMBertModel
+from .asmbert import ASMBertModel, ASMTokenizer
 
 
 class ASMTransformerModule(nn.Module):
