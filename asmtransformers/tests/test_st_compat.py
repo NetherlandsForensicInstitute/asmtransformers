@@ -155,3 +155,10 @@ def test_compare_identical(anchor, model):
     embeddings = model.encode([anchor, anchor])
     assert np.allclose(embedding, embeddings[0], rtol=1e-3)
     assert np.allclose(embedding, embeddings[1], rtol=1e-3)
+
+
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
+def test_embed_unknown_architecture(anchor, model):
+    with pytest.raises(KeyError, match='mips'):
+        # FIXME: this fails, kwargs are not passed along all the way to the tokenizer :(
+        model.encode(anchor, architecture='mips')
