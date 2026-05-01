@@ -76,7 +76,7 @@ BRANCH_INSTRUCTIONS = (
 
 
 # a separator between operands; commas or whitespaces or a combination of both
-OPERAND_SEPARATOR = re.compile(r'[,\s]+')
+OPERAND_SEPARATOR = re.compile(r'[,\s\(\)]+')
 
 
 class RISCVPreprocessor:
@@ -169,6 +169,16 @@ def parse_operands(operands: str) -> Iterator[str]:
     offset = 0
     while offset < len(operands):
         match operands[offset]:
+            case '(':
+                # a dereference from the expression between brackets, provide as separate tokens surrounded by the
+                # reference brackets
+                # NB: this assumes there will be no nesting of bracketry, as that would slice an incorrect substring
+                end = operands.index(')', offset)
+                yield '('
+                yield from parse_operands(operands[offset + 1: end].lower())
+                yield ')'
+                # next offset is after the reference
+                offset = end + 1
             case ' ' | ',':
                 # treat both spaces and commas as separators (skip these tokens)
                 offset += 1

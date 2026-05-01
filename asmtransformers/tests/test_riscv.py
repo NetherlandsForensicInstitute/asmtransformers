@@ -2,9 +2,8 @@ import importlib.resources
 import json
 
 import pytest
-from networkx import DiGraph
 
-from asmtransformers import arm64, riscv
+from asmtransformers import riscv
 from asmtransformers.models.asmbert import ARM64Tokenizer
 
 
@@ -15,19 +14,22 @@ def tokenizer():
 
 def test_parse_no_operands():
     assert riscv.parse_instruction('ret') == ('ret', ())
+    # there are only 20 items that can have a c. extension, indicating the instruction should be saved in less memory
+    # so we keep it attached to the instruction
     assert riscv.parse_instruction('c.nop') == ('c.nop', ())
 
-# todo: find actual examples
-# j is the only instruction that takes one operand, I couldn't find examples of actual operands that were not
-# 'variablified'
+
 def test_parse_single_operand():
-    assert riscv.parse_instruction('j x0') == ('j', ('x0',))
-    assert riscv.parse_instruction('c.j 0x123456') == ('c.j', ('0x123456',))
+    assert riscv.parse_instruction('j x032') == ('j', ('x032',))
+    assert riscv.parse_instruction('c.j 0x02') == ('c.j', ('0x02',))
+    # we want to separate (sp) like we do in ARM64, as it is attached to a number which would result in a large vocab
+    assert riscv.parse_instruction('c.sdsp ra,0x05(sp)') == ('c.sdsp', ('ra', '0x05', '(', 'sp', ')')
+)
 
 
 def test_parse_multiple_operands():
-    assert arm64.parse_instruction('c.addi4spn s0,sp,0x30') == ('c.addi4spn', ('s0', 'sp', '0x30'))
-    assert arm64.parse_instruction('ld a5,-0x28') == ('ld', ('a5', '-0x28'))
+    assert riscv.parse_instruction('c.addi4spn s0,sp,0x30') == ('c.addi4spn', ('s0', 'sp', '0x30'))
+    assert riscv.parse_instruction('ld a5,-0x28') == ('ld', ('a5', '-0x28'))
 
 
 
@@ -55,22 +57,23 @@ def test_jump_to_unknown_block(tokenizer):
     assert tokens.index('UNK_JUMP_ADDR') - tokens.index('bgt') == 1
 
 
-# def test_offset_prefix_tokens(tokenizer):
-#     graph = DiGraph()
-#     graph.add_node(0x12, asm=['b 0x34'])
-#     graph.add_node(0x34, asm=['b 0x12'])
-#
-#     tokens1 = tokenizer.preprocess(graph)
-#     tokenizer.prefix_tokens = ('[CLS]', '[PAD]')
-#     tokens2 = tokenizer.preprocess(graph)
-#
-#     assert tokens1 != tokens2
-#     assert tokens2[:2] == ['[CLS]', '[PAD]']
-#     # code is the same, jumps should have shifted due to prefixed tokens
-#     assert (tokens1[1], tokens1[3]) == ('JUMP_ADDR_2', 'JUMP_ADDR_0')
-#     assert (tokens2[3], tokens2[5]) == ('JUMP_ADDR_4', 'JUMP_ADDR_2')
-#
-#
+def test_offset_prefix_tokens(tokenizer):
+    graph = {
+        0x12: ['bgt 0x34'],
+        0x34: ['beq 0x12'],
+             }
+
+    tokens1 = tokenizer.preprocess(graph)
+    tokenizer.prefix_tokens = ('[CLS]', '[PAD]')
+    tokens2 = tokenizer.preprocess(graph)
+
+    assert tokens1 != tokens2
+    assert tokens2[:2] == ['[CLS]', '[PAD]']
+    # code is the same, jumps should have shifted due to prefixed tokens
+    assert (tokens1[1], tokens1[3]) == ('JUMP_ADDR_2', 'JUMP_ADDR_0')
+    assert (tokens2[3], tokens2[5]) == ('JUMP_ADDR_4', 'JUMP_ADDR_2')
+
+
 # def test_format_operand():
 #     class ObfuscatingTokenizer(arm64.ARM64Preprocessor):
 #         def format_operand(self, operand):
