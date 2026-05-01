@@ -74,27 +74,28 @@ def test_offset_prefix_tokens(tokenizer):
     assert (tokens2[3], tokens2[5]) == ('JUMP_ADDR_4', 'JUMP_ADDR_2')
 
 
-# def test_format_operand():
-#     class ObfuscatingTokenizer(arm64.ARM64Preprocessor):
-#         def format_operand(self, operand):
-#             if arm64.is_offset(operand):
-#                 return 'OBFUSCATED'
-#             else:
-#                 return operand
-#
-#     graph = DiGraph()
-#     graph.add_node(0x12, asm=['add x0,x0,0x78', 'b 0x78'])
-#     graph.add_node(0x78, asm=['sub w0,w0,0x78', 'ret'])
-#
-#     tokens = ObfuscatingTokenizer().preprocess(graph)
-#
-#     # expect a jump token towards the second basic block, but expect the other two occurrences of 0x78 to have been
-#     # obfuscated by obfuscate_offset
-#     assert 'JUMP_ADDR_6' in tokens
-#     assert '0x78' not in tokens
-#     assert tokens.count('OBFUSCATED') == 2
-#
-#
+def test_format_operand():
+    class ObfuscatingTokenizer(riscv.RISCVPreprocessor):
+        def format_operand(self, operand):
+            if riscv.is_offset(operand):
+                return 'OBFUSCATED'
+            else:
+                return operand
+
+    # w0 does not exist in riscv
+    graph = {
+        0x12: ['add x0,x0,0x78', 'beq 0x78'],
+        0x78: ['sub w0,w0,0x78', 'ret'],
+    }
+
+    tokens = ObfuscatingTokenizer().preprocess(graph)
+    # expect a jump token towards the second basic block, but expect the other two occurrences of 0x78 to have been
+    # obfuscated by obfuscate_offset
+    assert 'JUMP_ADDR_6' in tokens
+    assert '0x78' not in tokens
+    assert tokens.count('OBFUSCATED') == 2
+
+# todo: adjust to risc-v; requires a riscv subfolder under asmtransformers/models
 # def test_arm64_tokenizer_masks_padding_tokens():
 #     tokenizer_path = importlib.resources.files('asmtransformers.models').joinpath('arm64bert')
 #     tokenizer = ARM64Tokenizer.from_pretrained(tokenizer_path)
