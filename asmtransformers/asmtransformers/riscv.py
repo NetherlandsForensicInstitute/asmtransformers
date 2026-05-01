@@ -39,22 +39,36 @@ CONDITION_CODES = (
     'al',
 )
 
-# todo: change the below to risc-v
+# branch instructions will be treated differently, as we need to convert their addresses into jump address tokens
 BRANCH_INSTRUCTIONS = (
-    # direct branch
-    'b',
-    'br',
-    # branch + link
-    'bl',
-    'blr',
-    # branch on compare to zero
-    'cbz',
-    'cbnz',
+    # branch (not) equal to zero
+    'beq',
+    'bne',
+    'beqz',
+    'bnez',
+    # less than
+    'blt',
+    'bltu',
+    'bltz',
+    # greater than
+    'bgt',
+    'bgtu',
+    'bgtz',
+    # less or equal
+    'ble',
+    'bleu',
+    'blez',
+    # greater or equal
+    'bge',
+    'bgeu',
+    'bgez',
+    # jump
+    'j',
+    'jal',
+    'jalr',
     # return
     'ret',
-    # test zero bit
-    'tbz',
-    'tbnz',
+    'call',
 )
 # conditional branches
 # todo: there seems to be no b. in risc-v, figure out what to do with this
@@ -65,7 +79,7 @@ BRANCH_INSTRUCTIONS = (
 OPERAND_SEPARATOR = re.compile(r'[,\s]+')
 
 
-class ARM64Preprocessor:
+class RISCVPreprocessor:
     def __init__(self, *, context_length=512, prefix_tokens=None, operand_formatters=None):
         self.context_length = context_length
         self.prefix_tokens = prefix_tokens or ()
