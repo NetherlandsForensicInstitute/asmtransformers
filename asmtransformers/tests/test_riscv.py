@@ -1,10 +1,6 @@
-import importlib.resources
-import json
-
 import pytest
 
 from asmtransformers import riscv
-from asmtransformers.models.asmbert import ARM64Tokenizer
 
 
 @pytest.fixture
@@ -82,7 +78,7 @@ def test_format_operand():
             else:
                 return operand
 
-    # w0 does not exist in riscv
+    # todo: w0 does not exist in riscv, make this actual riscv compliant
     graph = {
         0x12: ['add x0,x0,0x78', 'beq 0x78'],
         0x78: ['sub w0,w0,0x78', 'ret'],
