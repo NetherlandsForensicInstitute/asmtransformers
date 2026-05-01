@@ -8,37 +8,6 @@ from asmtransformers.operands import is_offset
 # useful info:
 # https://projectf.io/posts/riscv-cheat-sheet/
 
-# todo: find out if this applies, given that BRANCH-INSTRUCTIONS isn't applicable
-# maybe it is not applicable for BRANCH INSTRUCTIONS but the structure might be useful for compressed instruction
-# see https://docs.riscv.org/reference/isa/unpriv/c-st-ext.html
-
-CONDITION_CODES = (
-    # equal / not equal
-    'eq',
-    'ne',
-    # carry & unsigned
-    'cs',
-    'hs',
-    'cc',
-    'lo',
-    # negative / positive
-    'mi',
-    'pl',
-    # overflow
-    'vs',
-    'vc',
-    # unsigned higher / lower
-    'hi',
-    'ls',
-    # greater & lesser (+ equal)
-    'gt',
-    'ge',
-    'lt',
-    'le',
-    # always (b.al == b?)
-    'al',
-)
-
 # branch instructions will be treated differently, as we need to convert their addresses into jump address tokens
 BRANCH_INSTRUCTIONS = (
     # branch (not) equal to zero
@@ -70,10 +39,6 @@ BRANCH_INSTRUCTIONS = (
     'ret',
     'call',
 )
-# conditional branches
-# todo: there seems to be no b. in risc-v, figure out what to do with this
-#BRANCH_INSTRUCTIONS += tuple(f'b.{cc}' for cc in CONDITION_CODES)
-
 
 # a separator between operands; commas or whitespaces or a combination of both
 OPERAND_SEPARATOR = re.compile(r'[,\s\(\)]+')
@@ -108,16 +73,6 @@ class RISCVPreprocessor:
         # start with an empty token list unless we've been handed a prefix (e.g. 'CLS'), making sure that the token
         # offsets we're collecting line up with the token offsets where those blocks actually start (see below)
         tokens = list(self.prefix_tokens)
-
-        if isinstance(function_blocks, DiGraph):
-            # function_blocks is still in graph form, assume it's in jTrans form
-            # all we need is a mapping of a block's id or offset to its assembly code
-            function_blocks = {
-                block_id: block['asm']
-                for block_id, block
-                # sort the graph by block id to force deterministic results
-                in sorted(function_blocks.nodes.items())
-            }
 
         for block_id, block in function_blocks.items():
             # log the 'next' token offset as the start of the block that will be processed next
