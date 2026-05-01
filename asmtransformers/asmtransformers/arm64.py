@@ -178,7 +178,8 @@ def parse_operands(operands: str) -> Iterator[str]:
                 offset += 1
             case _:
                 # any other case is 'just an operand'
-                end = end.start() if (end := OPERAND_SEPARATOR.search(operands, offset)) else len(operands)
+                # find the starting index of the separator; marking the end of the current operand
+                end = sep.start() if (sep := OPERAND_SEPARATOR.search(operands, offset)) else len(operands)
                 yield operands[offset:end].lower()
                 # next offset is either a separator (which will get ignored in the next iteration) or past the end of
                 # the string (causing tokenization to end)
