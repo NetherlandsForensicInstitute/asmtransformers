@@ -1,6 +1,6 @@
 import sys
 
-from datasets import Dataset
+import datasets
 
 from asmtransformers.models.asmbert import ARM64Tokenizer
 
@@ -21,8 +21,11 @@ if __name__ == '__main__':
     # expect 3 arguments from cli
     tokenizer, data_in, data_out = sys.argv[1:]
 
+    tokenizer = ARM64Tokenizer.from_pretrained(tokenizer)
+    dataset = datasets.load_from_disk(data_in)
+
     # let the tokenizer preprocess data from data_in, write the result to data_out
-    preprocess(
-        ARM64Tokenizer.from_pretrained(tokenizer),
-        Dataset.load_from_disk(data_in),
-    ).save_to_disk(data_out)
+    for subset in dataset:
+        dataset[subset] = preprocess(tokenizer, dataset[subset])
+
+    dataset.save_to_disk(data_out)

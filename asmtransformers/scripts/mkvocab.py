@@ -21,7 +21,7 @@ if __name__ == '__main__':
     print('opening dataset ...')
     dataset = datasets.load_from_disk(DATASET)
     print('... done')
-    preprocessor = arm64.Preprocessor(
+    preprocessor = arm64.ARM64Preprocessor(
         operand_formatters=(
             operands.format_immediate_log,
             operands.format_offset_log,

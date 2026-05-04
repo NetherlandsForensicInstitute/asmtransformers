@@ -58,7 +58,7 @@ BRANCH_INSTRUCTIONS += tuple(f'b.{cc}' for cc in CONDITION_CODES)
 OPERAND_SEPARATOR = re.compile(r'[,\s]+')
 
 
-class Preprocessor:
+class ARM64Preprocessor:
     def __init__(self, *, context_length=512, prefix_tokens=None, operand_formatters=None):
         self.context_length = context_length
         self.prefix_tokens = prefix_tokens or ()
@@ -173,10 +173,8 @@ def parse_operands(operands: str) -> Iterator[str]:
                 yield '}'
                 # next offset is after the set
                 offset = end + 1
-            # treat both spaces and commas as separators (skip these tokens)
-            case ' ':
-                offset += 1
-            case ',':
+            case ' ' | ',':
+                # treat both spaces and commas as separators (skip these tokens)
                 offset += 1
             case _:
                 # any other case is 'just an operand'
