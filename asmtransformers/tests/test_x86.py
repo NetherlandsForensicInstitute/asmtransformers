@@ -2,7 +2,7 @@ import pytest
 from networkx import DiGraph
 
 from asmtransformers import x86
-from asmtransformers.x86 import is_offset
+from asmtransformers.operands import is_offset
 
 
 @pytest.fixture
