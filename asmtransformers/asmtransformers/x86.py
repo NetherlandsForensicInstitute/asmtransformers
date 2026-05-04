@@ -163,8 +163,9 @@ def _parse_mem_expr(expr: str) -> Iterator[str]:
 
 class X86Preprocessor:
     """
-    Based on the ARM64 preprocessor but adjusted for amd64 (x86_64) arch. 
+    Based on the ARM64 preprocessor but adjusted for amd64 (x86_64) arch.
     """
+
     def __init__(
         self,
         *,
