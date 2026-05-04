@@ -208,6 +208,7 @@ class X86Preprocessor:
                 tokens.append(mnemonic)
                 for operand in self.parse_operands(operand_str) if operand_str else ():
                     if mnemonic in self.branch_instructions and is_offset(operand):
+                        # can't slice at place 2 because negative hex values so therefore use value from is_offset regex
                         jump_target = int(is_offset(operand).group('value'), base=16)
                         jump_offsets[len(tokens)] = jump_target
                     else:
