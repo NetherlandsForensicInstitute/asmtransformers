@@ -200,6 +200,7 @@ class ARM64Tokenizer(BertTokenizer):
 
     def tokenize(self, texts, split_special_tokens=False, **kwargs):
         encoded_inputs = []
+        texts = [texts] if isinstance(texts, str) else texts
         for text in texts:
             cfg = dict(json.loads(text))
             tokens = self.preprocessor.preprocess(cfg)
