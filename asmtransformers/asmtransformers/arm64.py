@@ -1,8 +1,6 @@
 import re
 from collections.abc import Iterator
 
-from networkx import DiGraph
-
 from asmtransformers.operands import is_offset
 
 
@@ -78,7 +76,7 @@ class ARM64Preprocessor:
             if replacement := formatter(operand):
                 return replacement
 
-    def preprocess(self, function_blocks: dict[int, list[str]] | DiGraph) -> list[str]:
+    def preprocess(self, function_blocks: dict[int, list[str]]) -> list[str]:
         # collect token offsets for each basic block being processed as {block id → token offset}
         block_offsets = {}
         # collect token offsets for tokens that need to be patched to jump tokens {token offset → block id}
@@ -88,15 +86,7 @@ class ARM64Preprocessor:
         # offsets we're collecting line up with the token offsets where those blocks actually start (see below)
         tokens = list(self.prefix_tokens)
 
-        if isinstance(function_blocks, DiGraph):
-            # function_blocks is still in graph form, assume it's in jTrans form
-            # all we need is a mapping of a block's id or offset to its assembly code
-            function_blocks = {
-                block_id: block['asm']
-                for block_id, block
-                # sort the graph by block id to force deterministic results
-                in sorted(function_blocks.nodes.items())
-            }
+        function_blocks = dict(sorted(function_blocks.items()))
 
         for block_id, block in function_blocks.items():
             # log the 'next' token offset as the start of the block that will be processed next

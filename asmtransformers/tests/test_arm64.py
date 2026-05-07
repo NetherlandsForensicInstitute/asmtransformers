@@ -2,7 +2,6 @@ import importlib.resources
 import json
 
 import pytest
-from networkx import DiGraph
 
 from asmtransformers import arm64
 from asmtransformers.models.asmbert import ARM64Tokenizer
@@ -35,8 +34,7 @@ def test_parse_multiple_operands():
 
 
 def test_tokenize_single_block(tokenizer):
-    graph = DiGraph()
-    graph.add_node(0, asm=['ld x0,#0x1234', 'add x0,x0,#0x1234', 'ret'])
+    graph = {42: ['ld x0,#0x1234', 'add x0,x0,#0x1234', 'ret']}
 
     assert tokenizer.preprocess(graph) == [
         'ld',
@@ -51,10 +49,10 @@ def test_tokenize_single_block(tokenizer):
 
 
 def test_tokenize_branching_blocks(tokenizer):
-    graph = DiGraph()
-    # NB: nodes are in 'reverse order', tokenizer should (?) reorder these based on their node ids
-    graph.add_node(42, asm=['add x2,x2,#0x290', 'b.eq x2,0x0'])  # branch to offset 0
-    graph.add_node(0, asm=['sub x2,x2,#0x290', 'bl 0x2a'])  # branch to offset 42
+    graph = {
+        42: ['add x2,x2,#0x290', 'b.eq x2,0x0'],  # branch to offset 0
+        0: ['sub x2,x2,#0x290', 'bl 0x2a'],
+    }  # branch to offset 42
 
     assert tokenizer.preprocess(graph) == [
         'sub',
@@ -89,9 +87,7 @@ def test_context_length_boundary():
 
 
 def test_jump_to_unknown_block(tokenizer):
-    graph = DiGraph()
-    graph.add_node(0x12, asm=['b.gt 0x123', 'add x0 x0 #0x12'])
-    graph.add_node(0x34, asm=['b 0x12', 'sub x0 x0 #0x12'])
+    graph = {0x12: ['b.gt 0x123', 'add x0 x0 #0x12'], 0x34: ['b 0x12', 'sub x0 x0 #0x12']}
 
     tokens = tokenizer.preprocess(graph)
 
@@ -99,10 +95,10 @@ def test_jump_to_unknown_block(tokenizer):
 
 
 def test_offset_prefix_tokens(tokenizer):
-    graph = DiGraph()
-    graph.add_node(0x12, asm=['b 0x34'])
-    graph.add_node(0x34, asm=['b 0x12'])
-
+    graph = {
+        0x12: ['b 0x34'],
+        0x34: ['b 0x12'],
+    }
     tokens1 = tokenizer.preprocess(graph)
     tokenizer.prefix_tokens = ('[CLS]', '[PAD]')
     tokens2 = tokenizer.preprocess(graph)
@@ -122,9 +118,7 @@ def test_format_operand():
             else:
                 return operand
 
-    graph = DiGraph()
-    graph.add_node(0x12, asm=['add x0,x0,0x78', 'b 0x78'])
-    graph.add_node(0x78, asm=['sub w0,w0,0x78', 'ret'])
+    graph = {0x12: ['add x0,x0,0x78', 'b 0x78'], 0x78: ['sub w0,w0,0x78', 'ret']}
 
     tokens = ObfuscatingTokenizer().preprocess(graph)
 
