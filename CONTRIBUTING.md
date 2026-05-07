@@ -47,6 +47,10 @@ pdm run test
 pdm run all
 ```
 
+`pdm run check` validates the lockfile and runs Ruff format/lint checks. `pdm run test` runs the test suite
+with coverage collection. `pdm run all` is the pre-PR convenience command; it currently runs `check`, `test`, and
+the coverage report.
+
 Use `pdm run fix` only when you intentionally want Ruff to rewrite formatting or lint issues.
 
 Python style is configured in each package's `pyproject.toml`:
@@ -85,9 +89,9 @@ If a behavior change is intentional, update or add tests and documentation that 
 
 For Python changes, run the commands that match the scope of your change:
 
-- `pdm run test` for behavior changes.
-- `pdm run check` for style, lockfile, and lint validation.
-- `pdm run all` before opening a pull request.
+- `pdm run test` while validating behavior changes.
+- `pdm run check` while validating style, lockfile, and lint changes.
+- `pdm run all` in each affected Python project before opening a pull request.
 
 For documentation-only changes, runtime tests are not normally required.
 
