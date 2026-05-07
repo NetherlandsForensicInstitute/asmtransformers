@@ -194,7 +194,7 @@ class X86Preprocessor:
         block_offsets = {}
         jump_offsets = {}
         tokens = list(self.prefix_tokens)
-        
+
         function_blocks = dict(sorted(function_blocks.items()))
 
         for block_id, block in function_blocks.items():
