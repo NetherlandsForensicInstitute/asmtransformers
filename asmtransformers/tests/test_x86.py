@@ -1,5 +1,4 @@
 import pytest
-from networkx import DiGraph
 
 from asmtransformers import x86
 from asmtransformers.operands import is_offset
@@ -46,8 +45,8 @@ def test_parse_complex_memory():
 
 
 def test_tokenize_single_block(tokenizer):
-    graph = DiGraph()
-    graph.add_node(0, asm=['mov rax, 0x1234', 'add rax, 0x1234', 'ret'])
+    
+    graph={0: ['mov rax, 0x1234', 'add rax, 0x1234', 'ret']}
 
     assert tokenizer.preprocess(graph) == [
         'mov',
@@ -61,10 +60,12 @@ def test_tokenize_single_block(tokenizer):
 
 
 def test_tokenize_branching_blocks(tokenizer):
-    graph = DiGraph()
+
     # NB: nodes are in 'reverse order', tokenizer should reorder these based on their node ids
-    graph.add_node(42, asm=['add rcx, 0x290', 'je 0x0'])  # branch to offset 0
-    graph.add_node(0, asm=['sub rcx, 0x290', 'jmp 0x2a'])  # branch to offset 42
+    graph = {
+        42: ['add rcx, 0x290', 'je 0x0'], 
+        0: ['sub rcx, 0x290', 'jmp 0x2a']
+    }  # branch to offset 0
 
     assert tokenizer.preprocess(graph) == [
         'sub',
@@ -94,20 +95,21 @@ def test_context_length_boundary():
 
 
 def test_jump_to_unknown_block(tokenizer):
-    graph = DiGraph()
-    graph.add_node(0x12, asm=['jg 0x999', 'add rax, 0x12'])
-    graph.add_node(0x34, asm=['jmp 0x12', 'sub rax, 0x12'])
-
-    tokens = tokenizer.preprocess(graph)
+    graph = {
+        0x12 : ['jg 0x999', 'add rax, 0x12'],
+        0x34: ['jmp 0x12', 'sub rax, 0x12']
+    }
+    tokens= tokenizer.preprocess(graph)
 
     assert tokens.index('UNK_JUMP_ADDR') - tokens.index('jg') == 1
 
 
 def test_offset_prefix_tokens(tokenizer):
-    graph = DiGraph()
-    graph.add_node(0x12, asm=['jmp 0x34'])
-    graph.add_node(0x34, asm=['jmp 0x12'])
-
+    
+    graph= {
+        0x12: ['jmp 0x34'],
+        0x34 :['jmp 0x12']
+    }
     tokens1 = tokenizer.preprocess(graph)
     tokenizer.prefix_tokens = ('[CLS]', '[PAD]')
     tokens2 = tokenizer.preprocess(graph)
@@ -127,10 +129,10 @@ def test_format_operand():
             else:
                 return operand
 
-    graph = DiGraph()
-    graph.add_node(0x12, asm=['add rax, 0x78', 'jmp 0x78'])
-    graph.add_node(0x78, asm=['sub rbx, 0x78', 'ret'])
-
+    graph = {
+        0x12: ['add rax, 0x78', 'jmp 0x78'],
+        0x78: ['sub rbx, 0x78', 'ret']
+    }
     tokens = ObfuscatingPreprocessor().preprocess(graph)
 
     # jmp 0x78 resolves to a JUMP_ADDR token; the other two 0x78 occurrences are obfuscated

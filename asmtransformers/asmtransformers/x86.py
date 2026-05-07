@@ -1,8 +1,6 @@
 import re
 from collections.abc import Callable, Iterator
 
-from networkx import DiGraph
-
 from asmtransformers.operands import is_offset
 
 
@@ -61,8 +59,6 @@ BRANCH_INSTRUCTIONS = (
 )
 
 
-# Ghidra prefixes memory operands with a size qualifier followed by the keyword 'ptr'
-# for example "dword ptr [rbp + -0x8]". We concat these two words into 1 mem token.
 SIZE_QUALIFIERS = (
     'byte',
     'word',
@@ -198,9 +194,8 @@ class X86Preprocessor:
         block_offsets = {}
         jump_offsets = {}
         tokens = list(self.prefix_tokens)
-
-        if isinstance(function_blocks, DiGraph):
-            function_blocks = {block_id: block['asm'] for block_id, block in sorted(function_blocks.nodes.items())}
+        
+        function_blocks = dict(sorted(function_blocks.items()))
 
         for block_id, block in function_blocks.items():
             block_offsets[block_id] = len(tokens)
@@ -211,9 +206,9 @@ class X86Preprocessor:
 
                 tokens.append(mnemonic)
                 for operand in self.parse_operands(operand_str) if operand_str else ():
-                    if mnemonic in self.branch_instructions and is_offset(operand):
+                    if mnemonic in self.branch_instructions and (offset := is_offset(operand)):
                         # can't slice at place 2 because negative hex values so therefore use value from is_offset regex
-                        jump_target = int(is_offset(operand).group('value'), base=16)
+                        jump_target = int(offset.group('value'), base=16)
                         jump_offsets[len(tokens)] = jump_target
                     else:
                         operand = self.format_operand(operand) or operand
