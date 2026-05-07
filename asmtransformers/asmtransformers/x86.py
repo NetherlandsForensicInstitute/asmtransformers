@@ -9,9 +9,6 @@ BRANCH_INSTRUCTIONS = (
     # unconditional jump and call/return
     'jmp',
     'call',
-    'ret',
-    'retn',
-    'retf',
     # equal / zero
     'je',
     'jz',
