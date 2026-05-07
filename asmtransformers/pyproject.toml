@@ -14,6 +14,7 @@ authors = [
     {name = "Mattijs Ugen", email = "144798+akaIDIOT@users.noreply.github.com"},
     {name = "Judith van de Wetering", email = "22766364+judithvdw@users.noreply.github.com"},
     {name = "Anne Fleur van Luenen", email = "50952036+fleurvanl@users.noreply.github.com"},
+    {name = "Lasse Vulto", email = "113847047+AstroVasseL@users.noreply.github.com"},
 ]
 dependencies = [
     "accelerate",
