@@ -19,14 +19,12 @@ def test_parse_single_operand():
     assert riscv.parse_instruction('j x032') == ('j', ('x032',))
     assert riscv.parse_instruction('c.j 0x02') == ('c.j', ('0x02',))
     # we want to separate (sp) like we do in ARM64, as it is attached to a number which would result in a large vocab
-    assert riscv.parse_instruction('c.sdsp ra,0x05(sp)') == ('c.sdsp', ('ra', '0x05', '(', 'sp', ')')
-)
+    assert riscv.parse_instruction('c.sdsp ra,0x05(sp)') == ('c.sdsp', ('ra', '0x05', '(', 'sp', ')'))
 
 
 def test_parse_multiple_operands():
     assert riscv.parse_instruction('c.addi4spn s0,sp,0x30') == ('c.addi4spn', ('s0', 'sp', '0x30'))
     assert riscv.parse_instruction('ld a5,-0x28') == ('ld', ('a5', '-0x28'))
-
 
 
 def test_context_length_boundary():
@@ -45,10 +43,12 @@ def test_context_length_boundary():
 
 
 def test_jump_to_unknown_block(tokenizer):
-    tokens = tokenizer.preprocess({
+    tokens = tokenizer.preprocess(
+        {
             0x12: ['bgt 0x123', 'add x0 x0 #0x12'],
             0x34: ['beq 0x12', 'sub x0 x0 #0x12'],
-        })
+        }
+    )
 
     assert tokens.index('UNK_JUMP_ADDR') - tokens.index('bgt') == 1
 
@@ -57,7 +57,7 @@ def test_offset_prefix_tokens(tokenizer):
     graph = {
         0x12: ['bgt 0x34'],
         0x34: ['beq 0x12'],
-             }
+    }
 
     tokens1 = tokenizer.preprocess(graph)
     tokenizer.prefix_tokens = ('[CLS]', '[PAD]')
@@ -90,6 +90,7 @@ def test_format_operand():
     assert 'JUMP_ADDR_6' in tokens
     assert '0x78' not in tokens
     assert tokens.count('OBFUSCATED') == 2
+
 
 # todo: adjust to risc-v; requires a riscv subfolder under asmtransformers/models
 # def test_arm64_tokenizer_masks_padding_tokens():

@@ -5,6 +5,7 @@ from networkx import DiGraph
 
 from asmtransformers.operands import is_offset
 
+
 # useful info:
 # https://projectf.io/posts/riscv-cheat-sheet/
 
@@ -130,7 +131,7 @@ def parse_operands(operands: str) -> Iterator[str]:
                 # NB: this assumes there will be no nesting of bracketry, as that would slice an incorrect substring
                 end = operands.index(')', offset)
                 yield '('
-                yield from parse_operands(operands[offset + 1: end].lower())
+                yield from parse_operands(operands[offset + 1 : end].lower())
                 yield ')'
                 # next offset is after the reference
                 offset = end + 1
