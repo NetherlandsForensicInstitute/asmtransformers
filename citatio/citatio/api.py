@@ -38,10 +38,11 @@ async def add_function(  # NB: function body isn't actually async, forcing it to
     request: Request,
     name: Annotated[str, Body()],
     cfg: Annotated[ControlFlowGraph, Body()],
+    architecture: str = 'arm64',
     binary_name: Annotated[str, Body()] = None,
     binary_sha256: Annotated[str, Body()] = None,
 ):
-    embedding = request.app.state.model.encode(str(cfg))
+    embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
     request.app.state.database.add_function(name, cfg, embedding, binary_name, binary_sha256)
 
 
@@ -49,7 +50,8 @@ async def add_function(  # NB: function body isn't actually async, forcing it to
 async def search_function(  # NB: function body isn't actually async, forcing it to run blocking on the event loop
     request: Request,
     cfg: Annotated[ControlFlowGraph, Body()],
+    architecture: str = 'arm64',
     top_n: Annotated[int, Body()] = 25,
 ):
-    embedding = request.app.state.model.encode(str(cfg))
+    embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
     return request.app.state.database.search_function(embedding, top_n)

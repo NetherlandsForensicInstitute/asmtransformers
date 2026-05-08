@@ -158,7 +158,7 @@ class ASMBertForMaskedLM(BertForMaskedLM):
         return output
 
 
-class ARM64Tokenizer(BertTokenizer):
+class ASMTokenizer(BertTokenizer):
     def __init__(
         self,
         vocab_file,
@@ -174,14 +174,16 @@ class ARM64Tokenizer(BertTokenizer):
         strip_accents=None,
         **kwargs,
     ):
-        self.preprocessor = ARM64Preprocessor(
-            operand_formatters=(
-                # 2-log numerical values and offsets to reduce the number of unique tokens we'll generate
-                # (pre-made vocabulary used this too)
-                operands.format_immediate_log,
-                operands.format_offset_log,
-            )
-        )
+        self.preprocessors = {
+            'arm64': ARM64Preprocessor(
+                operand_formatters=(
+                    # 2-log numerical values and offsets to reduce the number of unique tokens we'll generate
+                    # (pre-made vocabulary used this too)
+                    operands.format_immediate_log,
+                    operands.format_offset_log,
+                )
+            ),
+        }
 
         super().__init__(
             vocab_file=vocab_file,
@@ -198,12 +200,13 @@ class ARM64Tokenizer(BertTokenizer):
             **kwargs,
         )
 
-    def tokenize(self, texts, split_special_tokens=False, **kwargs):
+    def tokenize(self, texts, architecture='arm64', split_special_tokens=False, **kwargs):
         encoded_inputs = []
         texts = [texts] if isinstance(texts, str) else texts
+        preprocessor = self.preprocessors[architecture]
         for text in texts:
             cfg = dict(json.loads(text))
-            tokens = self.preprocessor.preprocess(cfg)
+            tokens = preprocessor.preprocess(cfg)
             encoded_inputs.append(
                 {
                     # The assembly preprocessor already splits the function into model vocabulary tokens.

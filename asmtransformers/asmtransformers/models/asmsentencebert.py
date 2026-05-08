@@ -4,7 +4,7 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.sentence_transformer.modules import Pooling
 from torch import nn
 
-from .asmbert import ARM64Tokenizer, ASMBertModel
+from .asmbert import ASMBertModel, ASMTokenizer
 
 
 class ASMTransformerModule(nn.Module):
@@ -18,18 +18,14 @@ class ASMTransformerModule(nn.Module):
     ):
         super().__init__()
         self.model = ASMBertModel.from_pretrained(model_name_or_path, **(model_args or {}))
-        self.tokenizer = ARM64Tokenizer.from_pretrained(model_name_or_path)
+        self.tokenizer = ASMTokenizer.from_pretrained(model_name_or_path)
+        self.forward_kwargs = ['architecture']
 
         self.model.tokenizer = self.tokenizer
         self.model.config.tokenizer_class = self.tokenizer.__class__.__name__
 
     def get_embedding_dimension(self) -> int:
         return self.model.config.hidden_size
-
-    def preprocess(self, inputs, prompt=None, **kwargs):
-        if prompt:
-            inputs = [prompt + text for text in inputs]
-        return self.tokenizer(inputs, **kwargs)
 
     def tokenize(self, texts, **kwargs):
         return self.preprocess(texts, **kwargs)
@@ -46,6 +42,11 @@ class ASMTransformerModule(nn.Module):
         outputs = self.model(**model_inputs)
         features['token_embeddings'] = outputs.last_hidden_state
         return features
+
+    def preprocess(self, inputs, prompt=None, architecture='arm64', **kwargs):
+        if prompt:
+            inputs = [prompt + text for text in inputs]
+        return self.tokenizer(inputs, architecture=architecture, **kwargs)
 
 
 def apply_freeze_policy(bert_model, *, freeze_embeddings=True, freeze_layer_count=10):
