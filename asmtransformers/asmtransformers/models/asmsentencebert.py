@@ -79,6 +79,11 @@ class ASMSTTransformer(Transformer):
         if hasattr(self, 'model'):
             self.model.tokenizer = tokenizer
 
+    def preprocess(self, inputs, prompt=None, architecture='arm64', **kwargs):
+        if prompt:
+            inputs = [prompt + text for text in inputs]
+        return self.tokenizer(inputs, architecture=architecture, **kwargs)
+
 
 class ASMSentenceTransformer(SentenceTransformer):
     """Convenience class that allows for easy finetuning and inference for a
