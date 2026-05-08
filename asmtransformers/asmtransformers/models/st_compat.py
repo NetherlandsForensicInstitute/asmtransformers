@@ -5,7 +5,7 @@ from typing import Any
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.sentence_transformer.modules import Pooling
 
-from .asmbert import ARM64Tokenizer
+from .asmbert import ASMTokenizer
 from .asmsentencebert import ASMTransformerModule, build_finetuning_model
 from .embedder import ASMEmbedder
 
@@ -28,7 +28,7 @@ class STCheckpointTransformerModule(ASMTransformerModule):
     ):
         super().__init__(model_name_or_path, model_args=model_args)
         if processor_kwargs:
-            self.tokenizer = ARM64Tokenizer.from_pretrained(model_name_or_path, **processor_kwargs)
+            self.tokenizer = ASMTokenizer.from_pretrained(model_name_or_path, **processor_kwargs)
             self.model.tokenizer = self.tokenizer
         self.max_seq_length = max_seq_length or min(
             self.model.config.max_position_embeddings,
@@ -73,11 +73,16 @@ def build_sentence_transformer(model_name_or_path, model_args=None):
 
 
 def _normalize_encode_by_default(model):
+    get_model_kwargs = model.get_model_kwargs
     encode = model.encode
+
+    def get_model_kwargs_with_architecture():
+        return get_model_kwargs() + ['architecture']
 
     def encode_with_normalization_default(sentences, *args, normalize_embeddings=True, **kwargs):
         return encode(sentences, *args, normalize_embeddings=normalize_embeddings, **kwargs)
 
+    model.get_model_kwargs = get_model_kwargs_with_architecture
     model.encode = encode_with_normalization_default
     return model
 
@@ -97,7 +102,7 @@ def load_st_embedding_as_native_embedder(model_name_or_path, *, model_args=None,
     """Load an old ST-format embedding checkpoint through the native embedder.
 
     Remove this when published embedding checkpoints are converted to native
-    ASMBertModel/ARM64Tokenizer checkpoint directories.
+    ASMBertModel/ASMTokenizer checkpoint directories.
     """
 
     model_path = _resolve_transformer_path(model_name_or_path)

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from asmtransformers.models.asmbert import ARM64Tokenizer, ASMBertModel
+from asmtransformers.models.asmbert import ASMBertModel, ASMTokenizer
 
 
 class ASMEmbedder:
@@ -17,7 +17,7 @@ class ASMEmbedder:
 
     @classmethod
     def from_pretrained(cls, model_name_or_path, *, model_args=None, tokenizer_args=None, device=None):
-        tokenizer = ARM64Tokenizer.from_pretrained(model_name_or_path, **(tokenizer_args or {}))
+        tokenizer = ASMTokenizer.from_pretrained(model_name_or_path, **(tokenizer_args or {}))
         model = ASMBertModel.from_pretrained(model_name_or_path, **(model_args or {}))
         return cls(model, tokenizer, device=device)
 
@@ -33,6 +33,7 @@ class ASMEmbedder:
         batch_size=32,
         normalize_embeddings=None,
         convert_to_numpy=True,
+        **tokenizer_kwargs,
     ):
         single_input = isinstance(sentences, str)
         sentences = [sentences] if single_input else list(sentences)
@@ -42,7 +43,7 @@ class ASMEmbedder:
         with torch.no_grad():
             for start in range(0, len(sentences), batch_size):
                 batch = sentences[start : start + batch_size]
-                inputs = self.tokenizer(batch)
+                inputs = self.tokenizer(batch, **tokenizer_kwargs)
                 inputs = {key: value.to(self.device) for key, value in inputs.items()}
                 outputs = self.model(**inputs)
                 pooled = self.mean_pool(outputs.last_hidden_state, inputs['attention_mask'])
