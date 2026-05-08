@@ -6,7 +6,7 @@ from sentence_transformers.base.modality import InputFormatter
 from sentence_transformers.sentence_transformer.modules import Pooling, Transformer
 from torch import nn
 
-from .asmbert import ARM64Tokenizer, ASMBertModel
+from .asmbert import ASMBertModel, ASMTokenizer
 
 
 class ASMSTTransformer(Transformer):
@@ -79,6 +79,11 @@ class ASMSTTransformer(Transformer):
         if hasattr(self, 'model'):
             self.model.tokenizer = tokenizer
 
+    def preprocess(self, inputs, prompt=None, architecture='arm64', **kwargs):
+        if prompt:
+            inputs = [prompt + text for text in inputs]
+        return self.tokenizer(inputs, architecture=architecture, **kwargs)
+
 
 class ASMSentenceTransformer(SentenceTransformer):
     """Convenience class that allows for easy finetuning and inference for a
@@ -109,7 +114,7 @@ class ASMSentenceTransformer(SentenceTransformer):
 
     @staticmethod
     def _build_tokenizer(model_name_or_path):
-        return ARM64Tokenizer.from_pretrained(model_name_or_path)
+        return ASMTokenizer.from_pretrained(model_name_or_path)
 
     @classmethod
     def _build_modules(cls, model_name_or_path, model_args=None):
@@ -145,6 +150,15 @@ class ASMSentenceTransformer(SentenceTransformer):
 
         return cls(modules=[embedding_model, pooling_model])
 
-    def encode(self, sentences, *args, normalize_embeddings=True, **kwargs):
+    def get_model_kwargs(self):
+        return super().get_model_kwargs() + ['architecture']
+
+    def encode(self, sentences, *args, architecture='arm64', normalize_embeddings=True, **kwargs):
         # Change the default for normalize_embeddings.
-        return super().encode(sentences, *args, normalize_embeddings=normalize_embeddings, **kwargs)
+        return super().encode(
+            sentences,
+            *args,
+            architecture=architecture,
+            normalize_embeddings=normalize_embeddings,
+            **kwargs,
+        )
