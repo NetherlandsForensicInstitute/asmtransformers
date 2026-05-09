@@ -49,8 +49,6 @@ There are two layers:
 - `ASMBertForMaskedLM` and `ASMBertModel` adapt Hugging Face BERT classes to the jTrans-style setup, including shared word/position embeddings and jump-target prediction support during pretraining.
 - `build_finetuning_model()` adapts the pretrained transformer into a plain `SentenceTransformer` model for triplet-loss finetuning.
 - `ASMEmbedder` provides native inference without requiring sentence-transformers at deployment time.
-- `st_compat` contains temporary compatibility shims for old sentence-transformers checkpoints/imports.
-- `asmsentencebert.__getattr__` only exists because old ST checkpoints reference `asmtransformers.models.asmsentencebert.ASMSTTransformer`; remove it after checkpoint conversion.
 
 The current tokenizer integration is ARM64-specific:
 
@@ -128,6 +126,7 @@ The current architecture is anchored by tests in:
 
 - [tests/test_arm64.py](../tests/test_arm64.py) for parsing, tokenization, jump handling, and prefix-token behavior
 - [tests/test_operand_formatters.py](../tests/test_operand_formatters.py) for numeric normalization behavior
-- [tests/test_asmsentencebert.py](../tests/test_asmsentencebert.py) for model integration and embedding stability checks
+- [tests/test_asmbert.py](../tests/test_asmbert.py) for model integration and embedding stability checks
+- [tests/test_embedder.py](../tests/test_embedder.py) for native embedding inference
 
 Contributor changes that affect preprocessing, tokenization, or model composition should preserve the invariants covered there or extend the suite accordingly.

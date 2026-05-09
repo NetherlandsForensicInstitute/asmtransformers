@@ -81,14 +81,3 @@ def build_finetuning_model(
         freeze_layer_count=freeze_layer_count,
     )
     return model
-
-
-def __getattr__(name):
-    if name in {'ASMSentenceTransformer', 'ASMSTTransformer'}:
-        # Temporary checkpoint compatibility bridge: published ST-format checkpoints
-        # reference asmtransformers.models.asmsentencebert.ASMSTTransformer in modules.json.
-        # Delete this after those checkpoints are converted to native embedder format.
-        from .st_compat import ASMSentenceTransformer, ASMSTTransformer
-
-        return {'ASMSentenceTransformer': ASMSentenceTransformer, 'ASMSTTransformer': ASMSTTransformer}[name]
-    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

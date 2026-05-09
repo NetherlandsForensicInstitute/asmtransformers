@@ -16,10 +16,12 @@ class ASMEmbedder:
         self.model.eval()
 
     @classmethod
-    def from_pretrained(cls, model_name_or_path, *, model_args=None, tokenizer_args=None, device=None):
+    def from_pretrained(
+        cls, model_name_or_path, *, model_args=None, tokenizer_args=None, device=None, normalize_embeddings=True
+    ):
         tokenizer = ASMTokenizer.from_pretrained(model_name_or_path, **(tokenizer_args or {}))
         model = ASMBertModel.from_pretrained(model_name_or_path, **(model_args or {}))
-        return cls(model, tokenizer, device=device)
+        return cls(model, tokenizer, device=device, normalize_embeddings=normalize_embeddings)
 
     @staticmethod
     def mean_pool(token_embeddings, attention_mask):
@@ -31,6 +33,7 @@ class ASMEmbedder:
         sentences,
         *,
         batch_size=32,
+        architecture='arm64',
         normalize_embeddings=None,
         convert_to_numpy=True,
     ):
@@ -42,7 +45,7 @@ class ASMEmbedder:
         with torch.no_grad():
             for start in range(0, len(sentences), batch_size):
                 batch = sentences[start : start + batch_size]
-                inputs = self.tokenizer(batch)
+                inputs = self.tokenizer(batch, architecture=architecture)
                 inputs = {key: value.to(self.device) for key, value in inputs.items()}
                 outputs = self.model(**inputs)
                 pooled = self.mean_pool(outputs.last_hidden_state, inputs['attention_mask'])
