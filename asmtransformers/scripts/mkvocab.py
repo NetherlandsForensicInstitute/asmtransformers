@@ -8,7 +8,6 @@ from tqdm import tqdm
 from asmtransformers.models import asmbert
 
 
-DATASET = Path(sys.argv[1])
 OUTPUT = Path('./results/vocab.txt')
 
 CONTEXT_LENGTH = 512
@@ -30,12 +29,12 @@ def extract_tokens(tokenizer, dataset, subset_name='all'):
     return tokens
 
 
-def mkvocab():
+def mkvocab(dataset_file):
     # use list comp to force ordering (lexicographic sort breaks without leaing zeroes)
     jump_targets = [f'JUMP_ADDR_{n}' for n in range(CONTEXT_LENGTH)]
 
     print('opening dataset ...')
-    dataset = datasets.load_from_disk(DATASET)
+    dataset = datasets.load_from_disk(dataset_file)
     print('... done')
 
     # Open without a vocab, the entire point is to make a new one.
@@ -61,4 +60,4 @@ def mkvocab():
 
 
 if __name__ == '__main__':
-    mkvocab()
+    mkvocab(Path(sys.argv[1]))
