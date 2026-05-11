@@ -16,7 +16,7 @@ def test_parse_no_operands():
 
 
 def test_parse_single_operand():
-    assert riscv.parse_instruction('j x032') == ('j', ('x032',))
+    assert riscv.parse_instruction('j 0x32') == ('j', ('0x32',))
     assert riscv.parse_instruction('c.j 0x02') == ('c.j', ('0x02',))
     # we want to separate (sp) like we do in ARM64, as it is attached to a number which would result in a large vocab
     assert riscv.parse_instruction('c.sdsp ra,0x05(sp)') == ('c.sdsp', ('ra', '0x05', '(', 'sp', ')'))
