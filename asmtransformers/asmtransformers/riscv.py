@@ -1,8 +1,6 @@
 import re
 from collections.abc import Iterator
 
-from networkx import DiGraph
-
 from asmtransformers.operands import is_offset
 
 
@@ -65,7 +63,7 @@ class RISCVPreprocessor:
             if replacement := formatter(operand):
                 return replacement
 
-    def preprocess(self, function_blocks: dict[int, list[str]] | DiGraph) -> list[str]:
+    def preprocess(self, function_blocks: dict[int, list[str]]) -> list[str]:
         # collect token offsets for each basic block being processed as {block id → token offset}
         block_offsets = {}
         # collect token offsets for tokens that need to be patched to jump tokens {token offset → block id}
