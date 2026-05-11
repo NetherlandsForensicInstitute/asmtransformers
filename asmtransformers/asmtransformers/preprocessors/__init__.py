@@ -1,6 +1,8 @@
-from collections.abc import Sequence
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import ClassVar
+
+from asmtransformers.operands import is_offset
 
 
 class ASMPreprocessor(ABC):
@@ -26,12 +28,7 @@ class ASMPreprocessor(ABC):
                 return replacement
 
     @abstractmethod
-    def parse_instruction(self, instruction: str) -> tuple[str, tuple[str, ...]]:
-        ...
-
-    @abstractmethod
-    def is_offset(self, operand: str) -> bool:
-        ...
+    def parse_instruction(self, instruction: str) -> tuple[str, tuple[str, ...]]: ...
 
     def preprocess(self, function_blocks: dict[int, list[str]]) -> list[str]:
         # collect token offsets for each basic block being processed as {block id → token offset}
@@ -54,7 +51,7 @@ class ASMPreprocessor(ABC):
 
                 tokens.append(instruction)
                 for operand in operands:
-                    if instruction in self.branch_instructions and self.is_offset(operand):
+                    if instruction in self.branch_instructions and is_offset(operand):
                         # an operand to a branching instruction that is formatted as a hexadecimal number
                         # this is interpreter as the offset to a basic block, and this tracked as such in path_offsets
                         jump_target = int(operand, base=16)
