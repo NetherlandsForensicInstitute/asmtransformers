@@ -1,7 +1,7 @@
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 
-from asmtransformers.operands import is_offset
+from asmtransformers.preprocessors import ASMPreprocessor
 
 
 # based mostly on: https://en.wikipedia.org/wiki/List_of_x86_instructions
@@ -154,66 +154,25 @@ def _parse_mem_expr(expr: str) -> Iterator[str]:
                     i += 1
 
 
-class X86Preprocessor:
+class X86Preprocessor(ASMPreprocessor):
     """
     Based on the ARM64 preprocessor but adjusted for amd64 (x86_64) arch.
     """
 
-    def __init__(
-        self,
-        *,
-        branch_instructions: tuple[str, ...] = BRANCH_INSTRUCTIONS,
-        parse_operands: Callable[[str], Iterator[str]] = parse_operands,
-        context_length: int = 512,
-        prefix_tokens: tuple[str, ...] | None = None,
-        operand_formatters: tuple[Callable, ...] | None = None,
-    ):
-        self.branch_instructions = frozenset(branch_instructions)
-        self.parse_operands = parse_operands
-        self.context_length = context_length
-        self.prefix_tokens = prefix_tokens or ()
-        self.operand_formatters = operand_formatters or ()
+    branch_instructions = BRANCH_INSTRUCTIONS
 
-    def format_jump(self, operand: str, target_index: int | None) -> str:
-        if target_index is None:
-            return 'UNK_JUMP_ADDR'
-        elif target_index < self.context_length:
-            return f'JUMP_ADDR_{target_index}'
-        else:
-            return 'JUMP_ADDR_EXCEEDED'
+    def parse_instruction(self, instruction: str) -> tuple[str, tuple[str, ...]]:
+        return parse_instruction(instruction.lower())
 
-    def format_operand(self, operand: str) -> str | None:
-        for formatter in self.operand_formatters:
-            if replacement := formatter(operand):
-                return replacement
 
-    def preprocess(self, function_blocks: dict[int, list[str]]) -> list[str]:
-        block_offsets = {}
-        jump_offsets = {}
-        tokens = list(self.prefix_tokens)
-
-        function_blocks = dict(sorted(function_blocks.items()))
-
-        for block_id, block in function_blocks.items():
-            block_offsets[block_id] = len(tokens)
-            for instruction in block:
-                parts = instruction.lower().split(maxsplit=1)
-                mnemonic = parts[0]
-                operand_str = parts[1] if len(parts) > 1 else ''
-
-                tokens.append(mnemonic)
-                for operand in self.parse_operands(operand_str) if operand_str else ():
-                    if mnemonic in self.branch_instructions and (offset := is_offset(operand)):
-                        # can't slice at place 2 because negative hex values so therefore use value from is_offset regex
-                        jump_target = int(offset.group('value'), base=16)
-                        jump_offsets[len(tokens)] = jump_target
-                    else:
-                        operand = self.format_operand(operand) or operand
-                    tokens.append(operand)
-
-        for offset, jump_target in jump_offsets.items():
-            token = tokens[offset]
-            if replacement := self.format_jump(token, block_offsets.get(jump_target)):
-                tokens[offset] = replacement
-
-        return tokens
+def parse_instruction(instruction):
+    match instruction.split(maxsplit=1):
+        # instruction and a number of operands to be parsed
+        case instruction, operands:
+            return instruction, tuple(parse_operands(operands))
+        # no operands to be parsed (but instruction will be a list here)
+        case [instruction]:
+            return instruction, ()
+        case _:
+            # TODO: error message
+            raise ValueError
