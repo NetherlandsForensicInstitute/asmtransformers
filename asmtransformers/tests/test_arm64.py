@@ -4,6 +4,7 @@ import json
 import pytest
 
 from asmtransformers.models.asmbert import ASMTokenizer
+from asmtransformers.operands import is_offset
 from asmtransformers.preprocessors import arm64
 
 
@@ -113,7 +114,7 @@ def test_offset_prefix_tokens(tokenizer):
 def test_format_operand():
     class ObfuscatingTokenizer(arm64.ARM64Preprocessor):
         def format_operand(self, operand):
-            if arm64.is_offset(operand):
+            if is_offset(operand):
                 return 'OBFUSCATED'
             else:
                 return operand

@@ -1,6 +1,7 @@
 import pytest
 
 from asmtransformers import riscv
+from asmtransformers.operands import is_offset
 
 
 @pytest.fixture
@@ -73,7 +74,7 @@ def test_offset_prefix_tokens(tokenizer):
 def test_format_operand():
     class ObfuscatingTokenizer(riscv.RISCVPreprocessor):
         def format_operand(self, operand):
-            if riscv.is_offset(operand):
+            if is_offset(operand):
                 return 'OBFUSCATED'
             else:
                 return operand
