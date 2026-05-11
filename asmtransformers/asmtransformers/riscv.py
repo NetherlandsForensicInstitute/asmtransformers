@@ -85,7 +85,7 @@ class RISCVPreprocessor:
                     if instruction in BRANCH_INSTRUCTIONS and is_offset(operand):
                         # an operand to a branching instruction that is formatted as a hexadecimal number
                         # this is interpreter as the offset to a basic block, and this tracked as such in path_offsets
-                        jump_target = int(operand[2:], base=16)
+                        jump_target = int(operand, base=16)
                         jump_offsets[len(tokens)] = jump_target
                     else:
                         # for anything but an address operand of a branching / jumping instruction, let format_operand
