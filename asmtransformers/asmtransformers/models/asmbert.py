@@ -7,7 +7,7 @@ from transformers.modeling_outputs import MaskedLMOutput
 from transformers.models.bert.modeling_bert import BertOnlyMLMHead, BertPreTrainedModel
 
 from asmtransformers import operands
-from asmtransformers.arm64 import ARM64Preprocessor
+from asmtransformers.preprocessors.arm64 import ARM64Preprocessor
 from asmtransformers.riscv import RISCVPreprocessor
 from asmtransformers.x86 import X86Preprocessor
 

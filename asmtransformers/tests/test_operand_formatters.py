@@ -1,4 +1,5 @@
-from asmtransformers import arm64, operands
+from asmtransformers import operands
+from asmtransformers.preprocessors import arm64
 
 
 def test_full_house():
