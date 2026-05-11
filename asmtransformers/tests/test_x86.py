@@ -10,28 +10,28 @@ def tokenizer():
 
 
 def test_parse_plain_operands():
-    assert list(x86.parse_operands('rax')) == ['rax']
-    assert list(x86.parse_operands('0x10')) == ['0x10']
-    assert list(x86.parse_operands('rax, rbx')) == ['rax', 'rbx']
-    assert list(x86.parse_operands('rax, 0x10')) == ['rax', '0x10']
+    assert list(x86.parser_x86_operands('rax')) == ['rax']
+    assert list(x86.parser_x86_operands('0x10')) == ['0x10']
+    assert list(x86.parser_x86_operands('rax, rbx')) == ['rax', 'rbx']
+    assert list(x86.parser_x86_operands('rax, 0x10')) == ['rax', '0x10']
 
 
 def test_parse_memory_operand():
-    assert list(x86.parse_operands('[rax]')) == ['[', 'rax', ']']
-    assert list(x86.parse_operands('[rbp + -0x8]')) == ['[', 'rbp', '+', '-0x8', ']']
+    assert list(x86.parser_x86_operands('[rax]')) == ['[', 'rax', ']']
+    assert list(x86.parser_x86_operands('[rbp + -0x8]')) == ['[', 'rbp', '+', '-0x8', ']']
 
 
 def test_parse_size_qualifier():
-    assert list(x86.parse_operands('dword ptr [rbp + -0x8]')) == ['dword_ptr', '[', 'rbp', '+', '-0x8', ']']
-    assert list(x86.parse_operands('xmmword ptr [rax]')) == ['xmmword_ptr', '[', 'rax', ']']
+    assert list(x86.parser_x86_operands('dword ptr [rbp + -0x8]')) == ['dword_ptr', '[', 'rbp', '+', '-0x8', ']']
+    assert list(x86.parser_x86_operands('xmmword ptr [rax]')) == ['xmmword_ptr', '[', 'rax', ']']
 
 
 def test_parse_segment_override():
-    assert list(x86.parse_operands('fs:[rax]')) == ['fs', '[', 'rax', ']']
+    assert list(x86.parser_x86_operands('fs:[rax]')) == ['fs', '[', 'rax', ']']
 
 
 def test_parse_complex_memory():
-    assert list(x86.parse_operands('[rax + rcx*4 + 0x10]')) == [
+    assert list(x86.parser_x86_operands('[rax + rcx*4 + 0x10]')) == [
         '[',
         'rax',
         '+',

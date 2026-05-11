@@ -1,5 +1,5 @@
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 
 from asmtransformers.preprocessors import ASMPreprocessor
 
@@ -75,7 +75,14 @@ _OPERAND_TOKEN = re.compile(r'[^\s,+\-*\[\]]+')
 _MEM_OPERATORS = frozenset('+-*')
 
 
-def parse_operands(operands: str) -> Iterator[str]:
+class X86Preprocessor(ASMPreprocessor):
+    branch_instructions = BRANCH_INSTRUCTIONS
+
+    def parse_operands(self, operands: str) -> Iterable[str]:
+        return parser_x86_operands(operands)
+
+
+def parser_x86_operands(operands: str) -> Iterator[str]:
     """
     move through x86 string operands linearly
     """
@@ -152,27 +159,3 @@ def _parse_mem_expr(expr: str) -> Iterator[str]:
                     i = m.end()
                 else:
                     i += 1
-
-
-class X86Preprocessor(ASMPreprocessor):
-    """
-    Based on the ARM64 preprocessor but adjusted for amd64 (x86_64) arch.
-    """
-
-    branch_instructions = BRANCH_INSTRUCTIONS
-
-    def parse_instruction(self, instruction: str) -> tuple[str, tuple[str, ...]]:
-        return parse_instruction(instruction.lower())
-
-
-def parse_instruction(instruction):
-    match instruction.split(maxsplit=1):
-        # instruction and a number of operands to be parsed
-        case instruction, operands:
-            return instruction, tuple(parse_operands(operands))
-        # no operands to be parsed (but instruction will be a list here)
-        case [instruction]:
-            return instruction, ()
-        case _:
-            # TODO: error message
-            raise ValueError

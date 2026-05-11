@@ -1,5 +1,5 @@
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable
 
 from asmtransformers.preprocessors import ASMPreprocessor
 
@@ -59,24 +59,11 @@ OPERAND_SEPARATOR = re.compile(r'[,\s]+')
 class ARM64Preprocessor(ASMPreprocessor):
     branch_instructions = BRANCH_INSTRUCTIONS
 
-    def parse_instruction(self, instruction: str) -> tuple[str, tuple[str, ...]]:
-        return parse_instruction(instruction)
+    def parse_operands(self, operands: str) -> Iterable[str]:
+        return parse_arm64_operands(operands)
 
 
-def parse_instruction(instruction):
-    match instruction.split(maxsplit=1):
-        # instruction and a number of operands to be parsed
-        case instruction, operands:
-            return instruction, tuple(parse_operands(operands))
-        # no operands to be parsed (but instruction will be a list here)
-        case [instruction]:
-            return instruction, ()
-        case _:
-            # TODO: error message
-            raise ValueError
-
-
-def parse_operands(operands: str) -> Iterator[str]:
+def parse_arm64_operands(operands: str) -> Iterable[str]:
     # move through the string of operands linearly, starting at offset 0
     offset = 0
     while offset < len(operands):
@@ -87,7 +74,7 @@ def parse_operands(operands: str) -> Iterator[str]:
                 # NB: this assumes there will be no nesting of bracketry, as that would slice an incorrect substring
                 end = operands.index(']', offset)
                 yield '['
-                yield from parse_operands(operands[offset + 1 : end].lower())
+                yield from parse_arm64_operands(operands[offset + 1 : end].lower())
                 yield ']'
                 # next offset is after the reference
                 offset = end + 1
@@ -102,7 +89,7 @@ def parse_operands(operands: str) -> Iterator[str]:
                 # NB: this assumes there will be no nesting of bracketry, as that would slice an incorrect substring
                 end = operands.index('}', offset)
                 yield '{'
-                yield from parse_operands(operands[offset + 1 : end].lower())
+                yield from parse_arm64_operands(operands[offset + 1 : end].lower())
                 yield '}'
                 # next offset is after the set
                 offset = end + 1

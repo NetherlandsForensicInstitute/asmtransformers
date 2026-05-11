@@ -1,14 +1,20 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import ClassVar
 
-from asmtransformers.operands import is_offset
+from asmtransformers.operands import Formatter, is_offset
 
 
 class ASMPreprocessor(ABC):
     branch_instructions: ClassVar[Sequence[str]] = ()
 
-    def __init__(self, *, context_length=512, prefix_tokens=None, operand_formatters=None):
+    def __init__(
+        self,
+        *,
+        context_length: int = 512,
+        prefix_tokens: Sequence[str] = None,
+        operand_formatters: Sequence[Formatter] = None,
+    ):
         self.context_length = context_length
         self.prefix_tokens = prefix_tokens or ()
         self.operand_formatters = operand_formatters or ()
@@ -27,8 +33,18 @@ class ASMPreprocessor(ABC):
             if replacement := formatter(operand):
                 return replacement
 
+    def parse_instruction(self, instruction: str) -> tuple[str, tuple[str, ...]]:
+        match instruction.lower().split(maxsplit=1):
+            case [instruction]:
+                # no operands
+                return instruction, ()
+            case instruction, operands:
+                return instruction, tuple(self.parse_operands(operands))
+            case _:
+                raise ValueError(f'failed to parse instruction "{instruction}"')
+
     @abstractmethod
-    def parse_instruction(self, instruction: str) -> tuple[str, tuple[str, ...]]: ...
+    def parse_operands(self, operands: str) -> Iterable[str]: ...
 
     def preprocess(self, function_blocks: dict[int, list[str]]) -> list[str]:
         # collect token offsets for each basic block being processed as {block id → token offset}
