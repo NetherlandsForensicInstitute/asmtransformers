@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from asmtransformers.models.asmsentencebert import ASMSentenceTransformer
+from asmtransformers.models.embedder import ASMEmbedder
 from fastapi import FastAPI, Request
 from fastapi.params import Body
 
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
         # TODO: log warning that we're running in in-memory database
         pass
 
-    app.state.model = ASMSentenceTransformer.from_pretrained(model)
+    app.state.model = ASMEmbedder.from_pretrained(model)
 
     with SQLiteDatabase.from_name(database) as database:
         app.state.database = database

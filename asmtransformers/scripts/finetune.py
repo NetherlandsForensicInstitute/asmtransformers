@@ -14,7 +14,7 @@ from tqdm import tqdm
 from tzlocal import get_localzone
 
 from asmtransformers.datasets import LazySentenceLabelDataset
-from asmtransformers.models.asmsentencebert import ASMSentenceTransformer
+from asmtransformers.models.asmsentencebert import build_finetuning_model
 
 
 def timestamp():
@@ -69,7 +69,7 @@ def main(data_folder, model, batch_size):
         handlers=[LoggingHandler(), logging.FileHandler(filename=f'{model_save_path}/training_logging.log')],
     )
 
-    model = ASMSentenceTransformer.from_basemodel(
+    model = build_finetuning_model(
         base_model_name_or_path=model_name_or_path, model_args={'torch_dtype': torch.bfloat16}
     )
     logging.info(f'pre-trained model {model_name} loaded')
