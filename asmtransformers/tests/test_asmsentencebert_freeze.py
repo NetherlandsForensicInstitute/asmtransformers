@@ -1,7 +1,6 @@
 import json
 
 import pytest
-import torch
 from transformers import BertConfig
 
 from asmtransformers.models.asmbert import ASMBertModel
