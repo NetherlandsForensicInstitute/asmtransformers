@@ -21,7 +21,6 @@ def extract_tokens(tokenizer, dataset, subset_name='all'):
         dataset = dataset.select(range(SAMPLE_SIZE))
 
     for sample in tqdm(dataset, desc=f'processing {subset_name}'):
-        print(sample)
         function = dict(json.loads(sample['cfg']))
         # Use the architecture-specific preprocessor to process the function into tokens
         tokens.update(tokenizer.preprocessors[sample['architecture']].preprocess(function))
