@@ -1,7 +1,7 @@
 import pytest
 
-from asmtransformers.preprocessors import riscv
 from asmtransformers.operands import is_offset
+from asmtransformers.preprocessors import riscv
 
 
 @pytest.fixture

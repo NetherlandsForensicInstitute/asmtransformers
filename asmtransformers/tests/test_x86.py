@@ -1,7 +1,7 @@
 import pytest
 
-from asmtransformers import x86
 from asmtransformers.operands import is_offset
+from asmtransformers.preprocessors import x86
 
 
 @pytest.fixture
