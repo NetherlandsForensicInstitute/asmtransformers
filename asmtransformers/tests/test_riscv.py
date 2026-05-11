@@ -1,6 +1,6 @@
 import pytest
 
-from asmtransformers import riscv
+from asmtransformers.preprocessors import riscv
 from asmtransformers.operands import is_offset
 
 
