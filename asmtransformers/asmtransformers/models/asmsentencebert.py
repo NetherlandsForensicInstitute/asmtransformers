@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from typing import Any
 
 from sentence_transformers import SentenceTransformer
@@ -14,7 +15,7 @@ class ASMTransformerModule(nn.Module):
         self,
         model_name_or_path: str,
         *,
-        model_args: dict[str, Any] | None = None,
+        model_args: Mapping[str, Any] | None = None,
     ):
         super().__init__()
         self.model = ASMBertModel.from_pretrained(model_name_or_path, **(model_args or {}))
@@ -40,6 +41,8 @@ class ASMTransformerModule(nn.Module):
             model_inputs['token_type_ids'] = features['token_type_ids']
 
         outputs = self.model(**model_inputs)
+        # sentence-transformers modules pass a shared features dict down the pipeline.
+        # Pooling consumes token_embeddings from that dict.
         features['token_embeddings'] = outputs.last_hidden_state
         return features
 
