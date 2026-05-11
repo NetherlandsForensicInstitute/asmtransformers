@@ -8,6 +8,8 @@ from transformers.models.bert.modeling_bert import BertOnlyMLMHead, BertPreTrain
 
 from asmtransformers import operands
 from asmtransformers.arm64 import ARM64Preprocessor
+from asmtransformers.riscv import RISCVPreprocessor
+from asmtransformers.x86 import X86Preprocessor
 
 
 class ASMBertModel(BertModel):
@@ -174,15 +176,17 @@ class ASMTokenizer(BertTokenizer):
         strip_accents=None,
         **kwargs,
     ):
+        formatters = (
+            # 2-log numerical values and offsets to reduce the number of unique tokens we'll generate
+            # (pre-made vocabulary used this too)
+            operands.format_immediate_log,
+            operands.format_offset_log,
+        )
         self.preprocessors = {
-            'arm64': ARM64Preprocessor(
-                operand_formatters=(
-                    # 2-log numerical values and offsets to reduce the number of unique tokens we'll generate
-                    # (pre-made vocabulary used this too)
-                    operands.format_immediate_log,
-                    operands.format_offset_log,
-                )
-            ),
+            'amd64': X86Preprocessor(operand_formatters=formatters),
+            'arm64': ARM64Preprocessor(operand_formatters=formatters),
+            'i386': X86Preprocessor(operand_formatters=formatters),
+            'riscv64': RISCVPreprocessor(operand_formatters=formatters),
         }
 
         super().__init__(

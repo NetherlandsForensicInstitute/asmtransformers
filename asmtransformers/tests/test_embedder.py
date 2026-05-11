@@ -135,6 +135,15 @@ def test_native_embedder_accepts_iterators(checkpoint_path, cfg):
     assert np.allclose(single, batched[1])
 
 
+def test_native_embedder_accepts_known_architectures(checkpoint_path):
+    embedder = ASMEmbedder.from_pretrained(checkpoint_path)
+
+    assert embedder.encode('[[0, ["add", "eax", "eax"]]]', architecture='amd64') is not None
+    assert embedder.encode('[[0, ["add", "x0", "x1", "x2"]]]', architecture='arm64') is not None
+    assert embedder.encode('[[0, ["add", "rax", "rax"]]]', architecture='i386') is not None
+    assert embedder.encode('[[0, ["add", "rd", "rs1", "rs2"]]]', architecture='riscv64') is not None
+
+
 def test_native_embedder_rejects_unknown_architecture(checkpoint_path, cfg):
     embedder = ASMEmbedder.from_pretrained(checkpoint_path)
 
