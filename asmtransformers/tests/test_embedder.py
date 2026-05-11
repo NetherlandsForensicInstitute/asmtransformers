@@ -125,6 +125,16 @@ def test_native_embedder_batch_size_does_not_change_embeddings(checkpoint_path, 
     assert np.allclose(single, batched[1])
 
 
+def test_native_embedder_accepts_iterators(checkpoint_path, cfg):
+    embedder = ASMEmbedder.from_pretrained(checkpoint_path)
+
+    single = embedder.encode(cfg)
+    batched = embedder.encode((item for item in [cfg, cfg]), batch_size=1)
+
+    assert np.allclose(single, batched[0])
+    assert np.allclose(single, batched[1])
+
+
 def test_native_embedder_rejects_unknown_architecture(checkpoint_path, cfg):
     embedder = ASMEmbedder.from_pretrained(checkpoint_path)
 

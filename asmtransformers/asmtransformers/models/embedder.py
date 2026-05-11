@@ -1,3 +1,5 @@
+from itertools import batched
+
 import numpy as np
 import torch
 
@@ -38,13 +40,12 @@ class ASMEmbedder:
         convert_to_numpy=True,
     ):
         single_input = isinstance(sentences, str)
-        sentences = [sentences] if single_input else list(sentences)
+        sentences = [sentences] if single_input else sentences
         normalize_embeddings = self.normalize_embeddings if normalize_embeddings is None else normalize_embeddings
 
         embeddings = []
         with torch.no_grad():
-            for start in range(0, len(sentences), batch_size):
-                batch = sentences[start : start + batch_size]
+            for batch in batched(sentences, batch_size, strict=False):
                 inputs = self.tokenizer(batch, architecture=architecture)
                 inputs = {key: value.to(self.device) for key, value in inputs.items()}
                 outputs = self.model(**inputs)
