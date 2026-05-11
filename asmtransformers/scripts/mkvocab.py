@@ -5,37 +5,48 @@ from pathlib import Path
 import datasets
 from tqdm import tqdm
 
-from asmtransformers import arm64, operands
+from asmtransformers.models import asmbert
 
 
-DATASET = Path(sys.argv[1])  # Path to dataset, fill in yourself
+DATASET = Path(sys.argv[1])
 OUTPUT = Path('./results/vocab.txt')
 
 CONTEXT_LENGTH = 512
 SAMPLE_SIZE = 0
 
-if __name__ == '__main__':
+
+def extract_tokens(tokenizer, dataset, subset_name='all'):
+    tokens = set()
+
+    if SAMPLE_SIZE:
+        dataset = dataset.select(range(SAMPLE_SIZE))
+
+    for sample in tqdm(dataset, desc=f'processing {subset_name}'):
+        print(sample)
+        function = dict(json.loads(sample['cfg']))
+        # Use the architecture-specific preprocessor to process the function into tokens
+        tokens.update(tokenizer.preprocessors[sample['architecture']].preprocess(function))
+
+    return tokens
+
+
+def mkvocab():
     # use list comp to force ordering (lexicographic sort breaks without leaing zeroes)
     jump_targets = [f'JUMP_ADDR_{n}' for n in range(CONTEXT_LENGTH)]
 
     print('opening dataset ...')
     dataset = datasets.load_from_disk(DATASET)
     print('... done')
-    preprocessor = arm64.ARM64Preprocessor(
-        operand_formatters=(
-            operands.format_immediate_log,
-            operands.format_offset_log,
-        )
-    )
+
+    # Open without a vocab, the entire point is to make a new one.
+    tokenizer = asmbert.ASMTokenizer('/dev/null')
     tokens = set()
 
-    for subset in dataset:
-        if SAMPLE_SIZE:
-            dataset[subset] = dataset[subset].select(range(SAMPLE_SIZE))
-
-        for sample in tqdm(dataset[subset], desc=f'processing {subset} subset'):
-            function = dict(json.loads(sample['cfg']))
-            tokens.update(preprocessor.preprocess(function))
+    if 'train' in dataset:
+        for subset in dataset:
+            tokens.update(extract_tokens(tokenizer, dataset[subset], subset))
+    else:
+        tokens.update(extract_tokens(tokenizer, dataset))
 
     # remove the used jump targets from the collected tokens
     tokens -= set(jump_targets)
@@ -47,3 +58,7 @@ if __name__ == '__main__':
         for token in sorted(tokens):
             output.write(token)
             output.write('\n')
+
+
+if __name__ == '__main__':
+    mkvocab()
