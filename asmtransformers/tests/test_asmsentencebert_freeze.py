@@ -31,7 +31,6 @@ def checkpoint_path(tmp_path):
         )
     )
 
-    torch.manual_seed(0)
     config = BertConfig(
         vocab_size=len(vocab),
         hidden_size=8,
