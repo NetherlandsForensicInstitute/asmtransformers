@@ -6,6 +6,20 @@ from asmtransformers.operands import Formatter, is_offset
 
 
 class ASMPreprocessor(ABC):
+    """
+    Base class for architecture-specific preprocessing of assembly code.
+
+    Subclasses should provide at least two things:
+
+    - a `branch_instructions` class or instance attribute, used to determine whether offset operands should be
+      translated into jump target tokens;
+    - `parse_operands`, a method to split the operands part of an instruction into a token or tokens.
+
+    Instructions strings are assumed to be "<instruction> <operand1> <operand2>". Should the decompilation result format
+    this in a different way, subclasses could override `parse_instruction`, which should in turn call `parse_operands`
+    with *all operands* in a single string.
+    """
+
     branch_instructions: ClassVar[Collection[str]] = ()
 
     def __init__(
@@ -15,11 +29,30 @@ class ASMPreprocessor(ABC):
         prefix_tokens: Sequence[str] = None,
         operand_formatters: Sequence[Formatter] = None,
     ):
+        """
+
+        Subclasses are encouraged to *not* override this.
+
+        :param context_length: The maximum number of tokens to consider in scope. Jumps outside of this context length
+            should be considered to exceed the context length and use the appropriate token.
+        :param prefix_tokens: Tokens to insert before the first instruction (this also influences the minimum jump
+            target).
+        :param operand_formatters: An ordered sequence of formatters to optionally translate operands into a different
+            representation (note that the first formatter that produces a replacement is used, subsequent formatters are
+            ignored for that particular operand.
+        """
         self.context_length = context_length
         self.prefix_tokens = prefix_tokens or ()
         self.operand_formatters = operand_formatters or ()
 
     def format_jump(self, operand: str, target_index: int | None) -> str:
+        """
+        Formats a target jump address into a jump token, either inside or outside the context length.
+
+        :param operand: The original operand that refers to a jump address.
+        :param target_index: The token index the operand refers to.
+        :return: A jump token.
+        """
         if target_index is None:
             return 'UNK_JUMP_ADDR'
         elif target_index < self.context_length:
@@ -28,12 +61,31 @@ class ASMPreprocessor(ABC):
             return 'JUMP_ADDR_EXCEEDED'
 
     def format_operand(self, operand: str) -> str | None:
+        """
+        Queries the configured operand formatters in order whether the operand should be formatted.
+
+        Note that the first formatter to update the operand is used blindly, without querying the remaining formatters.
+
+        :param operand: The operand to be formatted.
+        :return: An updated operand, or `None`.
+        """
         for formatter in self.operand_formatters:
             # provide the first non-falsy value returned by any formatter
             if replacement := formatter(operand):
                 return replacement
+        # no format override, signal use as-is
+        return None
 
     def parse_instruction(self, instruction: str) -> tuple[str, tuple[str, ...]]:
+        """
+        Splits `instruction` into the instruction mnemonic and its operands, as `(instruction, (token1, token2, ...))`.
+
+        Note that the operands section of the resulting value need not match the common syntax for this, operand parsers
+        for specific architectures can choose to separate `[x1]` into 3 tokens `[`, `x1` and `]`.
+
+        :param instruction: the full instruction string to parse, e.g. `add x1 #0x01`.
+        :return: `(token, (token, ...))`, where the first token represents the instruction mnemonic.
+        """
         match instruction.lower().split(maxsplit=1):
             case [instruction]:
                 # no operands
@@ -44,9 +96,27 @@ class ASMPreprocessor(ABC):
                 raise ValueError(f'failed to parse instruction "{instruction}"')
 
     @abstractmethod
-    def parse_operands(self, operands: str) -> Iterable[str]: ...
+    def parse_operands(self, operands: str) -> Iterable[str]:
+        """
+        Architecture-specific parsing of operands for an instruction.
+
+        The translation from any number of operands to any number of tokens is up to the architecture implementor.
+
+        :param operands: operands to be parsed.
+        :return: An iterable of tokens (e.g. a `list` or a `generator`).
+        """
+        ...
 
     def preprocess(self, function_blocks: dict[int, list[str]]) -> list[str]:
+        """
+        Main entrypoint for a preprocessor, translation a control flow graph into a list of tokens.
+
+        NB: the control flow graph is sorted by address before processing it, assuming the entry point for the graph is
+            the lowest address in the graph!
+
+        :param function_blocks: A control flow graph encoded as a *{address → [instruction, ...]}* structure.
+        :return: The list of tokens representing the provided control flow graph.
+        """
         # collect token offsets for each basic block being processed as {block id → token offset}
         block_offsets = {}
         # collect token offsets for tokens that need to be patched to jump tokens {token offset → block id}
