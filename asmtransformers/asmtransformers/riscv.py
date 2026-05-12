@@ -33,11 +33,22 @@ BRANCH_INSTRUCTIONS = (
     # jump
     'j',
     'jal',
-    'jalr',
-    # return
-    'ret',
+    # call
     'call',
+    # compressed instructions
+    # jumps
+    'c.j',
+    'c.jal',
+    # branches
+    'c.beqz',
+    'c.bnez',
+    # register relative jumps are removed from this list as we can't resolve them with jump addresses
+    # 'jalr',
+    # 'c.jalr',
+    # 'c.jr',
+    # 'ret',
 )
+
 
 # a separator between operands; commas or whitespaces or a combination of both
 OPERAND_SEPARATOR = re.compile(r'[,\s\(\)]+')
@@ -73,6 +84,8 @@ class RISCVPreprocessor:
         # offsets we're collecting line up with the token offsets where those blocks actually start (see below)
         tokens = list(self.prefix_tokens)
 
+        function_blocks = dict(sorted(function_blocks.items()))
+
         for block_id, block in function_blocks.items():
             # log the 'next' token offset as the start of the block that will be processed next
             block_offsets[block_id] = len(tokens)
@@ -82,10 +95,10 @@ class RISCVPreprocessor:
 
                 tokens.append(instruction)
                 for operand in operands:
-                    if instruction in BRANCH_INSTRUCTIONS and is_offset(operand):
+                    if instruction in BRANCH_INSTRUCTIONS and (offset := is_offset(operand)):
                         # an operand to a branching instruction that is formatted as a hexadecimal number
                         # this is interpreter as the offset to a basic block, and this tracked as such in path_offsets
-                        jump_target = int(operand, base=16)
+                        jump_target = int(offset.group('value'), base=16)
                         jump_offsets[len(tokens)] = jump_target
                     else:
                         # for anything but an address operand of a branching / jumping instruction, let format_operand
