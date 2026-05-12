@@ -33,10 +33,20 @@ BRANCH_INSTRUCTIONS = {
     # jump
     'j',
     'jal',
-    'jalr',
-    # return
-    'ret',
+    # call
     'call',
+    # compressed instructions
+    # jumps
+    'c.j',
+    'c.jal',
+    # branches
+    'c.beqz',
+    'c.bnez',
+    # register relative jumps are removed from this list as we can't resolve them with jump addresses
+    # 'jalr',
+    # 'c.jalr',
+    # 'c.jr',
+    # 'ret',
 }
 
 
