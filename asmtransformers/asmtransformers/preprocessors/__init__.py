@@ -39,7 +39,7 @@ class ASMPreprocessor(ABC):
             target).
         :param operand_formatters: An ordered sequence of formatters to optionally translate operands into a different
             representation (note that the first formatter that produces a replacement is used, subsequent formatters are
-            ignored for that particular operand.
+            ignored for that particular operand).
         """
         self.context_length = context_length
         self.prefix_tokens = prefix_tokens or ()
@@ -109,7 +109,7 @@ class ASMPreprocessor(ABC):
 
     def preprocess(self, function_blocks: dict[int, list[str]]) -> list[str]:
         """
-        Main entrypoint for a preprocessor, translation a control flow graph into a list of tokens.
+        Main entrypoint for a preprocessor, translates a control flow graph into a list of tokens.
 
         NB: the control flow graph is sorted by address before processing it, assuming the entry point for the graph is
             the lowest address in the graph!
