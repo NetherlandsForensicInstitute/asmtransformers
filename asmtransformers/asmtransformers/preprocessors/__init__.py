@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Collection, Iterable, Sequence
 from typing import ClassVar
 
 from asmtransformers.operands import Formatter, is_offset
 
 
 class ASMPreprocessor(ABC):
-    branch_instructions: ClassVar[Sequence[str]] = ()
+    branch_instructions: ClassVar[Collection[str]] = ()
 
     def __init__(
         self,

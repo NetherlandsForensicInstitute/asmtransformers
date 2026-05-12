@@ -8,7 +8,7 @@ from asmtransformers.preprocessors import ASMPreprocessor
 # https://projectf.io/posts/riscv-cheat-sheet/
 
 # branch instructions will be treated differently, as we need to convert their addresses into jump address tokens
-BRANCH_INSTRUCTIONS = (
+BRANCH_INSTRUCTIONS = {
     # branch (not) equal to zero
     'beq',
     'bne',
@@ -37,7 +37,8 @@ BRANCH_INSTRUCTIONS = (
     # return
     'ret',
     'call',
-)
+}
+
 
 # a separator between operands; commas or whitespaces or a combination of both
 OPERAND_SEPARATOR = re.compile(r'[,\s()]+')

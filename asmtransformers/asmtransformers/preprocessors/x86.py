@@ -56,7 +56,7 @@ BRANCH_INSTRUCTIONS = (
 )
 
 
-SIZE_QUALIFIERS = (
+SIZE_QUALIFIERS = {
     'byte',
     'word',
     'dword',
@@ -65,12 +65,12 @@ SIZE_QUALIFIERS = (
     'xmmword',
     'ymmword',
     'zmmword',
-)
+}
 
-_SIZE_QUALIFIER_SET = frozenset(SIZE_QUALIFIERS)
 
 # Matches one token that stops before commas, spaces, or memory-expression operators
 _OPERAND_TOKEN = re.compile(r'[^\s,+\-*\[\]]+')
+
 
 _MEM_OPERATORS = frozenset('+-*')
 
@@ -104,7 +104,7 @@ class X86Preprocessor(ASMPreprocessor):
                     token = m.group().rstrip(':')  # strip segment-override colon (e.g. "fs:")
                     lower = token.lower()
 
-                    if lower in _SIZE_QUALIFIER_SET:
+                    if lower in SIZE_QUALIFIERS:
                         # consume the mandatory following "ptr" keyword and merge into one token
                         rest = operands[m.end() :].lstrip()
                         if rest.lower().startswith('ptr'):

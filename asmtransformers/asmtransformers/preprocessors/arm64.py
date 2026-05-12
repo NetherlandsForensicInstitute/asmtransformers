@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from asmtransformers.preprocessors import ASMPreprocessor
 
 
-CONDITION_CODES = (
+CONDITION_CODES = {
     # equal / not equal
     'eq',
     'ne',
@@ -29,10 +29,10 @@ CONDITION_CODES = (
     'le',
     # always (b.al == b?)
     'al',
-)
+}
 
 
-BRANCH_INSTRUCTIONS = (
+BRANCH_INSTRUCTIONS = {
     # direct branch
     'b',
     'br',
@@ -47,9 +47,9 @@ BRANCH_INSTRUCTIONS = (
     # test zero bit
     'tbz',
     'tbnz',
-)
+}
 # conditional branches
-BRANCH_INSTRUCTIONS += tuple(f'b.{cc}' for cc in CONDITION_CODES)
+BRANCH_INSTRUCTIONS |= {f'b.{cc}' for cc in CONDITION_CODES}
 
 
 # a separator between operands; commas or whitespaces or a combination of both
