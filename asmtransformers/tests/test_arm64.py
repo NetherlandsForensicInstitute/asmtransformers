@@ -3,8 +3,9 @@ import json
 
 import pytest
 
-from asmtransformers import arm64
 from asmtransformers.models.asmbert import ASMTokenizer
+from asmtransformers.operands import is_offset
+from asmtransformers.preprocessors import arm64
 
 
 @pytest.fixture
@@ -12,25 +13,25 @@ def tokenizer():
     return arm64.ARM64Preprocessor()
 
 
-def test_parse_no_operands():
-    assert arm64.parse_instruction('ret') == ('ret', ())
+def test_parse_no_operands(tokenizer):
+    assert tokenizer.parse_instruction('ret') == ('ret', ())
 
 
-def test_parse_single_operand():
-    assert arm64.parse_instruction('blr x0') == ('blr', ('x0',))
-    assert arm64.parse_instruction('b 0x123456') == ('b', ('0x123456',))
-    assert arm64.parse_instruction('b.ne [w0, #0x4]') == ('b.ne', ('[', 'w0', '#0x4', ']'))
+def test_parse_single_operand(tokenizer):
+    assert tokenizer.parse_instruction('blr x0') == ('blr', ('x0',))
+    assert tokenizer.parse_instruction('b 0x123456') == ('b', ('0x123456',))
+    assert tokenizer.parse_instruction('b.ne [w0, #0x4]') == ('b.ne', ('[', 'w0', '#0x4', ']'))
 
 
-def test_parse_multiple_operands():
-    assert arm64.parse_instruction('ldp x19,x20,[sp, #0x10]') == ('ldp', ('x19', 'x20', '[', 'sp', '#0x10', ']'))
-    assert arm64.parse_instruction('ldp x29,x30,[sp], #0x60') == ('ldp', ('x29', 'x30', '[', 'sp', ']', '#0x60'))
-    assert arm64.parse_instruction('movk x1,#0x4024, LSL #16') == ('movk', ('x1', '#0x4024', 'lsl', '#16'))
-    assert arm64.parse_instruction('stp x29,x30,[sp, #-0x60]!') == (
+def test_parse_multiple_operands(tokenizer):
+    assert tokenizer.parse_instruction('ldp x19,x20,[sp, #0x10]') == ('ldp', ('x19', 'x20', '[', 'sp', '#0x10', ']'))
+    assert tokenizer.parse_instruction('ldp x29,x30,[sp], #0x60') == ('ldp', ('x29', 'x30', '[', 'sp', ']', '#0x60'))
+    assert tokenizer.parse_instruction('movk x1,#0x4024, LSL #16') == ('movk', ('x1', '#0x4024', 'lsl', '#16'))
+    assert tokenizer.parse_instruction('stp x29,x30,[sp, #-0x60]!') == (
         'stp',
         ('x29', 'x30', '[', 'sp', '#-0x60', ']', '!'),
     )
-    assert arm64.parse_instruction('ldp x29,x30,[sp], #0x60') == ('ldp', ('x29', 'x30', '[', 'sp', ']', '#0x60'))
+    assert tokenizer.parse_instruction('ldp x29,x30,[sp], #0x60') == ('ldp', ('x29', 'x30', '[', 'sp', ']', '#0x60'))
 
 
 def test_tokenize_single_block(tokenizer):
@@ -113,7 +114,7 @@ def test_offset_prefix_tokens(tokenizer):
 def test_format_operand():
     class ObfuscatingTokenizer(arm64.ARM64Preprocessor):
         def format_operand(self, operand):
-            if arm64.is_offset(operand):
+            if is_offset(operand):
                 return 'OBFUSCATED'
             else:
                 return operand

@@ -1,6 +1,7 @@
 import pytest
 
-from asmtransformers import riscv
+from asmtransformers.operands import is_offset
+from asmtransformers.preprocessors import riscv
 
 
 @pytest.fixture
@@ -8,23 +9,23 @@ def tokenizer():
     return riscv.RISCVPreprocessor()
 
 
-def test_parse_no_operands():
-    assert riscv.parse_instruction('ret') == ('ret', ())
+def test_parse_no_operands(tokenizer):
+    assert tokenizer.parse_instruction('ret') == ('ret', ())
     # there are only 20 items that can have a c. extension, indicating the instruction should be saved in less memory
     # so we keep it attached to the instruction
-    assert riscv.parse_instruction('c.nop') == ('c.nop', ())
+    assert tokenizer.parse_instruction('c.nop') == ('c.nop', ())
 
 
-def test_parse_single_operand():
-    assert riscv.parse_instruction('j 0x32') == ('j', ('0x32',))
-    assert riscv.parse_instruction('c.j 0x02') == ('c.j', ('0x02',))
+def test_parse_single_operand(tokenizer):
+    assert tokenizer.parse_instruction('j 0x32') == ('j', ('0x32',))
+    assert tokenizer.parse_instruction('c.j 0x02') == ('c.j', ('0x02',))
     # we want to separate (sp) like we do in ARM64, as it is attached to a number which would result in a large vocab
-    assert riscv.parse_instruction('c.sdsp ra,0x05(sp)') == ('c.sdsp', ('ra', '0x05', '(', 'sp', ')'))
+    assert tokenizer.parse_instruction('c.sdsp ra,0x05(sp)') == ('c.sdsp', ('ra', '0x05', '(', 'sp', ')'))
 
 
-def test_parse_multiple_operands():
-    assert riscv.parse_instruction('c.addi4spn s0,sp,0x30') == ('c.addi4spn', ('s0', 'sp', '0x30'))
-    assert riscv.parse_instruction('ld a5,-0x28') == ('ld', ('a5', '-0x28'))
+def test_parse_multiple_operands(tokenizer):
+    assert tokenizer.parse_instruction('c.addi4spn s0,sp,0x30') == ('c.addi4spn', ('s0', 'sp', '0x30'))
+    assert tokenizer.parse_instruction('ld a5,-0x28') == ('ld', ('a5', '-0x28'))
 
 
 def test_context_length_boundary():
@@ -97,7 +98,7 @@ def test_offset_prefix_tokens(tokenizer):
 def test_format_operand():
     class ObfuscatingTokenizer(riscv.RISCVPreprocessor):
         def format_operand(self, operand):
-            if riscv.is_offset(operand):
+            if is_offset(operand):
                 return 'OBFUSCATED'
             else:
                 return operand

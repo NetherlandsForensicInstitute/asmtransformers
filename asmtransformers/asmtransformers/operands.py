@@ -1,5 +1,9 @@
 import re
+from collections.abc import Callable
 from math import log2
+
+
+type Formatter = Callable[[str], str | None]
 
 
 def format_immediate_log(operand: str, threshold: int = 16) -> str | None:

@@ -1,61 +1,20 @@
-import re
-from collections.abc import Iterator
+from abc import ABC, abstractmethod
+from collections.abc import Collection, Iterable, Sequence
+from typing import ClassVar
 
-from asmtransformers.operands import is_offset
-
-
-# useful info:
-# https://projectf.io/posts/riscv-cheat-sheet/
-
-# branch instructions will be treated differently, as we need to convert their addresses into jump address tokens
-BRANCH_INSTRUCTIONS = (
-    # branch (not) equal to zero
-    'beq',
-    'bne',
-    'beqz',
-    'bnez',
-    # less than
-    'blt',
-    'bltu',
-    'bltz',
-    # greater than
-    'bgt',
-    'bgtu',
-    'bgtz',
-    # less or equal
-    'ble',
-    'bleu',
-    'blez',
-    # greater or equal
-    'bge',
-    'bgeu',
-    'bgez',
-    # jump
-    'j',
-    'jal',
-    # call
-    'call',
-    # compressed instructions
-    # jumps
-    'c.j',
-    'c.jal',
-    # branches
-    'c.beqz',
-    'c.bnez',
-    # register relative jumps are removed from this list as we can't resolve them with jump addresses
-    # 'jalr',
-    # 'c.jalr',
-    # 'c.jr',
-    # 'ret',
-)
+from asmtransformers.operands import Formatter, is_offset
 
 
-# a separator between operands; commas or whitespaces or a combination of both
-OPERAND_SEPARATOR = re.compile(r'[,\s\(\)]+')
+class ASMPreprocessor(ABC):
+    branch_instructions: ClassVar[Collection[str]] = ()
 
-
-class RISCVPreprocessor:
-    def __init__(self, *, context_length=512, prefix_tokens=None, operand_formatters=None):
+    def __init__(
+        self,
+        *,
+        context_length: int = 512,
+        prefix_tokens: Sequence[str] = None,
+        operand_formatters: Sequence[Formatter] = None,
+    ):
         self.context_length = context_length
         self.prefix_tokens = prefix_tokens or ()
         self.operand_formatters = operand_formatters or ()
@@ -74,6 +33,19 @@ class RISCVPreprocessor:
             if replacement := formatter(operand):
                 return replacement
 
+    def parse_instruction(self, instruction: str) -> tuple[str, tuple[str, ...]]:
+        match instruction.lower().split(maxsplit=1):
+            case [instruction]:
+                # no operands
+                return instruction, ()
+            case instruction, operands:
+                return instruction, tuple(self.parse_operands(operands))
+            case _:
+                raise ValueError(f'failed to parse instruction "{instruction}"')
+
+    @abstractmethod
+    def parse_operands(self, operands: str) -> Iterable[str]: ...
+
     def preprocess(self, function_blocks: dict[int, list[str]]) -> list[str]:
         # collect token offsets for each basic block being processed as {block id → token offset}
         block_offsets = {}
@@ -91,14 +63,14 @@ class RISCVPreprocessor:
             block_offsets[block_id] = len(tokens)
             for instruction in block:
                 # parse the line of assembly into an instruction and its operands
-                instruction, operands = parse_instruction(instruction)
+                instruction, operands = self.parse_instruction(instruction)
 
                 tokens.append(instruction)
                 for operand in operands:
-                    if instruction in BRANCH_INSTRUCTIONS and (offset := is_offset(operand)):
+                    if instruction in self.branch_instructions and is_offset(operand):
                         # an operand to a branching instruction that is formatted as a hexadecimal number
                         # this is interpreter as the offset to a basic block, and this tracked as such in path_offsets
-                        jump_target = int(offset.group('value'), base=16)
+                        jump_target = int(operand, base=16)
                         jump_offsets[len(tokens)] = jump_target
                     else:
                         # for anything but an address operand of a branching / jumping instruction, let format_operand
@@ -119,40 +91,3 @@ class RISCVPreprocessor:
                 tokens[offset] = replacement
 
         return tokens
-
-
-def parse_instruction(instruction: str) -> tuple[str, tuple[str, ...]]:
-    match instruction.split(maxsplit=1):
-        # instruction and a number of operands to be parsed
-        case instruction, operands:
-            return instruction, tuple(parse_operands(operands))
-        # no operands to be parsed (but instruction will be a list here)
-        case instruction:
-            return instruction[0], ()
-
-
-def parse_operands(operands: str) -> Iterator[str]:
-    # move through the string of operands linearly, starting at offset 0
-    offset = 0
-    while offset < len(operands):
-        match operands[offset]:
-            case '(':
-                # a dereference from the expression between brackets, provide as separate tokens surrounded by the
-                # reference brackets
-                # NB: this assumes there will be no nesting of bracketry, as that would slice an incorrect substring
-                end = operands.index(')', offset)
-                yield '('
-                yield from parse_operands(operands[offset + 1 : end].lower())
-                yield ')'
-                # next offset is after the reference
-                offset = end + 1
-            case ' ' | ',':
-                # treat both spaces and commas as separators (skip these tokens)
-                offset += 1
-            case _:
-                # any other case is 'just an operand'
-                end = end.start() if (end := OPERAND_SEPARATOR.search(operands, offset)) else len(operands)
-                yield operands[offset:end].lower()
-                # next offset is either a separator (which will get ignored in the next iteration) or past the end of
-                # the string (causing tokenization to end)
-                offset = end

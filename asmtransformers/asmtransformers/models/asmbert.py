@@ -7,9 +7,7 @@ from transformers.modeling_outputs import MaskedLMOutput
 from transformers.models.bert.modeling_bert import BertOnlyMLMHead, BertPreTrainedModel
 
 from asmtransformers import operands
-from asmtransformers.arm64 import ARM64Preprocessor
-from asmtransformers.riscv import RISCVPreprocessor
-from asmtransformers.x86 import X86Preprocessor
+from asmtransformers.preprocessors import arm64, riscv, x86
 
 
 class ASMBertModel(BertModel):
@@ -183,10 +181,10 @@ class ASMTokenizer(BertTokenizer):
             operands.format_offset_log,
         )
         self.preprocessors = {
-            'amd64': X86Preprocessor(operand_formatters=formatters),
-            'arm64': ARM64Preprocessor(operand_formatters=formatters),
-            'i386': X86Preprocessor(operand_formatters=formatters),
-            'riscv64': RISCVPreprocessor(operand_formatters=formatters),
+            'amd64': x86.X86Preprocessor(operand_formatters=formatters),
+            'arm64': arm64.ARM64Preprocessor(operand_formatters=formatters),
+            'i386': x86.X86Preprocessor(operand_formatters=formatters),
+            'riscv64': riscv.RISCVPreprocessor(operand_formatters=formatters),
         }
 
         super().__init__(
