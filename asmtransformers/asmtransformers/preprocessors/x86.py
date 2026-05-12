@@ -89,7 +89,7 @@ class X86Preprocessor(ASMPreprocessor):
                 case '[':
                     end = operands.index(']', offset)
                     yield '['
-                    yield from self.parse_memory_expression(operands[offset + 1 : end])
+                    yield from self.parse_memory_expression(operands[offset + 1 : end].strip())
                     yield ']'
                     offset = end + 1
                 case ch if ch in _MEM_OPERATORS:
@@ -123,32 +123,31 @@ class X86Preprocessor(ASMPreprocessor):
         Split a memory address expression into tokens.
         treating negative displacements like "-0x8" as a single token rather than an operator followed by a number.
         """
-        expr = expr.strip()
-        i = 0
+        offset = 0
         length = len(expr)
 
-        while i < length:
-            match expr[i]:
+        while offset < length:
+            match expr[offset]:
                 case ' ':
-                    i += 1
+                    offset += 1
                 case '+' | '*':
-                    yield expr[i]
-                    i += 1
+                    yield expr[offset]
+                    offset += 1
                 case '-':
                     # unary minus: attach to the number that follows when preceded by an operator or start
-                    prev = expr[:i].rstrip()
+                    prev = expr[:offset].rstrip()
                     if not prev or prev[-1] in ('+', '-', '*'):
-                        m = _OPERAND_TOKEN.match(expr, i + 1)
+                        m = _OPERAND_TOKEN.match(expr, offset + 1)
                         if m:
                             yield f'-{m.group().lower()}'
-                            i = m.end()
+                            offset = m.end()
                             continue
                     yield '-'
-                    i += 1
+                    offset += 1
                 case _:
-                    m = _OPERAND_TOKEN.match(expr, i)
+                    m = _OPERAND_TOKEN.match(expr, offset)
                     if m:
                         yield m.group().lower()
-                        i = m.end()
+                        offset = m.end()
                     else:
-                        i += 1
+                        offset += 1
