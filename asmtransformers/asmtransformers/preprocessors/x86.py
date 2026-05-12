@@ -106,7 +106,7 @@ class X86Preprocessor(ASMPreprocessor):
                         assert rest.lstrip().startswith('ptr')
                         yield f'{token}_ptr'
                         # continue after "ptr"
-                        offset = end + rest.index('ptr') + 3
+                        offset = end + rest.index('ptr') + 3  # len('ptr')
                     else:
                         # strip optional segment-override suffix ":" from the token
                         # TODO: would it be informational to keep that suffix instead?
