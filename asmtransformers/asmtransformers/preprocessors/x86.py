@@ -5,7 +5,7 @@ from asmtransformers.preprocessors import ASMPreprocessor
 
 
 # based mostly on: https://en.wikipedia.org/wiki/List_of_x86_instructions
-BRANCH_INSTRUCTIONS = (
+BRANCH_INSTRUCTIONS = {
     # unconditional jump and call/return
     'jmp',
     'call',
@@ -53,7 +53,7 @@ BRANCH_INSTRUCTIONS = (
     'loop',
     'loope',
     'loopne',
-)
+}
 
 
 SIZE_QUALIFIERS = {
@@ -68,11 +68,9 @@ SIZE_QUALIFIERS = {
 }
 
 
-# Matches one token that stops before commas, spaces, or memory-expression operators
-_OPERAND_TOKEN = re.compile(r'[^\s,+\-*\[\]]+')
-
-
-_MEM_OPERATORS = frozenset('+-*')
+# a separator between operands; commas, whitespaces, memory expression start/end/operator or a combination of these
+OPERAND_SEPARATOR = re.compile(r'[,\s\[\]+\-*]+')
+MEMORY_OPERATORS = {'+', '-', '*'}
 
 
 class X86Preprocessor(ASMPreprocessor):
@@ -85,70 +83,61 @@ class X86Preprocessor(ASMPreprocessor):
         while offset < length:
             match operands[offset]:
                 case ' ' | ',':
+                    # treat both spaces and commas as separators (skip these tokens)
                     offset += 1
                 case '[':
+                    # expression between square brackets is a memory expression
+                    # slice this out of the operands string and process it separately
                     end = operands.index(']', offset)
                     yield '['
-                    yield from self.parse_memory_expression(operands[offset + 1 : end])
+                    yield from self.parse_memory_expression(operands[offset + 1 : end].strip())
                     yield ']'
                     offset = end + 1
-                case ch if ch in _MEM_OPERATORS:
-                    yield ch
-                    offset += 1
                 case _:
-                    m = _OPERAND_TOKEN.match(operands, offset)
-                    if not m:
-                        offset += 1
-                        continue
+                    # any other case is 'just an operand'
+                    # find the starting index of the separator; marking the end of the current operand
+                    end = sep.start() if (sep := OPERAND_SEPARATOR.search(operands, offset)) else len(operands)
+                    token = operands[offset:end]
 
-                    token = m.group().rstrip(':')  # strip segment-override colon (e.g. "fs:")
-                    lower = token.lower()
-
-                    if lower in SIZE_QUALIFIERS:
+                    if token in SIZE_QUALIFIERS:
                         # consume the mandatory following "ptr" keyword and merge into one token
-                        rest = operands[m.end() :].lstrip()
-                        if rest.lower().startswith('ptr'):
-                            yield f'{lower}_ptr'
-                            offset = m.end() + (len(operands[m.end() :]) - len(rest)) + 3
-                        else:
-                            yield lower
-                            offset = m.end()
+                        rest = operands[end:]
+                        # NB: a size qualifier *should* be followed by "ptr"
+                        assert rest.lstrip().startswith('ptr')
+                        yield f'{token}_ptr'
+                        # continue after "ptr"
+                        offset = end + rest.index('ptr') + 3  # len('ptr')
                     else:
-                        yield lower
-                        offset = m.end()
+                        # strip optional segment-override suffix ":" from the token
+                        # TODO: would it be informational to keep that suffix instead?
+                        yield token.removesuffix(':')
+                        offset = end
 
-    def parse_memory_expression(self, expr: str) -> Iterator[str]:
+    def parse_memory_expression(self, expression: str) -> Iterator[str]:
         """
         We need this because subtracting a memory expression in ghidra is done by [rbp + -0x8].
         Split a memory address expression into tokens.
         treating negative displacements like "-0x8" as a single token rather than an operator followed by a number.
         """
-        expr = expr.strip()
-        i = 0
-        length = len(expr)
+        offset = 0
+        length = len(expression)
 
-        while i < length:
-            match expr[i]:
+        while offset < length:
+            match expression[offset]:
                 case ' ':
-                    i += 1
-                case '+' | '*':
-                    yield expr[i]
-                    i += 1
-                case '-':
-                    # unary minus: attach to the number that follows when preceded by an operator or start
-                    prev = expr[:i].rstrip()
-                    if not prev or prev[-1] in ('+', '-', '*'):
-                        m = _OPERAND_TOKEN.match(expr, i + 1)
-                        if m:
-                            yield f'-{m.group().lower()}'
-                            i = m.end()
-                            continue
-                    yield '-'
-                    i += 1
+                    offset += 1
+                case '-' if not (preceding := expression[:offset].rstrip()) or preceding[-1] in MEMORY_OPERATORS:
+                    # a negative displacement, treat it as an operand starting with "-" instead of an operator
+                    # NB: search for the end of the operand *after* the "-"
+                    end = sep.start() if (sep := OPERAND_SEPARATOR.search(expression, offset + 1)) else len(expression)
+                    yield expression[offset:end]
+                    offset = end
+                case '+' | '*' | '-' as operator:
+                    yield operator
+                    offset += 1
                 case _:
-                    m = _OPERAND_TOKEN.match(expr, i)
-                    if m:
-                        yield m.group().lower()
-                        i = m.end()
-                    else:
-                        i += 1
+                    # any other case is 'just an operand'
+                    # find the starting index of the separator; marking the end of the current operand
+                    end = sep.start() if (sep := OPERAND_SEPARATOR.search(expression, offset)) else len(expression)
+                    yield expression[offset:end]
+                    offset = end

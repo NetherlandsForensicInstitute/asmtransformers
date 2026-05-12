@@ -18,12 +18,14 @@ def test_parse_plain_operands(tokenizer):
 
 def test_parse_memory_operand(tokenizer):
     assert list(tokenizer.parse_operands('[rax]')) == ['[', 'rax', ']']
-    assert list(tokenizer.parse_operands('[rbp + -0x8]')) == ['[', 'rbp', '+', '-0x8', ']']
+    assert list(tokenizer.parse_operands('[rbp+-0x8]')) == ['[', 'rbp', '+', '-0x8', ']']
 
 
 def test_parse_size_qualifier(tokenizer):
     assert list(tokenizer.parse_operands('dword ptr [rbp + -0x8]')) == ['dword_ptr', '[', 'rbp', '+', '-0x8', ']']
-    assert list(tokenizer.parse_operands('xmmword ptr [rax]')) == ['xmmword_ptr', '[', 'rax', ']']
+    assert list(tokenizer.parse_operands('dword ptr [rbp - 0x8]')) == ['dword_ptr', '[', 'rbp', '-', '0x8', ']']
+    assert list(tokenizer.parse_operands('dword ptr [rbp-0x8]')) == ['dword_ptr', '[', 'rbp', '-', '0x8', ']']
+    assert list(tokenizer.parse_operands('xmmword   ptr [rax]')) == ['xmmword_ptr', '[', 'rax', ']']
 
 
 def test_parse_segment_override(tokenizer):
@@ -45,7 +47,6 @@ def test_parse_complex_memory(tokenizer):
 
 
 def test_tokenize_single_block(tokenizer):
-
     graph = {0: ['mov rax, 0x1234', 'add rax, 0x1234', 'ret']}
 
     assert tokenizer.preprocess(graph) == [
@@ -60,7 +61,6 @@ def test_tokenize_single_block(tokenizer):
 
 
 def test_tokenize_branching_blocks(tokenizer):
-
     # NB: nodes are in 'reverse order', tokenizer should reorder these based on their node ids
     graph = {42: ['add rcx, 0x290', 'je 0x0'], 0: ['sub rcx, 0x290', 'jmp 0x2a']}  # branch to offset 0
 
