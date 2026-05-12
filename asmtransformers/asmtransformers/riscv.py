@@ -37,7 +37,17 @@ BRANCH_INSTRUCTIONS = (
     # return
     'ret',
     'call',
+    # compressed instructions
+    # jumps
+    'c.j',
+    'c.jal',
+    'c.jalr',
+    'c.jr',
+    # branches
+    'c.beqz',
+    'c.bnez',
 )
+
 
 # a separator between operands; commas or whitespaces or a combination of both
 OPERAND_SEPARATOR = re.compile(r'[,\s\(\)]+')
@@ -72,6 +82,8 @@ class RISCVPreprocessor:
         # start with an empty token list unless we've been handed a prefix (e.g. 'CLS'), making sure that the token
         # offsets we're collecting line up with the token offsets where those blocks actually start (see below)
         tokens = list(self.prefix_tokens)
+
+        function_blocks = dict(sorted(function_blocks.items()))
 
         for block_id, block in function_blocks.items():
             # log the 'next' token offset as the start of the block that will be processed next
