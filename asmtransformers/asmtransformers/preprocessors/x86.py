@@ -68,10 +68,8 @@ SIZE_QUALIFIERS = {
 }
 
 
-# a separator between operands; commas, whitespaces, memory expressions or a combination of these
-OPERAND_SEPARATOR = re.compile(r'[,\s\[\]]+')
-# Matches one token that stops before commas, spaces, or memory-expression operators
-_OPERAND_TOKEN = re.compile(r'[^\s,+\-*\[\]]+')
+# a separator between operands; commas, whitespaces, memory expression start/end/operator or a combination of these
+OPERAND_SEPARATOR = re.compile(r'[,\s\[\]+\-*]+')
 
 
 class X86Preprocessor(ASMPreprocessor):
@@ -114,38 +112,31 @@ class X86Preprocessor(ASMPreprocessor):
                         yield token.removesuffix(':')
                         offset = end
 
-
-    def parse_memory_expression(self, expr: str) -> Iterator[str]:
+    def parse_memory_expression(self, expression: str) -> Iterator[str]:
         """
         We need this because subtracting a memory expression in ghidra is done by [rbp + -0x8].
         Split a memory address expression into tokens.
         treating negative displacements like "-0x8" as a single token rather than an operator followed by a number.
         """
         offset = 0
-        length = len(expr)
+        length = len(expression)
 
         while offset < length:
-            match expr[offset]:
+            match expression[offset]:
                 case ' ':
                     offset += 1
-                case '+' | '*':
-                    yield expr[offset]
-                    offset += 1
-                case '-':
-                    # unary minus: attach to the number that follows when preceded by an operator or start
-                    prev = expr[:offset].rstrip()
-                    if not prev or prev[-1] in ('+', '-', '*'):
-                        m = _OPERAND_TOKEN.match(expr, offset + 1)
-                        if m:
-                            yield f'-{m.group().lower()}'
-                            offset = m.end()
-                            continue
-                    yield '-'
+                case '-' if not (preceding := expression[:offset].rstrip()) or preceding[-1] in '+-*':
+                    # a negative displacement, treat it as an operand starting with "-" instead of an operator
+                    # NB: search for the end of the operand *after* the "-"
+                    end = sep.start() if (sep := OPERAND_SEPARATOR.search(expression, offset + 1)) else len(expression)
+                    yield expression[offset:end]
+                    offset = end
+                case '+' | '*' | '-' as operator:
+                    yield operator
                     offset += 1
                 case _:
-                    m = _OPERAND_TOKEN.match(expr, offset)
-                    if m:
-                        yield m.group().lower()
-                        offset = m.end()
-                    else:
-                        offset += 1
+                    # any other case is 'just an operand'
+                    # find the starting index of the separator; marking the end of the current operand
+                    end = sep.start() if (sep := OPERAND_SEPARATOR.search(expression, offset)) else len(expression)
+                    yield expression[offset:end]
+                    offset = end
