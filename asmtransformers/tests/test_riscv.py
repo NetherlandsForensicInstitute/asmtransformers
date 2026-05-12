@@ -53,8 +53,8 @@ def test_jump_to_unknown_block(tokenizer):
     assert tokens.index('UNK_JUMP_ADDR') - tokens.index('bgt') == 1
 
 
-def test_compressed_jump():
-    tokens = riscv.RISCVPreprocessor(context_length=512).preprocess(
+def test_compressed_jump(tokenizer):
+    tokens = tokenizer.preprocess(
         {
             0x12: ['c.beqz 0x123', 'add x0 x0 #0x12'],
             0x34: ['c.bnez 0x12', 'sub x0 x0 #0x12'],
