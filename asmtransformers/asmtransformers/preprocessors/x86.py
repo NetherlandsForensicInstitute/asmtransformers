@@ -70,6 +70,7 @@ SIZE_QUALIFIERS = {
 
 # a separator between operands; commas, whitespaces, memory expression start/end/operator or a combination of these
 OPERAND_SEPARATOR = re.compile(r'[,\s\[\]+\-*]+')
+MEMORY_OPERATORS = {'+', '-', '*'}
 
 
 class X86Preprocessor(ASMPreprocessor):
@@ -125,7 +126,7 @@ class X86Preprocessor(ASMPreprocessor):
             match expression[offset]:
                 case ' ':
                     offset += 1
-                case '-' if not (preceding := expression[:offset].rstrip()) or preceding[-1] in '+-*':
+                case '-' if not (preceding := expression[:offset].rstrip()) or preceding[-1] in MEMORY_OPERATORS:
                     # a negative displacement, treat it as an operand starting with "-" instead of an operator
                     # NB: search for the end of the operand *after* the "-"
                     end = sep.start() if (sep := OPERAND_SEPARATOR.search(expression, offset + 1)) else len(expression)
