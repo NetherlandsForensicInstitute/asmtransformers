@@ -96,7 +96,8 @@ class RISCVPreprocessor:
                 tokens.append(instruction)
                 for operand in operands:
                     if instruction in BRANCH_INSTRUCTIONS and (offset := is_offset(operand)):
-                        # can't slice at place 2 because negative hex values so therefore use value from is_offset regex
+                        # an operand to a branching instruction that is formatted as a hexadecimal number
+                        # this is interpreter as the offset to a basic block, and this tracked as such in path_offsets
                         jump_target = int(offset.group('value'), base=16)
                         jump_offsets[len(tokens)] = jump_target
                     else:
