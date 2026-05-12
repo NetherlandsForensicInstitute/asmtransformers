@@ -18,12 +18,12 @@ def test_parse_plain_operands(tokenizer):
 
 def test_parse_memory_operand(tokenizer):
     assert list(tokenizer.parse_operands('[rax]')) == ['[', 'rax', ']']
-    assert list(tokenizer.parse_operands('[rbp + -0x8]')) == ['[', 'rbp', '+', '-0x8', ']']
+    assert list(tokenizer.parse_operands('[rbp+-0x8]')) == ['[', 'rbp', '+', '-0x8', ']']
 
 
 def test_parse_size_qualifier(tokenizer):
     assert list(tokenizer.parse_operands('dword ptr [rbp + -0x8]')) == ['dword_ptr', '[', 'rbp', '+', '-0x8', ']']
-    assert list(tokenizer.parse_operands('xmmword ptr [rax]')) == ['xmmword_ptr', '[', 'rax', ']']
+    assert list(tokenizer.parse_operands('xmmword   ptr [rax]')) == ['xmmword_ptr', '[', 'rax', ']']
 
 
 def test_parse_segment_override(tokenizer):
