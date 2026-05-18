@@ -14,6 +14,7 @@ def test_parse_plain_operands(tokenizer):
     assert list(tokenizer.parse_operands('0x10')) == ['0x10']
     assert list(tokenizer.parse_operands('rax, rbx')) == ['rax', 'rbx']
     assert list(tokenizer.parse_operands('rax, 0x10')) == ['rax', '0x10']
+    assert list(tokenizer.parse_operands('rsp,-0x10')) == ['rsp', '-0x10']
 
 
 def test_parse_memory_operand(tokenizer):
