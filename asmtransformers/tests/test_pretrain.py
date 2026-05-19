@@ -56,7 +56,7 @@ def test_pretrain_passes_resume_checkpoint_to_trainer(monkeypatch, tmp_path):
         def save_pretrained(self, output_dir):
             calls['tokenizer_output_dir'] = output_dir
 
-    class FakeBertTokenizer:
+    class FakeASMTokenizer:
         @classmethod
         def from_pretrained(cls, tokenizer):
             calls['tokenizer_path'] = tokenizer
@@ -104,7 +104,7 @@ def test_pretrain_passes_resume_checkpoint_to_trainer(monkeypatch, tmp_path):
         )
     )
 
-    monkeypatch.setattr(pretrain_module, 'BertTokenizer', FakeBertTokenizer)
+    monkeypatch.setattr(pretrain_module, 'ASMTokenizer', FakeASMTokenizer)
     monkeypatch.setattr(pretrain_module, 'ASMBertForMaskedLM', FakeModel)
     monkeypatch.setattr(pretrain_module, 'Trainer', FakeTrainer)
     monkeypatch.setattr(pretrain_module, 'load_from_disk', lambda path: dataset)
