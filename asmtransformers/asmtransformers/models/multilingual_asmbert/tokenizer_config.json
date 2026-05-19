@@ -9,5 +9,5 @@
   "mask_token": "[MASK]",
   "tokenize_chinese_chars": false,
   "strip_accents": null,
-  "tokenizer_class": "BertTokenizer"
+  "tokenizer_class": "ASMTokenizer"
 }
