@@ -1,12 +1,14 @@
 import argparse
 import datetime as dt
 import logging
+from importlib import resources
 from pathlib import Path
 
 from datasets import load_from_disk
 from transformers import BertConfig, DataCollatorForLanguageModeling, Trainer, TrainingArguments
 from tzlocal import get_localzone
 
+from asmtransformers.models import model_resource
 from asmtransformers.models.asmbert import ASMBertForMaskedLM, ASMTokenizer
 
 
@@ -40,13 +42,21 @@ def pretrain(
     logging.info(f'Saving checkpoints to: {output_dir}')
 
     # Load the tokenizer and model
-    tokenizer = ASMTokenizer.from_pretrained(tokenizer)
+    default_model_resource = model_resource('arm64bert')
+    if tokenizer is None:
+        with resources.as_file(default_model_resource) as tokenizer_path:
+            tokenizer = ASMTokenizer.from_pretrained(tokenizer_path)
+    else:
+        tokenizer = ASMTokenizer.from_pretrained(tokenizer)
+
     if model_path:
         model = ASMBertForMaskedLM.from_pretrained(model_path)
         assert model.base_model.embeddings.position_embeddings is model.base_model.embeddings.word_embeddings
     else:
         # if no model_path is given, initialise a 'clean ASMBert'
-        config = BertConfig.from_json_file('../asmtransformers/models/arm64bert/arm64bert_config.json')
+        config_resource = default_model_resource.joinpath('config.json')
+        with resources.as_file(config_resource) as config_path:
+            config = BertConfig.from_json_file(config_path)
         model = ASMBertForMaskedLM(config)
         assert model.base_model.embeddings.position_embeddings is model.base_model.embeddings.word_embeddings
     logging.info('Tokenizer and model loaded')
@@ -120,8 +130,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--tokenizer',
         type=str,
-        default=Path(__file__) / '../asmtransformers/models/arm64bert',
-        help='the path of tokenizer',
+        default=None,
+        help='the path of tokenizer; defaults to the packaged arm64bert tokenizer',
     )
     parser.add_argument('--epoch', type=int, default=1, help='number of training epochs')
     parser.add_argument('--batch-size', type=int, default=1, help='training batch size')
