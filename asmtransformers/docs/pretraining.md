@@ -80,8 +80,8 @@ uses bfloat16 where appropriate while preserving normal optimizer and checkpoint
 Use `--tf32` on Ampere, Hopper, or newer NVIDIA GPUs to allow TF32 matmul/cudnn kernels. The script enables PyTorch TF32
 backend flags and passes TF32 through to `TrainingArguments` when CUDA is available.
 
-Do not use these flags on older CUDA GPUs that do not support them. If a local CPU-only dry run needs to exercise CLI
-construction, `--tf32` is accepted but ignored by `TrainingArguments`.
+Do not use these flags on older CUDA GPUs that do not support them. If a local CPU-only dry run or CI job needs to
+exercise CLI construction, `--bf16` and `--tf32` are accepted but not passed through to `TrainingArguments`.
 
 ## Checkpoints And Resume
 

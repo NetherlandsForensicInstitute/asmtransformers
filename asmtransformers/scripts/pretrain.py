@@ -35,6 +35,7 @@ def build_training_args(
     save_total_limit,
     seed,
 ):
+    bf16_training_arg = bf16 if torch.cuda.is_available() else False
     tf32_training_arg = tf32 if torch.cuda.is_available() else None
     return TrainingArguments(
         output_dir=output_dir,
@@ -53,7 +54,7 @@ def build_training_args(
         prediction_loss_only=True,
         report_to=['tensorboard'],
         gradient_accumulation_steps=gradient_accumulation_steps,
-        bf16=bf16,
+        bf16=bf16_training_arg,
         tf32=tf32_training_arg,
         dataloader_num_workers=dataloader_num_workers,
         seed=seed,
