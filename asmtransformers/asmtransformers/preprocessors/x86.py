@@ -96,7 +96,7 @@ class X86Preprocessor(ASMPreprocessor):
                 case _:
                     # any other case is 'just an operand'
                     # find the starting index of the separator; marking the end of the current operand
-                    end = sep.start() if (sep := OPERAND_SEPARATOR.search(operands, offset)) else len(operands)
+                    end = sep.start() if (sep := OPERAND_SEPARATOR.search(operands, offset + 1)) else len(operands)
                     token = operands[offset:end]
 
                     if token in SIZE_QUALIFIERS:
@@ -128,7 +128,6 @@ class X86Preprocessor(ASMPreprocessor):
                     offset += 1
                 case '-' if not (preceding := expression[:offset].rstrip()) or preceding[-1] in MEMORY_OPERATORS:
                     # a negative displacement, treat it as an operand starting with "-" instead of an operator
-                    # NB: search for the end of the operand *after* the "-"
                     end = sep.start() if (sep := OPERAND_SEPARATOR.search(expression, offset + 1)) else len(expression)
                     yield expression[offset:end]
                     offset = end
@@ -138,6 +137,6 @@ class X86Preprocessor(ASMPreprocessor):
                 case _:
                     # any other case is 'just an operand'
                     # find the starting index of the separator; marking the end of the current operand
-                    end = sep.start() if (sep := OPERAND_SEPARATOR.search(expression, offset)) else len(expression)
+                    end = sep.start() if (sep := OPERAND_SEPARATOR.search(expression, offset + 1)) else len(expression)
                     yield expression[offset:end]
                     offset = end
