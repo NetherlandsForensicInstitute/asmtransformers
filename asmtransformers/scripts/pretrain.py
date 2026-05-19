@@ -42,7 +42,7 @@ def pretrain(
     logging.info(f'Saving checkpoints to: {output_dir}')
 
     # Load the tokenizer and model
-    default_model_resource = model_resource('arm64bert')
+    default_model_resource = model_resource('multilingual_asmbert')
     if tokenizer is None:
         with resources.as_file(default_model_resource) as tokenizer_path:
             tokenizer = ASMTokenizer.from_pretrained(tokenizer_path)
@@ -131,7 +131,7 @@ if __name__ == '__main__':
         '--tokenizer',
         type=str,
         default=None,
-        help='the path of tokenizer; defaults to the packaged arm64bert tokenizer',
+        help='the path of tokenizer; defaults to the packaged multilingual_asmbert tokenizer',
     )
     parser.add_argument('--epoch', type=int, default=1, help='number of training epochs')
     parser.add_argument('--batch-size', type=int, default=1, help='training batch size')
