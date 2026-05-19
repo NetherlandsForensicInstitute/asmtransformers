@@ -7,7 +7,7 @@ from datasets import load_from_disk
 from transformers import BertConfig, BertTokenizer, DataCollatorForLanguageModeling, Trainer, TrainingArguments
 from tzlocal import get_localzone
 
-from asmtransformers.models.asmbert import ASMBertForMaskedLM
+from asmtransformers.models.asmbert import ASMBertForMaskedLM, ASMTokenizer
 
 
 def timestamp():
@@ -40,13 +40,13 @@ def pretrain(
     logging.info(f'Saving checkpoints to: {output_dir}')
 
     # Load the tokenizer and model
-    tokenizer = BertTokenizer.from_pretrained(tokenizer)
+    tokenizer = ASMTokenizer.from_pretrained(tokenizer)
     if model_path:
         model = ASMBertForMaskedLM.from_pretrained(model_path)
         assert model.base_model.embeddings.position_embeddings is model.base_model.embeddings.word_embeddings
     else:
         # if no model_path is given, initialise a 'clean ASMBert'
-        config = BertConfig.from_json_file('asmtransformers/models/arm64bert/arm64bert_config.json')
+        config = BertConfig.from_json_file('../asmtransformers/models/arm64bert/arm64bert_config.json')
         model = ASMBertForMaskedLM(config)
         assert model.base_model.embeddings.position_embeddings is model.base_model.embeddings.word_embeddings
     logging.info('Tokenizer and model loaded')
