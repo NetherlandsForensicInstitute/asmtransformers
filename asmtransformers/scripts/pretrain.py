@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 from datasets import load_from_disk
-from transformers import BertConfig, BertTokenizer, DataCollatorForLanguageModeling, Trainer, TrainingArguments
+from transformers import BertConfig, DataCollatorForLanguageModeling, Trainer, TrainingArguments
 from tzlocal import get_localzone
 
 from asmtransformers.models.asmbert import ASMBertForMaskedLM, ASMTokenizer
