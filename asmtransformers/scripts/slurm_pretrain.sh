@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=asm-pretrain
+#SBATCH --nodes=2
+#SBATCH --gpus-per-node=8
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=32
+#SBATCH --time=48:00:00
+#SBATCH --output=%x-%j.out
+
+set -euo pipefail
+
+DATA=${DATA:?set DATA to a preprocessed Hugging Face dataset directory}
+TOKENIZER=${TOKENIZER:?set TOKENIZER to the multi-arch tokenizer directory}
+OUTPUT_DIR=${OUTPUT_DIR:-output}
+CONFIG=${CONFIG:-asmtransformers/models/arm64bert/arm64bert_config.json}
+
+BATCH_SIZE=${BATCH_SIZE:-16}
+GRADIENT_ACCUMULATION_STEPS=${GRADIENT_ACCUMULATION_STEPS:-4}
+EPOCHS=${EPOCHS:-1}
+MAX_STEPS=${MAX_STEPS:--1}
+SAVE_STEPS=${SAVE_STEPS:-10000}
+LOGGING_STEPS=${LOGGING_STEPS:-100}
+EVAL_SAMPLES=${EVAL_SAMPLES:-100000}
+DATALOADER_NUM_WORKERS=${DATALOADER_NUM_WORKERS:-8}
+SAVE_TOTAL_LIMIT=${SAVE_TOTAL_LIMIT:-5}
+MLM_PROB=${MLM_PROB:-0.15}
+LEARNING_RATE=${LEARNING_RATE:-1e-4}
+WARMUP_RATIO=${WARMUP_RATIO:-0.06}
+SEED=${SEED:-42}
+
+GPUS_PER_NODE=${SLURM_GPUS_ON_NODE:-${SLURM_GPUS_PER_NODE:-1}}
+NNODES=${SLURM_NNODES:-1}
+NODE_RANK=${SLURM_NODEID:-0}
+MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+MASTER_PORT=${MASTER_PORT:-29500}
+
+export TOKENIZERS_PARALLELISM=false
+export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
+
+srun pdm run torchrun \
+    --nnodes "$NNODES" \
+    --nproc-per-node "$GPUS_PER_NODE" \
+    --node-rank "$NODE_RANK" \
+    --master-addr "$MASTER_ADDR" \
+    --master-port "$MASTER_PORT" \
+    scripts/pretrain.py \
+    --data "$DATA" \
+    --tokenizer "$TOKENIZER" \
+    --output-dir "$OUTPUT_DIR" \
+    --config "$CONFIG" \
+    --epoch "$EPOCHS" \
+    --max-steps "$MAX_STEPS" \
+    --batch-size "$BATCH_SIZE" \
+    --gradient-accumulation-steps "$GRADIENT_ACCUMULATION_STEPS" \
+    --save-steps "$SAVE_STEPS" \
+    --logging-steps "$LOGGING_STEPS" \
+    --eval-samples "$EVAL_SAMPLES" \
+    --dataloader-num-workers "$DATALOADER_NUM_WORKERS" \
+    --save-total-limit "$SAVE_TOTAL_LIMIT" \
+    --mlm-prob "$MLM_PROB" \
+    --learning-rate "$LEARNING_RATE" \
+    --warmup-ratio "$WARMUP_RATIO" \
+    --seed "$SEED" \
+    --bf16 \
+    --tf32
