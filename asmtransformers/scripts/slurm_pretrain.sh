@@ -11,7 +11,7 @@ set -euo pipefail
 
 DATA=${DATA:?set DATA to a preprocessed Hugging Face dataset directory}
 TOKENIZER=${TOKENIZER:?set TOKENIZER to the multi-arch tokenizer directory}
-OUTPUT_DIR=${OUTPUT_DIR:-output}
+OUTPUT_DIR=${OUTPUT_DIR:?set OUTPUT_DIR to the base output directory}
 CONFIG=${CONFIG:-asmtransformers/models/arm64bert/arm64bert_config.json}
 
 BATCH_SIZE=${BATCH_SIZE:-16}
@@ -44,9 +44,9 @@ srun pdm run torchrun \
     --master-addr "$MASTER_ADDR" \
     --master-port "$MASTER_PORT" \
     scripts/pretrain.py \
+    "$OUTPUT_DIR" \
     --data "$DATA" \
     --tokenizer "$TOKENIZER" \
-    --output-dir "$OUTPUT_DIR" \
     --config "$CONFIG" \
     --epoch "$EPOCHS" \
     --max-steps "$MAX_STEPS" \

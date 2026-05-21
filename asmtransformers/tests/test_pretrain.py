@@ -5,7 +5,7 @@ import pytest
 from datasets import Dataset, DatasetDict
 
 from scripts import pretrain as pretrain_module
-from scripts.pretrain import build_training_args, load_eval_dataset
+from scripts.pretrain import build_arg_parser, build_training_args, load_eval_dataset
 
 
 def build_training_args_kwargs(*, bf16=False, tf32=False):
@@ -26,6 +26,20 @@ def build_training_args_kwargs(*, bf16=False, tf32=False):
         'save_total_limit': 3,
         'seed': 123,
     }
+
+
+def test_arg_parser_requires_output_dir():
+    parser = build_arg_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args([])
+
+
+def test_arg_parser_accepts_positional_output_dir():
+    args = build_arg_parser().parse_args(['output', '--data', 'dataset-path'])
+
+    assert args.output_dir == 'output'
+    assert args.data == 'dataset-path'
 
 
 def test_build_training_args_rejects_bf16_without_cuda(monkeypatch):

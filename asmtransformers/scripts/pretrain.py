@@ -206,19 +206,18 @@ def pretrain(
     logging.info('Training done')
 
 
-if __name__ == '__main__':
+def build_arg_parser():
     parser = argparse.ArgumentParser(description='ASM-Pretrain')
+    parser.add_argument(
+        'output_dir',
+        type=str,
+        help='the directory where the pretrained model will be saved',
+    )
     parser.add_argument(
         '--model-path',
         type=str,
         default=None,
         help='the path of the model to pretrain, can be empty if you want to initialise a new model',
-    )
-    parser.add_argument(
-        '--output-dir',
-        type=str,
-        default=Path(__file__).parent.parent / 'output',
-        help='the directory where the pretrained model be saved',
     )
     parser.add_argument('--data', type=str, help='training dataset')
     parser.add_argument(
@@ -231,7 +230,7 @@ if __name__ == '__main__':
         '--config',
         type=str,
         default=None,
-        help='the path of the model config used when initializing a new model defaults to packaged '
+        help='the path of the model config used when initializing a new model. Defaults to packaged '
         'multilingual_asmbert',
     )
     parser.add_argument('--epoch', type=int, default=1, help='number of training epochs')
@@ -265,7 +264,11 @@ if __name__ == '__main__':
         default=None,
         help='path to a Trainer checkpoint to resume from',
     )
+    return parser
 
+
+if __name__ == '__main__':
+    parser = build_arg_parser()
     args = parser.parse_args()
     if args.eval_samples < 0:
         args.eval_samples = None

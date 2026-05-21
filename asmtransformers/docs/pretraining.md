@@ -36,9 +36,9 @@ writes TensorBoard logs, and saves checkpoints:
 ```bash
 cd asmtransformers
 pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
+    output \
     --data /path/to/tokenized-dataset \
     --tokenizer /path/to/tokenizer \
-    --output-dir output \
     --config asmtransformers/models/arm64bert/arm64bert_config.json \
     --batch-size 1 \
     --gradient-accumulation-steps 1 \
@@ -51,7 +51,7 @@ pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
 ```
 
 For SLURM, edit the `#SBATCH` header in `scripts/slurm_pretrain.sh` for the target partition, account, wall time,
-node count, and GPU count. Submit with dataset and tokenizer paths:
+node count, and GPU count. Submit with dataset, tokenizer, and output paths:
 
 ```bash
 cd asmtransformers
@@ -86,7 +86,7 @@ script exits before training rather than silently falling back. For local CPU-on
 
 ## Checkpoints And Resume
 
-The script writes timestamped runs under `--output-dir`:
+The script writes timestamped runs under the positional `output_dir`:
 
 ```text
 output/pretraining_mlm_YYYY-MM-DD_HH-MM-SS/
@@ -99,9 +99,9 @@ Resume an interrupted run from a Trainer checkpoint:
 
 ```bash
 pdm run torchrun --nproc-per-node 8 scripts/pretrain.py \
+    /path/to/output \
     --data /path/to/tokenized-dataset \
     --tokenizer /path/to/tokenizer \
-    --output-dir /path/to/output \
     --resume-from-checkpoint /path/to/output/pretraining_mlm_.../checkpoint-10000 \
     --bf16 \
     --tf32
