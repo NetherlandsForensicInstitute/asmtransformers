@@ -51,16 +51,20 @@ their similarity to the unknown function, hopefully giving an indication of what
 Pretraining
 -----------
 
-    usage: scripts/pretrain.py [-h] [--model-path MODEL_PATH] [--output-dir OUTPUT_DIR] [--data DATA] [--tokenizer TOKENIZER] [--epoch EPOCH] [--batch-size BATCH_SIZE] [--gradient-accumulation-steps GRADIENT_ACCUMULATION_STEPS] [--save-steps SAVE_STEPS] [--logging-steps LOGGING_STEPS] [--mlm-prob MLM_PROB]
+For cluster-oriented multi-architecture pretraining with CUDA bf16 mixed precision, see
+[docs/pretraining.md](docs/pretraining.md). Run `scripts/pretrain.py --help` for the full current CLI.
+
+    usage: scripts/pretrain.py [-h] [--model-path MODEL_PATH] [--data DATA] [--tokenizer TOKENIZER] [--epoch EPOCH] [--batch-size BATCH_SIZE] [--gradient-accumulation-steps GRADIENT_ACCUMULATION_STEPS] [--save-steps SAVE_STEPS] [--logging-steps LOGGING_STEPS] [--mlm-prob MLM_PROB] output_dir
 
     ASM-Pretrain
+
+    positional arguments:
+      output_dir            the directory where the pretrained model will be saved
 
     options:
       -h, --help            show this help message and exit
       --model-path MODEL_PATH
                             the path of the model to pretrain, can be empty if you want to initialise a new model
-      --output-dir OUTPUT_DIR
-                            the directory where the pretrained model be saved
       --data DATA           training dataset
       --tokenizer TOKENIZER
                             the path of tokenizer
