@@ -17,6 +17,26 @@ def timestamp():
     return dt.datetime.now(tz=get_localzone()).strftime('%Y-%m-%d_%H-%M-%S')
 
 
+def validate_precision_support(*, bf16, tf32):
+    if not bf16 and not tf32:
+        return
+
+    if not torch.cuda.is_available():
+        requested = ', '.join(flag for flag, enabled in (('--bf16', bf16), ('--tf32', tf32)) if enabled)
+        raise RuntimeError(f'{requested} requested, but CUDA is not available')
+
+    if bf16 and not torch.cuda.is_bf16_supported():
+        raise RuntimeError('--bf16 requested, but the current CUDA device does not support bfloat16')
+
+    if tf32:
+        capability = torch.cuda.get_device_capability()
+        if capability < (8, 0):
+            version = '.'.join(str(part) for part in capability)
+            raise RuntimeError(
+                f'--tf32 requested, but the current CUDA device has compute capability {version}; need 8.0+'
+            )
+
+
 def build_training_args(
     *,
     output_dir,
@@ -35,8 +55,7 @@ def build_training_args(
     save_total_limit,
     seed,
 ):
-    bf16_training_arg = bf16 if torch.cuda.is_available() else False
-    tf32_training_arg = tf32 if torch.cuda.is_available() else None
+    validate_precision_support(bf16=bf16, tf32=tf32)
     return TrainingArguments(
         output_dir=output_dir,
         learning_rate=learning_rate,
@@ -54,8 +73,8 @@ def build_training_args(
         prediction_loss_only=True,
         report_to=['tensorboard'],
         gradient_accumulation_steps=gradient_accumulation_steps,
-        bf16=bf16_training_arg,
-        tf32=tf32_training_arg,
+        bf16=bf16,
+        tf32=tf32,
         dataloader_num_workers=dataloader_num_workers,
         seed=seed,
     )
@@ -95,6 +114,7 @@ def pretrain(
     resume_from_checkpoint,
 ):
     output_dir = f'{output_dir}/pretraining_mlm_{timestamp()}'
+    validate_precision_support(bf16=bf16, tf32=tf32)
     Path(output_dir).mkdir(exist_ok=True, parents=True)
 
     if tf32:

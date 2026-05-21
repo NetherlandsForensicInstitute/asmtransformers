@@ -78,10 +78,11 @@ Use `--bf16` for CUDA bfloat16 mixed precision. This enables Hugging Face `Train
 uses bfloat16 where appropriate while preserving normal optimizer and checkpoint behavior.
 
 Use `--tf32` on Ampere, Hopper, or newer NVIDIA GPUs to allow TF32 matmul/cudnn kernels. The script enables PyTorch TF32
-backend flags and passes TF32 through to `TrainingArguments` when CUDA is available.
+backend flags and passes TF32 through to `TrainingArguments`.
 
-Do not use these flags on older CUDA GPUs that do not support them. If a local CPU-only dry run or CI job needs to
-exercise CLI construction, `--bf16` and `--tf32` are accepted but not passed through to `TrainingArguments`.
+These flags are strict requests. Do not use them on CPU-only systems or older CUDA GPUs that do not support them; the
+script exits before training rather than silently falling back. For local CPU-only dry runs or CI jobs, omit `--bf16` and
+`--tf32`.
 
 ## Checkpoints And Resume
 

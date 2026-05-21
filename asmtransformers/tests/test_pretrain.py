@@ -1,33 +1,78 @@
 import json
 from types import SimpleNamespace
 
+import pytest
 from datasets import Dataset, DatasetDict
 
 from scripts import pretrain as pretrain_module
 from scripts.pretrain import build_training_args, load_eval_dataset
 
 
-def test_build_training_args_accepts_bf16_request_without_requiring_cuda():
+def build_training_args_kwargs(*, bf16=False, tf32=False):
+    return {
+        'output_dir': '/tmp/asmtransformers-test',
+        'epoch': 1,
+        'max_steps': 20,
+        'batch_size': 2,
+        'gradient_accumulation_steps': 8,
+        'save_steps': 30,
+        'logging_steps': 5,
+        'eval_dataset': [1],
+        'learning_rate': 1e-4,
+        'warmup_ratio': 0.06,
+        'bf16': bf16,
+        'tf32': tf32,
+        'dataloader_num_workers': 4,
+        'save_total_limit': 3,
+        'seed': 123,
+    }
+
+
+def test_build_training_args_rejects_bf16_without_cuda(monkeypatch):
+    monkeypatch.setattr(pretrain_module.torch.cuda, 'is_available', lambda: False)
+
+    with pytest.raises(RuntimeError, match='--bf16 requested, but CUDA is not available'):
+        build_training_args(**build_training_args_kwargs(bf16=True))
+
+
+def test_build_training_args_rejects_tf32_without_cuda(monkeypatch):
+    monkeypatch.setattr(pretrain_module.torch.cuda, 'is_available', lambda: False)
+
+    with pytest.raises(RuntimeError, match='--tf32 requested, but CUDA is not available'):
+        build_training_args(**build_training_args_kwargs(tf32=True))
+
+
+def test_build_training_args_rejects_bf16_when_cuda_device_does_not_support_it(monkeypatch):
+    monkeypatch.setattr(pretrain_module.torch.cuda, 'is_available', lambda: True)
+    monkeypatch.setattr(pretrain_module.torch.cuda, 'is_bf16_supported', lambda: False)
+
+    with pytest.raises(RuntimeError, match='does not support bfloat16'):
+        build_training_args(**build_training_args_kwargs(bf16=True))
+
+
+def test_build_training_args_rejects_tf32_before_ampere(monkeypatch):
+    monkeypatch.setattr(pretrain_module.torch.cuda, 'is_available', lambda: True)
+    monkeypatch.setattr(pretrain_module.torch.cuda, 'get_device_capability', lambda: (7, 5))
+
+    with pytest.raises(RuntimeError, match='compute capability 7.5; need 8.0\\+'):
+        build_training_args(**build_training_args_kwargs(tf32=True))
+
+
+def test_build_training_args_passes_supported_precision_through(monkeypatch):
+    monkeypatch.setattr(pretrain_module.torch.cuda, 'is_available', lambda: True)
+    monkeypatch.setattr(pretrain_module.torch.cuda, 'is_bf16_supported', lambda: True)
+    monkeypatch.setattr(pretrain_module.torch.cuda, 'get_device_capability', lambda: (8, 0))
+    monkeypatch.setattr(pretrain_module, 'TrainingArguments', lambda **kwargs: SimpleNamespace(**kwargs))
+
     args = build_training_args(
-        output_dir='/tmp/asmtransformers-test',
-        epoch=1,
-        max_steps=20,
-        batch_size=2,
-        gradient_accumulation_steps=8,
-        save_steps=30,
-        logging_steps=5,
-        eval_dataset=[1],
-        learning_rate=1e-4,
-        warmup_ratio=0.06,
-        bf16=True,
-        tf32=True,
-        dataloader_num_workers=4,
-        save_total_limit=3,
-        seed=123,
+        **build_training_args_kwargs(
+            bf16=True,
+            tf32=True,
+        )
     )
 
-    assert args.bf16 is False
-    assert args.tf32 is None
+    assert args.bf16 is True
+    assert args.tf32 is True
     assert args.dataloader_num_workers == 4
     assert args.save_total_limit == 3
     assert args.seed == 123
@@ -125,8 +170,8 @@ def test_pretrain_passes_resume_checkpoint_to_trainer(monkeypatch, tmp_path):
         mlm_prob=0.15,
         learning_rate=1e-4,
         warmup_ratio=0.06,
-        bf16=True,
-        tf32=True,
+        bf16=False,
+        tf32=False,
         dataloader_num_workers=0,
         save_total_limit=2,
         eval_samples=1,
