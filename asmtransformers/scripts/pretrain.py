@@ -208,10 +208,6 @@ def pretrain(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ASM-Pretrain')
-    config_help = (
-        'the path of the model config used when initializing a new model; '
-        + 'defaults to packaged multilingual_asmbert'
-    )
     parser.add_argument(
         '--model-path',
         type=str,
@@ -235,7 +231,8 @@ if __name__ == '__main__':
         '--config',
         type=str,
         default=None,
-        help=config_help,
+        help='the path of the model config used when initializing a new model defaults to packaged '
+        'multilingual_asmbert',
     )
     parser.add_argument('--epoch', type=int, default=1, help='number of training epochs')
     parser.add_argument('--max-steps', type=int, default=-1, help='maximum number of training steps; -1 uses epochs')
