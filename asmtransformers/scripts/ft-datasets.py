@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import random
 
@@ -95,6 +96,8 @@ def generate_eval(data_folder, output_folder):
 def main(data_folder, output_folder):
     generate_train(data_folder, output_folder)
     generate_eval(data_folder, output_folder)
+    with open(os.path.join(output_folder, 'dataset_dict.json'), 'w') as f:
+        json.dump({'splits': ['train', 'test']}, f)
 
 
 def get_parser() -> argparse.ArgumentParser:
