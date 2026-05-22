@@ -86,10 +86,16 @@ script exits before training rather than silently falling back. For local CPU-on
 
 ## Checkpoints And Resume
 
-The script writes timestamped runs under the positional `output_dir`:
+The script writes runs under the positional `output_dir`. Local runs use a timestamped directory:
 
 ```text
 output/pretraining_mlm_YYYY-MM-DD_HH-MM-SS/
+```
+
+SLURM runs use the batch job id so all torchrun ranks agree on the same output directory:
+
+```text
+output/pretraining_mlm_slurm_$SLURM_JOB_ID/
 ```
 
 It saves the tokenizer, periodic Trainer checkpoints, TensorBoard logs, and the final model. Keep checkpoint retention

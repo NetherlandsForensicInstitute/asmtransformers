@@ -5,7 +5,13 @@ import pytest
 from datasets import Dataset, DatasetDict
 
 from scripts import pretrain as pretrain_module
-from scripts.pretrain import build_arg_parser, build_training_args, destroy_distributed_process_group, load_eval_dataset
+from scripts.pretrain import (
+    build_arg_parser,
+    build_output_dir,
+    build_training_args,
+    destroy_distributed_process_group,
+    load_eval_dataset,
+)
 
 
 def build_training_args_kwargs(*, bf16=False, tf32=False):
@@ -125,6 +131,19 @@ def test_arg_parser_accepts_positional_output_dir():
 
     assert args.output_dir == 'output'
     assert args.data == 'dataset-path'
+
+
+def test_build_output_dir_uses_timestamp_without_slurm_job_id(monkeypatch, tmp_path):
+    monkeypatch.delenv('SLURM_JOB_ID', raising=False)
+    monkeypatch.setattr(pretrain_module, 'timestamp', lambda: '2026-05-22_12-00-00')
+
+    assert build_output_dir(tmp_path) == str(tmp_path / 'pretraining_mlm_2026-05-22_12-00-00')
+
+
+def test_build_output_dir_uses_slurm_job_id(monkeypatch, tmp_path):
+    monkeypatch.setenv('SLURM_JOB_ID', '12345')
+
+    assert build_output_dir(tmp_path) == str(tmp_path / 'pretraining_mlm_slurm_12345')
 
 
 def test_build_training_args_rejects_bf16_without_cuda(monkeypatch):

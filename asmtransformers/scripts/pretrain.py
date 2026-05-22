@@ -1,6 +1,7 @@
 import argparse
 import datetime as dt
 import logging
+import os
 from importlib import resources
 from pathlib import Path
 
@@ -15,6 +16,12 @@ from asmtransformers.models.asmbert import ASMBertForMaskedLM, ASMTokenizer
 
 def timestamp():
     return dt.datetime.now(tz=get_localzone()).strftime('%Y-%m-%d_%H-%M-%S')
+
+
+def build_output_dir(base_output_dir):
+    slurm_job_id = os.environ.get('SLURM_JOB_ID')
+    run_name = f'pretraining_mlm_slurm_{slurm_job_id}' if slurm_job_id else f'pretraining_mlm_{timestamp()}'
+    return str(Path(base_output_dir) / run_name)
 
 
 def validate_precision_support(*, bf16, tf32):
@@ -118,7 +125,7 @@ def pretrain(
     seed,
     resume_from_checkpoint,
 ):
-    output_dir = f'{output_dir}/pretraining_mlm_{timestamp()}'
+    output_dir = build_output_dir(output_dir)
     validate_precision_support(bf16=bf16, tf32=tf32)
     Path(output_dir).mkdir(exist_ok=True, parents=True)
 
