@@ -60,8 +60,8 @@ def generate_eval(data_folder, output_folder):
 
     print('Sorting positives')
     # materialize it to disk because it's A LOT faster
-    test_functions.save_to_disk('/data/temp/pos')
-    test_functions_pos = Dataset.load_from_disk('/data/temp/pos')
+    test_functions.save_to_disk(os.path.join(output_folder, 'temp', 'pos'))
+    test_functions_pos = Dataset.load_from_disk(os.path.join(output_folder, 'temp', 'pos'))
     test_functions_pos = test_functions_pos.sort('label_random')
 
     print('Shuffling negatives')
