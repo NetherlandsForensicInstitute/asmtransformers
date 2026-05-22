@@ -5,7 +5,7 @@ import pytest
 from datasets import Dataset, DatasetDict
 
 from scripts import pretrain as pretrain_module
-from scripts.pretrain import build_arg_parser, build_training_args, load_eval_dataset
+from scripts.pretrain import build_arg_parser, build_training_args, destroy_distributed_process_group, load_eval_dataset
 
 
 def build_training_args_kwargs(*, bf16=False, tf32=False):
@@ -26,6 +26,91 @@ def build_training_args_kwargs(*, bf16=False, tf32=False):
         'save_total_limit': 3,
         'seed': 123,
     }
+
+
+def write_test_config(tmp_path):
+    config_path = tmp_path / 'config.json'
+    config_path.write_text(
+        json.dumps(
+            {
+                'vocab_size': 32,
+                'hidden_size': 16,
+                'num_hidden_layers': 1,
+                'num_attention_heads': 2,
+                'intermediate_size': 32,
+                'max_position_embeddings': 8,
+            }
+        )
+    )
+    return config_path
+
+
+def install_fake_pretrain_dependencies(monkeypatch, calls, *, world_process_zero=True, train_error=None):
+    def save_tokenizer(output_dir):
+        calls['tokenizer_output_dir'] = output_dir
+
+    def load_tokenizer(tokenizer):
+        calls['tokenizer_path'] = tokenizer
+        return SimpleNamespace(save_pretrained=save_tokenizer)
+
+    def build_model(config):
+        shared_embedding = object()
+        embeddings = SimpleNamespace(position_embeddings=shared_embedding, word_embeddings=shared_embedding)
+        return SimpleNamespace(base_model=SimpleNamespace(embeddings=embeddings))
+
+    def train(resume_from_checkpoint=None):
+        calls['resume_from_checkpoint'] = resume_from_checkpoint
+        if train_error is not None:
+            raise train_error
+
+    def build_trainer(*, model, args, data_collator, train_dataset, eval_dataset):
+        calls['trainer_args'] = args
+        calls['train_size'] = len(train_dataset)
+        calls['eval_size'] = len(eval_dataset)
+        return SimpleNamespace(
+            is_world_process_zero=lambda: world_process_zero,
+            train=train,
+            save_model=lambda output_dir: calls.setdefault('model_output_dir', output_dir),
+        )
+
+    dataset = DatasetDict(
+        {
+            'train': Dataset.from_dict({'input_ids': [[1], [2]], 'attention_mask': [[1], [1]]}),
+            'test': Dataset.from_dict({'input_ids': [[3]], 'attention_mask': [[1]]}),
+        }
+    )
+
+    monkeypatch.setattr(pretrain_module, 'ASMTokenizer', SimpleNamespace(from_pretrained=load_tokenizer))
+    monkeypatch.setattr(pretrain_module, 'ASMBertForMaskedLM', build_model)
+    monkeypatch.setattr(pretrain_module, 'Trainer', build_trainer)
+    monkeypatch.setattr(pretrain_module, 'load_from_disk', lambda path: dataset)
+    monkeypatch.setattr(pretrain_module, 'DataCollatorForLanguageModeling', lambda **kwargs: object())
+
+
+def run_test_pretrain(tmp_path, *, resume_from_checkpoint=None):
+    pretrain_module.pretrain(
+        model_path=None,
+        output_dir=tmp_path,
+        data='dataset-path',
+        tokenizer='tokenizer-path',
+        config=write_test_config(tmp_path),
+        epoch=1,
+        max_steps=-1,
+        batch_size=1,
+        gradient_accumulation_steps=1,
+        save_steps=3,
+        logging_steps=1,
+        mlm_prob=0.15,
+        learning_rate=1e-4,
+        warmup_ratio=0.06,
+        bf16=False,
+        tf32=False,
+        dataloader_num_workers=0,
+        save_total_limit=2,
+        eval_samples=1,
+        seed=42,
+        resume_from_checkpoint=resume_from_checkpoint,
+    )
 
 
 def test_arg_parser_requires_output_dir():
@@ -108,90 +193,33 @@ def test_load_eval_dataset_bounds_eval_samples():
     assert len(eval_dataset) == 2
 
 
+@pytest.mark.parametrize(
+    ('is_initialized', 'expected_destroyed'),
+    [
+        (True, True),
+        (False, False),
+    ],
+)
+def test_destroy_distributed_process_group(monkeypatch, is_initialized, expected_destroyed):
+    calls = {}
+
+    monkeypatch.setattr(pretrain_module.torch.distributed, 'is_available', lambda: True)
+    monkeypatch.setattr(pretrain_module.torch.distributed, 'is_initialized', lambda: is_initialized)
+    monkeypatch.setattr(
+        pretrain_module.torch.distributed, 'destroy_process_group', lambda: calls.setdefault('destroyed', True)
+    )
+
+    destroy_distributed_process_group()
+
+    assert calls == ({'destroyed': True} if expected_destroyed else {})
+
+
 def test_pretrain_passes_resume_checkpoint_to_trainer(monkeypatch, tmp_path):
     calls = {}
 
-    class FakeTokenizer:
-        def save_pretrained(self, output_dir):
-            calls['tokenizer_output_dir'] = output_dir
+    install_fake_pretrain_dependencies(monkeypatch, calls)
 
-    class FakeASMTokenizer:
-        @classmethod
-        def from_pretrained(cls, tokenizer):
-            calls['tokenizer_path'] = tokenizer
-            return FakeTokenizer()
-
-    class FakeModel:
-        def __init__(self, config):
-            shared_embedding = object()
-            self.base_model = SimpleNamespace(
-                embeddings=SimpleNamespace(
-                    position_embeddings=shared_embedding,
-                    word_embeddings=shared_embedding,
-                )
-            )
-
-        def save_pretrained(self, output_dir):
-            calls['model_output_dir'] = output_dir
-
-    class FakeTrainer:
-        def __init__(self, *, model, args, data_collator, train_dataset, eval_dataset):
-            calls['trainer_args'] = args
-            calls['train_size'] = len(train_dataset)
-            calls['eval_size'] = len(eval_dataset)
-
-        def train(self, resume_from_checkpoint=None):
-            calls['resume_from_checkpoint'] = resume_from_checkpoint
-
-    dataset = DatasetDict(
-        {
-            'train': Dataset.from_dict({'input_ids': [[1], [2]], 'attention_mask': [[1], [1]]}),
-            'test': Dataset.from_dict({'input_ids': [[3]], 'attention_mask': [[1]]}),
-        }
-    )
-    config_path = tmp_path / 'config.json'
-    config_path.write_text(
-        json.dumps(
-            {
-                'vocab_size': 32,
-                'hidden_size': 16,
-                'num_hidden_layers': 1,
-                'num_attention_heads': 2,
-                'intermediate_size': 32,
-                'max_position_embeddings': 8,
-            }
-        )
-    )
-
-    monkeypatch.setattr(pretrain_module, 'ASMTokenizer', FakeASMTokenizer)
-    monkeypatch.setattr(pretrain_module, 'ASMBertForMaskedLM', FakeModel)
-    monkeypatch.setattr(pretrain_module, 'Trainer', FakeTrainer)
-    monkeypatch.setattr(pretrain_module, 'load_from_disk', lambda path: dataset)
-    monkeypatch.setattr(pretrain_module, 'DataCollatorForLanguageModeling', lambda **kwargs: object())
-
-    pretrain_module.pretrain(
-        model_path=None,
-        output_dir=tmp_path,
-        data='dataset-path',
-        tokenizer='tokenizer-path',
-        config=config_path,
-        epoch=1,
-        max_steps=-1,
-        batch_size=1,
-        gradient_accumulation_steps=1,
-        save_steps=3,
-        logging_steps=1,
-        mlm_prob=0.15,
-        learning_rate=1e-4,
-        warmup_ratio=0.06,
-        bf16=False,
-        tf32=False,
-        dataloader_num_workers=0,
-        save_total_limit=2,
-        eval_samples=1,
-        seed=42,
-        resume_from_checkpoint='checkpoint-12',
-    )
+    run_test_pretrain(tmp_path, resume_from_checkpoint='checkpoint-12')
 
     assert calls['tokenizer_path'] == 'tokenizer-path'
     assert calls['trainer_args'].bf16 is False
@@ -199,3 +227,33 @@ def test_pretrain_passes_resume_checkpoint_to_trainer(monkeypatch, tmp_path):
     assert calls['train_size'] == 2
     assert calls['eval_size'] == 1
     assert calls['resume_from_checkpoint'] == 'checkpoint-12'
+    assert calls['tokenizer_output_dir'].startswith(str(tmp_path))
+    assert calls['model_output_dir'].startswith(str(tmp_path))
+
+
+def test_pretrain_skips_tokenizer_save_on_nonzero_process(monkeypatch, tmp_path):
+    calls = {}
+
+    install_fake_pretrain_dependencies(monkeypatch, calls, world_process_zero=False)
+
+    run_test_pretrain(tmp_path)
+
+    assert 'tokenizer_output_dir' not in calls
+    assert calls['model_output_dir'].startswith(str(tmp_path))
+
+
+def test_pretrain_cleans_up_distributed_process_group_after_training_error(monkeypatch, tmp_path):
+    calls = {}
+
+    install_fake_pretrain_dependencies(monkeypatch, calls, train_error=RuntimeError('training failed'))
+    monkeypatch.setattr(pretrain_module.torch.distributed, 'is_available', lambda: True)
+    monkeypatch.setattr(pretrain_module.torch.distributed, 'is_initialized', lambda: True)
+    monkeypatch.setattr(
+        pretrain_module.torch.distributed, 'destroy_process_group', lambda: calls.setdefault('destroyed', True)
+    )
+
+    with pytest.raises(RuntimeError, match='training failed'):
+        run_test_pretrain(tmp_path)
+
+    assert calls['destroyed'] is True
+    assert 'model_output_dir' not in calls

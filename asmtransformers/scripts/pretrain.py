@@ -90,6 +90,11 @@ def load_eval_dataset(functions, eval_samples):
     return eval_tokenized
 
 
+def destroy_distributed_process_group():
+    if torch.distributed.is_available() and torch.distributed.is_initialized():
+        torch.distributed.destroy_process_group()
+
+
 def pretrain(
     model_path,
     output_dir,
@@ -189,21 +194,25 @@ def pretrain(
         eval_dataset=eval_tokenized,
     )
 
-    logging.info(f'Save tokenizer to: {output_dir}')
-    tokenizer.save_pretrained(output_dir)
+    try:
+        if trainer.is_world_process_zero():
+            logging.info(f'Save tokenizer to: {output_dir}')
+            tokenizer.save_pretrained(output_dir)
 
-    logging.info('Start training')
-    logging.info(
-        f'Model parameters: epochs={epoch}, eval_steps={save_steps}, batch_size={batch_size}, '
-        f'gradient_accumulation_steps={gradient_accumulation_steps}, mlm_prob={mlm_prob}, bf16={bf16}, tf32={tf32}'
-    )
+        logging.info('Start training')
+        logging.info(
+            f'Model parameters: epochs={epoch}, eval_steps={save_steps}, batch_size={batch_size}, '
+            f'gradient_accumulation_steps={gradient_accumulation_steps}, mlm_prob={mlm_prob}, bf16={bf16}, tf32={tf32}'
+        )
 
-    trainer.train(resume_from_checkpoint=resume_from_checkpoint)
+        trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
-    logging.info(f'Save model to: {output_dir}')
-    model.save_pretrained(output_dir)
+        logging.info(f'Save model to: {output_dir}')
+        trainer.save_model(output_dir)
 
-    logging.info('Training done')
+        logging.info('Training done')
+    finally:
+        destroy_distributed_process_group()
 
 
 def build_arg_parser():
