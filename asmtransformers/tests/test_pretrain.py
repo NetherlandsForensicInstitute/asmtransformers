@@ -1,5 +1,6 @@
 import json
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from datasets import Dataset, DatasetDict
@@ -201,17 +202,15 @@ def test_load_eval_dataset_bounds_eval_samples():
     ],
 )
 def test_destroy_distributed_process_group(monkeypatch, is_initialized, expected_destroyed):
-    calls = {}
-
     monkeypatch.setattr(pretrain_module.torch.distributed, 'is_available', lambda: True)
     monkeypatch.setattr(pretrain_module.torch.distributed, 'is_initialized', lambda: is_initialized)
     monkeypatch.setattr(
-        pretrain_module.torch.distributed, 'destroy_process_group', lambda: calls.setdefault('destroyed', True)
+        pretrain_module.torch.distributed, 'destroy_process_group', (dpg_mock := Mock())
     )
 
     destroy_distributed_process_group()
+    assert dpg_mock.called == expected_destroyed
 
-    assert calls == ({'destroyed': True} if expected_destroyed else {})
 
 
 def test_pretrain_passes_resume_checkpoint_to_trainer(monkeypatch, tmp_path):

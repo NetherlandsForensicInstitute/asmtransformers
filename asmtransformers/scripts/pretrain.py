@@ -195,6 +195,7 @@ def pretrain(
     )
 
     try:
+        # Make sure the tokenizer is saved only once when performing a distributed run.
         if trainer.is_world_process_zero():
             logging.info(f'Save tokenizer to: {output_dir}')
             tokenizer.save_pretrained(output_dir)
