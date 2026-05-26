@@ -17,7 +17,6 @@ def generate_train(data_folder, output_folder):
     print('Creating category mapping')
 
     def label_name_mapper(example):
-        # label = example['bin_name'] or example['file_name'] + '/' + example['func_name'] or example['function_name']
         label = example['file_name'] + '/' + example['function_name']
         example['label_name'] = label
         return example
@@ -48,7 +47,6 @@ def generate_eval(data_folder, output_folder):
     print(test_functions)
 
     def add_random(example):
-        # label = example['bin_name'] + '/' + example['func_name']
         label = example['file_name'] + '/' + example['function_name']
         example['label'] = label
         # Ensure same labels are sorted together and in random order.
