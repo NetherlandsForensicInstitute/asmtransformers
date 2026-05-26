@@ -95,3 +95,13 @@ def test_finetuning_model_can_be_saved_and_reloaded(checkpoint_path, tmp_path):
     assert (output_path / '0_ASMTransformerModule' / 'tokenizer.json').is_file()
     assert embedding.shape == (8,)
     assert embedding.dtype == np.float32
+
+
+def test_saving_finetuning_model_does_not_query_huggingface_for_base_model(checkpoint_path, tmp_path, monkeypatch):
+    def fail_get_model_info(*args, **kwargs):
+        raise AssertionError('unexpected Hugging Face model lookup')
+
+    monkeypatch.setattr('sentence_transformers.base.model_card.get_model_info', fail_get_model_info)
+    model = build_finetuning_model(checkpoint_path)
+
+    model.save(tmp_path / 'saved-model')

@@ -2,6 +2,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from sentence_transformers import SentenceTransformer
+from sentence_transformers.sentence_transformer.model_card import SentenceTransformerModelCardData
 from sentence_transformers.sentence_transformer.modules import Module, Pooling
 
 from .asmbert import ASMBertModel, ASMTokenizer
@@ -101,7 +102,10 @@ def build_finetuning_model(
 ):
     embedding_model = ASMTransformerModule(base_model_name_or_path, model_args=model_args)
     pooling_model = Pooling(embedding_model.get_embedding_dimension())
-    model = SentenceTransformer(modules=[embedding_model, pooling_model])
+    model = SentenceTransformer(
+        modules=[embedding_model, pooling_model],
+        model_card_data=SentenceTransformerModelCardData(local_files_only=True),
+    )
     bert_model = model[0].model.base_model
 
     if bert_model.embeddings.position_embeddings is not bert_model.embeddings.word_embeddings:
