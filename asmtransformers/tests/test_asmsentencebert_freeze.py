@@ -1,6 +1,8 @@
 import json
 
+import numpy as np
 import pytest
+from sentence_transformers import SentenceTransformer
 from transformers import BertConfig
 
 from asmtransformers.models.asmbert import ASMBertModel
@@ -78,3 +80,18 @@ def test_from_basemodel_freezes_configured_layer_count(checkpoint_path):
     assert all(param.requires_grad for param in bert_model.embeddings.parameters())
     assert all(not param.requires_grad for param in bert_model.encoder.layer[0].parameters())
     assert all(param.requires_grad for param in bert_model.encoder.layer[1].parameters())
+
+
+def test_finetuning_model_can_be_saved_and_reloaded(checkpoint_path, tmp_path):
+    model = build_finetuning_model(checkpoint_path)
+    output_path = tmp_path / 'saved-model'
+
+    model.save(output_path, create_model_card=False)
+    reloaded = SentenceTransformer(str(output_path))
+    embedding = reloaded.encode('[[4096, ["ret"]]]')
+
+    assert (output_path / 'modules.json').is_file()
+    assert (output_path / '0_ASMTransformerModule' / 'model.safetensors').is_file()
+    assert (output_path / '0_ASMTransformerModule' / 'tokenizer.json').is_file()
+    assert embedding.shape == (8,)
+    assert embedding.dtype == np.float32

@@ -2,13 +2,12 @@ from collections.abc import Mapping
 from typing import Any
 
 from sentence_transformers import SentenceTransformer
-from sentence_transformers.sentence_transformer.modules import Pooling
-from torch import nn
+from sentence_transformers.sentence_transformer.modules import Module, Pooling
 
 from .asmbert import ASMBertModel, ASMTokenizer
 
 
-class ASMTransformerModule(nn.Module):
+class ASMTransformerModule(Module):
     """Minimal sentence-transformers module for ARM64BERT finetuning."""
 
     def __init__(
@@ -16,11 +15,12 @@ class ASMTransformerModule(nn.Module):
         model_name_or_path: str,
         *,
         model_args: Mapping[str, Any] | None = None,
+        tokenizer_args: Mapping[str, Any] | None = None,
     ):
         super().__init__()
         self.model = ASMBertModel.from_pretrained(model_name_or_path, **(model_args or {}))
-        self.tokenizer = ASMTokenizer.from_pretrained(model_name_or_path)
-        self.forward_kwargs = ['architecture']
+        self.tokenizer = ASMTokenizer.from_pretrained(model_name_or_path, **(tokenizer_args or {}))
+        self.forward_kwargs = {'architecture'}
 
         self.model.tokenizer = self.tokenizer
         self.model.config.tokenizer_class = self.tokenizer.__class__.__name__
@@ -50,6 +50,35 @@ class ASMTransformerModule(nn.Module):
         if prompt:
             inputs = [prompt + text for text in inputs]
         return self.tokenizer(inputs, architecture=architecture, **kwargs)
+
+    def save(self, output_path: str, *args, safe_serialization: bool = True, **kwargs) -> None:
+        self.model.save_pretrained(output_path, safe_serialization=safe_serialization)
+        self.tokenizer.save_pretrained(output_path)
+
+    @classmethod
+    def load(
+        cls,
+        model_name_or_path: str,
+        subfolder: str = '',
+        token: bool | str | None = None,
+        cache_folder: str | None = None,
+        revision: str | None = None,
+        local_files_only: bool = False,
+        model_kwargs: dict[str, Any] | None = None,
+        processor_kwargs: dict[str, Any] | None = None,
+        **kwargs,
+    ):
+        model_path = cls.load_dir_path(
+            model_name_or_path=model_name_or_path,
+            subfolder=subfolder,
+            token=token,
+            cache_folder=cache_folder,
+            revision=revision,
+            local_files_only=local_files_only,
+        )
+        if model_path is None:
+            raise FileNotFoundError(f'Could not load ASMTransformerModule from {model_name_or_path}/{subfolder}')
+        return cls(model_path, model_args=model_kwargs, tokenizer_args=processor_kwargs)
 
 
 def apply_freeze_policy(bert_model, *, freeze_embeddings=True, freeze_layer_count=10):
