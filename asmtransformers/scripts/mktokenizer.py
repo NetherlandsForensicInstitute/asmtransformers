@@ -3,7 +3,6 @@ import sys
 from pathlib import Path
 
 import datasets
-from tqdm import tqdm
 
 from asmtransformers.models import asmbert
 
@@ -18,7 +17,7 @@ def extract_tokens_map(tokenizer, dataset, subset_name='all'):
 
     def extract(cfgs, architectures):
         tokens = set()
-        for cfg, architecture in zip(cfgs, architectures):
+        for cfg, architecture in zip(cfgs, architectures, strict=True):
             function = dict(json.loads(cfg))
             tokens.update(tokenizer.preprocessors[architecture].preprocess(function))
         return {'tokens': [list(tokens)]}
@@ -27,7 +26,15 @@ def extract_tokens_map(tokenizer, dataset, subset_name='all'):
     # goal is to parallelize the process for speed purposes
     # the means is to make sub-datasets that we can process in parallel
     # this is done by making a new dataset where rows are lists of tokens that can later be joined to one vocab set
-    token_dataset = dataset.map(extract, batched=True, batch_size=10000, remove_columns=dataset.column_names, input_columns=['cfg', 'architecture'], keep_in_memory=True, num_proc=8)
+    token_dataset = dataset.map(
+        extract,
+        batched=True,
+        batch_size=40000,
+        remove_columns=dataset.column_names,
+        input_columns=['cfg', 'architecture'],
+        keep_in_memory=True,
+        num_proc=8,
+    )
     for tokens in token_dataset['tokens']:
         all_tokens.update(tokens)
     return all_tokens
