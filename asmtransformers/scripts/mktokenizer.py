@@ -18,7 +18,6 @@ def extract_tokens_map(tokenizer, dataset, subset_name='all'):
 
     def extract(cfgs, architectures):
         tokens = set()
-        print(cfgs, architectures)
         for cfg, architecture in zip(cfgs, architectures):
             function = dict(json.loads(cfg))
             tokens.update(tokenizer.preprocessors[architecture].preprocess(function))
