@@ -8,7 +8,7 @@ from tqdm import tqdm
 from asmtransformers.models import asmbert
 
 
-OUTPUT = Path('./results/vocab.txt')
+OUTPUT = Path('./results')
 
 CONTEXT_LENGTH = 512
 SAMPLE_SIZE = 0
@@ -36,26 +36,30 @@ def mkvocab(dataset_file):
     dataset = datasets.load_from_disk(dataset_file)
     print('... done')
 
-    # Open without a vocab, the entire point is to make a new one.
-    tokenizer = asmbert.ASMTokenizer('/dev/null')
+    # initialize "empty" tokenizer, to be able to use each architecture's preprocessors
+    # in order to create a vocabulary of this dataset
+    empty_tokenizer = asmbert.ASMTokenizer(vocab_file=None)
     tokens = set()
 
     if 'train' in dataset:
         for subset in dataset:
-            tokens.update(extract_tokens(tokenizer, dataset[subset], subset))
+            tokens.update(extract_tokens(empty_tokenizer, dataset[subset], subset))
     else:
-        tokens.update(extract_tokens(tokenizer, dataset))
+        tokens.update(extract_tokens(empty_tokenizer, dataset))
 
     # remove the used jump targets from the collected tokens
     tokens -= set(jump_targets)
 
-    with OUTPUT.open('wt') as output:
-        for token in jump_targets:
-            output.write(token)
-            output.write('\n')
-        for token in sorted(tokens):
-            output.write(token)
-            output.write('\n')
+    token_ids = {}
+
+    for id_, token in enumerate(jump_targets):
+        token_ids[token] = id_
+
+    for id_, token in enumerate(tokens, start=CONTEXT_LENGTH):
+        token_ids[token] = id_
+
+    real_tokenizer = asmbert.ASMTokenizer(vocab_file=None, vocab=token_ids)
+    real_tokenizer.save_pretrained(OUTPUT)
 
 
 if __name__ == '__main__':

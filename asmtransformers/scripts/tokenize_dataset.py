@@ -5,8 +5,8 @@ import datasets
 from asmtransformers.models.asmbert import ASMTokenizer
 
 
-def preprocess(tokenizer, dataset, *, num_proc=10):
-    def tokenize(function):
+def tokenize(tokenizer, dataset, *, num_proc=10):
+    def do_tokenize(function):
         encoded = tokenizer([function['cfg']], architecture=function.get('architecture', 'arm64'))
         return {key: value[0].tolist() for key, value in encoded.items()}
 
@@ -14,7 +14,7 @@ def preprocess(tokenizer, dataset, *, num_proc=10):
     if num_proc is not None:
         map_kwargs['num_proc'] = num_proc
 
-    return dataset.map(tokenize, **map_kwargs)
+    return dataset.map(do_tokenize, **map_kwargs)
 
 
 if __name__ == '__main__':
@@ -26,6 +26,6 @@ if __name__ == '__main__':
 
     # let the tokenizer preprocess data from data_in, write the result to data_out
     for subset in dataset:
-        dataset[subset] = preprocess(tokenizer, dataset[subset])
+        dataset[subset] = tokenize(tokenizer, dataset[subset])
 
     dataset.save_to_disk(data_out)
