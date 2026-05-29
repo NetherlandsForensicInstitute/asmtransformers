@@ -14,18 +14,24 @@ CONTEXT_LENGTH = 512
 SAMPLE_SIZE = 0
 
 
-def extract_tokens(tokenizer, dataset, subset_name='all'):
-    tokens = set()
+def extract_tokens_map(tokenizer, dataset, subset_name='all'):
 
-    if SAMPLE_SIZE:
-        dataset = dataset.select(range(SAMPLE_SIZE))
+    def extract(cfgs, architectures):
+        tokens = set()
+        print(cfgs, architectures)
+        for cfg, architecture in zip(cfgs, architectures):
+            function = dict(json.loads(cfg))
+            tokens.update(tokenizer.preprocessors[architecture].preprocess(function))
+        return {'tokens': [list(tokens)]}
 
-    for sample in tqdm(dataset, desc=f'processing {subset_name}'):
-        function = dict(json.loads(sample['cfg']))
-        # Use the architecture-specific preprocessor to process the function into tokens
-        tokens.update(tokenizer.preprocessors[sample['architecture']].preprocess(function))
-
-    return tokens
+    all_tokens = set()
+    # goal is to parallellize the process for speed purposes
+    # the means is to make sub-datasets that we can process in parallel
+    # this is done by making a new dataset where rows are lists of tokens that can later be joined to one vocab set
+    token_dataset = dataset.map(extract, batched=True, batch_size=10000, remove_columns=dataset.column_names, input_columns=['cfg', 'architecture'], keep_in_memory=True, num_proc=4)
+    for tokens in token_dataset['tokens']:
+        all_tokens.update(tokens)
+    return all_tokens
 
 
 def mkvocab(dataset_file):
@@ -43,9 +49,9 @@ def mkvocab(dataset_file):
 
     if 'train' in dataset:
         for subset in dataset:
-            tokens.update(extract_tokens(empty_tokenizer, dataset[subset], subset))
+            tokens.update(extract_tokens_map(empty_tokenizer, dataset[subset], subset))
     else:
-        tokens.update(extract_tokens(empty_tokenizer, dataset))
+        tokens.update(extract_tokens_map(empty_tokenizer, dataset))
 
     # remove the used jump targets from the collected tokens
     tokens -= set(jump_targets)
