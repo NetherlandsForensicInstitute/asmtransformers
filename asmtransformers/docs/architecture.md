@@ -72,7 +72,7 @@ This layer is largely architecture-agnostic as long as the dataset schema remain
 Operational entrypoints live in `asmtransformers/scripts/`. The most important ones are:
 
 - `tokenize_dataset.py`: tokenizes serialized CFG datasets
-- `mkvocab.py`: builds a vocabulary from preprocessed assembly corpora
+- `mktokenizer.py`: builds a tokenizer vocabulary from assembly corpora
 - `pretrain.py`: trains the masked-language-model / jump-target-prediction stage
 - `finetune.py`: trains the embedding model for semantic similarity
 - `evaluation.py`: evaluates retrieval quality
