@@ -12,7 +12,7 @@ set -euo pipefail
 DATA=${DATA:?set DATA to a preprocessed Hugging Face dataset directory}
 TOKENIZER=${TOKENIZER:?set TOKENIZER to the multi-arch tokenizer directory}
 OUTPUT_DIR=${OUTPUT_DIR:?set OUTPUT_DIR to the base output directory}
-CONFIG=${CONFIG:-asmtransformers/models/arm64bert/arm64bert_config.json}
+CONFIG=${CONFIG:-asmtransformers/models/multilingual_asmbert/config.json}
 
 BATCH_SIZE=${BATCH_SIZE:-16}
 GRADIENT_ACCUMULATION_STEPS=${GRADIENT_ACCUMULATION_STEPS:-4}

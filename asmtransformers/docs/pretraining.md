@@ -39,7 +39,7 @@ pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
     output \
     --data /path/to/tokenized-dataset \
     --tokenizer /path/to/tokenizer \
-    --config asmtransformers/models/arm64bert/arm64bert_config.json \
+    --config asmtransformers/models/multilingual_asmbert/config.json \
     --batch-size 1 \
     --gradient-accumulation-steps 1 \
     --max-steps 20 \
