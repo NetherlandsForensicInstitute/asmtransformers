@@ -40,7 +40,7 @@ def extract_tokens_map(tokenizer, dataset, subset_name='all'):
     return all_tokens
 
 
-def mkvocab(dataset_file):
+def mktokenizer(dataset_file):
     # use list comp to force ordering (lexicographic sort breaks without leaing zeroes)
     jump_targets = [f'JUMP_ADDR_{n}' for n in range(CONTEXT_LENGTH)]
 
@@ -75,4 +75,4 @@ def mkvocab(dataset_file):
 
 
 if __name__ == '__main__':
-    mkvocab(Path(sys.argv[1]))
+    mktokenizer(Path(sys.argv[1]))
