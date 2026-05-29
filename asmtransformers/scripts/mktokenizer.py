@@ -28,7 +28,7 @@ def extract_tokens_map(tokenizer, dataset, subset_name='all'):
     # goal is to parallelize the process for speed purposes
     # the means is to make sub-datasets that we can process in parallel
     # this is done by making a new dataset where rows are lists of tokens that can later be joined to one vocab set
-    token_dataset = dataset.map(extract, batched=True, batch_size=10000, remove_columns=dataset.column_names, input_columns=['cfg', 'architecture'], keep_in_memory=True, num_proc=4)
+    token_dataset = dataset.map(extract, batched=True, batch_size=10000, remove_columns=dataset.column_names, input_columns=['cfg', 'architecture'], keep_in_memory=True, num_proc=8)
     for tokens in token_dataset['tokens']:
         all_tokens.update(tokens)
     return all_tokens
