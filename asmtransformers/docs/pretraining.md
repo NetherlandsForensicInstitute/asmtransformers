@@ -86,11 +86,22 @@ script exits before training rather than silently falling back. For local CPU-on
 
 ## Checkpoints And Resume
 
-The script writes timestamped runs under the positional `output_dir`:
+The script writes runs under the positional `output_dir`. Local runs use a timestamped directory:
 
 ```text
 output/pretraining_mlm_YYYY-MM-DD_HH-MM-SS/
 ```
+
+SLURM runs launched through `scripts/slurm_pretrain.sh` export one shared run id before `srun`, so all torchrun ranks
+agree on the same output directory:
+
+```text
+output/pretraining_mlm_YYYY-MM-DD_HH-MM-SS_slurm_$SLURM_JOB_ID/
+```
+
+For repeated launches in the same scheduler allocation, non-SLURM multi-node launchers, or a custom run name, set
+`ASMTRANSFORMERS_RUN_ID` or pass `--run-id`. The explicit `--run-id` takes precedence over `ASMTRANSFORMERS_RUN_ID`,
+which takes precedence over `SLURM_JOB_ID`; otherwise the script falls back to a local timestamp.
 
 It saves the tokenizer, periodic Trainer checkpoints, TensorBoard logs, and the final model. Keep checkpoint retention
 bounded with `--save-total-limit`.
