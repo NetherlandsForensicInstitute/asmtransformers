@@ -4,6 +4,7 @@ from datasets import Dataset
 from asmtransformers.models import asmbert
 from scripts.mktokenizer import extract_tokens_map
 
+
 @pytest.fixture
 def dataset():
     return Dataset.from_dict(
@@ -30,10 +31,9 @@ def dataset():
     )
 
 
-
 def test_extract_tokens_map(dataset):
     empty_tokenizer = asmbert.ASMTokenizer(vocab_file=None)
     tokens = extract_tokens_map(empty_tokenizer, dataset)
     assert len(list(tokens)) == 6
     assert 'ret' in tokens
-    assert type(tokens) == set
+    assert isinstance(tokens, set)
