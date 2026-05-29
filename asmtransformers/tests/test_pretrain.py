@@ -1,4 +1,5 @@
 import json
+import logging
 from types import SimpleNamespace
 
 import pytest
@@ -9,6 +10,7 @@ from scripts.pretrain import (
     build_arg_parser,
     build_output_dir,
     build_training_args,
+    configure_pretrain_logging,
     destroy_distributed_process_group,
     load_eval_dataset,
 )
@@ -32,6 +34,29 @@ def build_training_args_kwargs(*, bf16=False, tf32=False):
         'save_total_limit': 3,
         'seed': 123,
     }
+
+
+@pytest.fixture(autouse=True)
+def restore_root_logger():
+    root_logger = logging.getLogger()
+    original_handlers = root_logger.handlers[:]
+    original_level = root_logger.level
+    yield
+    for handler in root_logger.handlers:
+        if handler not in original_handlers:
+            handler.close()
+    root_logger.handlers = original_handlers
+    root_logger.setLevel(original_level)
+
+
+def handler_filenames():
+    return {
+        handler.baseFilename for handler in logging.getLogger().handlers if isinstance(handler, logging.FileHandler)
+    }
+
+
+def stream_handler_count():
+    return sum(type(handler) is logging.StreamHandler for handler in logging.getLogger().handlers)
 
 
 def write_test_config(tmp_path):
@@ -167,6 +192,42 @@ def test_build_output_dir_uses_timestamp_without_run_id(monkeypatch, tmp_path):
     monkeypatch.setattr(pretrain_module, 'timestamp', lambda: '2026-05-22_12-00-00')
 
     assert build_output_dir(tmp_path) == str(tmp_path / 'pretraining_mlm_2026-05-22_12-00-00')
+
+
+def test_configure_pretrain_logging_keeps_single_process_logging(monkeypatch, tmp_path):
+    monkeypatch.delenv('RANK', raising=False)
+    monkeypatch.delenv('LOCAL_RANK', raising=False)
+    monkeypatch.delenv('WORLD_SIZE', raising=False)
+
+    configure_pretrain_logging(tmp_path)
+
+    assert handler_filenames() == {str(tmp_path / 'training_logging.log')}
+    assert stream_handler_count() == 1
+
+
+def test_configure_pretrain_logging_adds_canonical_and_rank_log_for_rank_zero(monkeypatch, tmp_path):
+    monkeypatch.setenv('RANK', '0')
+    monkeypatch.setenv('LOCAL_RANK', '0')
+    monkeypatch.setenv('WORLD_SIZE', '2')
+
+    configure_pretrain_logging(tmp_path)
+
+    assert handler_filenames() == {
+        str(tmp_path / 'training_logging.log'),
+        str(tmp_path / 'training_rank_0.log'),
+    }
+    assert stream_handler_count() == 1
+
+
+def test_configure_pretrain_logging_uses_only_rank_log_for_nonzero_rank(monkeypatch, tmp_path):
+    monkeypatch.setenv('RANK', '1')
+    monkeypatch.setenv('LOCAL_RANK', '0')
+    monkeypatch.setenv('WORLD_SIZE', '2')
+
+    configure_pretrain_logging(tmp_path)
+
+    assert handler_filenames() == {str(tmp_path / 'training_rank_1.log')}
+    assert stream_handler_count() == 0
 
 
 def test_build_training_args_rejects_bf16_without_cuda(monkeypatch):

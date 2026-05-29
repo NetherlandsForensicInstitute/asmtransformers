@@ -30,6 +30,62 @@ def build_output_dir(base_output_dir, run_id=None):
     return str(Path(base_output_dir) / f'pretraining_mlm_{run_id}')
 
 
+def distributed_logging_context():
+    rank = int(os.environ.get('RANK', '0'))
+    local_rank = int(os.environ.get('LOCAL_RANK', '0'))
+    world_size = int(os.environ.get('WORLD_SIZE', '1'))
+    return rank, local_rank, world_size
+
+
+class DistributedLogFilter(logging.Filter):
+    def __init__(self, *, rank, local_rank, world_size):
+        super().__init__()
+        self.rank = rank
+        self.local_rank = local_rank
+        self.world_size = world_size
+
+    def filter(self, record):
+        record.rank = self.rank
+        record.local_rank = self.local_rank
+        record.world_size = self.world_size
+        return True
+
+
+def configure_pretrain_logging(output_dir):
+    rank, local_rank, world_size = distributed_logging_context()
+    output_path = Path(output_dir)
+
+    if world_size > 1:
+        formatter = logging.Formatter(
+            fmt='%(asctime)s - rank=%(rank)s local_rank=%(local_rank)s world_size=%(world_size)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+        )
+        rank_filter = DistributedLogFilter(rank=rank, local_rank=local_rank, world_size=world_size)
+        handlers = [logging.FileHandler(filename=output_path / f'training_rank_{rank}.log')]
+        if rank == 0:
+            handlers.extend(
+                [
+                    logging.StreamHandler(),
+                    logging.FileHandler(filename=output_path / 'training_logging.log'),
+                ]
+            )
+        for handler in handlers:
+            handler.setFormatter(formatter)
+            handler.addFilter(rank_filter)
+    else:
+        formatter = logging.Formatter(fmt='%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        handlers = [
+            logging.StreamHandler(),
+            logging.FileHandler(filename=output_path / 'training_logging.log'),
+        ]
+        for handler in handlers:
+            handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.handlers = handlers
+    root_logger.setLevel(logging.INFO)
+
+
 def validate_precision_support(*, bf16, tf32):
     if not bf16 and not tf32:
         return
@@ -140,12 +196,7 @@ def pretrain(
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
 
-    logging.basicConfig(
-        format='%(asctime)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        level=logging.INFO,
-        handlers=[logging.StreamHandler(), logging.FileHandler(filename=f'{output_dir}/training_logging.log')],
-    )
+    configure_pretrain_logging(output_dir)
 
     logging.info('Script used: pretraining with MLM')
     logging.info(f'Saving checkpoints to: {output_dir}')
@@ -221,7 +272,8 @@ def pretrain(
 
         trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
-        logging.info(f'Save model to: {output_dir}')
+        if trainer.is_world_process_zero():
+            logging.info(f'Save model to: {output_dir}')
         trainer.save_model(output_dir)
 
         logging.info('Training done')
