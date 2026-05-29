@@ -93,7 +93,7 @@ def install_fake_pretrain_dependencies(monkeypatch, calls, *, world_process_zero
     monkeypatch.setattr(pretrain_module, 'DataCollatorForLanguageModeling', lambda **kwargs: object())
 
 
-def run_test_pretrain(tmp_path, *, resume_from_checkpoint=None):
+def run_test_pretrain(tmp_path, *, resume_from_checkpoint=None, run_id=None):
     pretrain_module.pretrain(
         model_path=None,
         output_dir=tmp_path,
@@ -116,6 +116,7 @@ def run_test_pretrain(tmp_path, *, resume_from_checkpoint=None):
         eval_samples=1,
         seed=42,
         resume_from_checkpoint=resume_from_checkpoint,
+        run_id=run_id,
     )
 
 
@@ -133,17 +134,39 @@ def test_arg_parser_accepts_positional_output_dir():
     assert args.data == 'dataset-path'
 
 
-def test_build_output_dir_uses_timestamp_without_slurm_job_id(monkeypatch, tmp_path):
+def test_arg_parser_accepts_run_id():
+    args = build_arg_parser().parse_args(['output', '--data', 'dataset-path', '--run-id', 'manual'])
+
+    assert args.run_id == 'manual'
+
+
+def test_build_output_dir_uses_cli_run_id(monkeypatch, tmp_path):
+    monkeypatch.setenv('ASMTRANSFORMERS_RUN_ID', 'env-run')
+    monkeypatch.setenv('SLURM_JOB_ID', '12345')
+
+    assert build_output_dir(tmp_path, run_id='manual') == str(tmp_path / 'pretraining_mlm_manual')
+
+
+def test_build_output_dir_uses_env_run_id_before_slurm_job_id(monkeypatch, tmp_path):
+    monkeypatch.setenv('ASMTRANSFORMERS_RUN_ID', 'env-run')
+    monkeypatch.setenv('SLURM_JOB_ID', '12345')
+
+    assert build_output_dir(tmp_path) == str(tmp_path / 'pretraining_mlm_env-run')
+
+
+def test_build_output_dir_uses_slurm_job_id(monkeypatch, tmp_path):
+    monkeypatch.delenv('ASMTRANSFORMERS_RUN_ID', raising=False)
+    monkeypatch.setenv('SLURM_JOB_ID', '12345')
+
+    assert build_output_dir(tmp_path) == str(tmp_path / 'pretraining_mlm_slurm_12345')
+
+
+def test_build_output_dir_uses_timestamp_without_run_id(monkeypatch, tmp_path):
+    monkeypatch.delenv('ASMTRANSFORMERS_RUN_ID', raising=False)
     monkeypatch.delenv('SLURM_JOB_ID', raising=False)
     monkeypatch.setattr(pretrain_module, 'timestamp', lambda: '2026-05-22_12-00-00')
 
     assert build_output_dir(tmp_path) == str(tmp_path / 'pretraining_mlm_2026-05-22_12-00-00')
-
-
-def test_build_output_dir_uses_slurm_job_id(monkeypatch, tmp_path):
-    monkeypatch.setenv('SLURM_JOB_ID', '12345')
-
-    assert build_output_dir(tmp_path) == str(tmp_path / 'pretraining_mlm_slurm_12345')
 
 
 def test_build_training_args_rejects_bf16_without_cuda(monkeypatch):

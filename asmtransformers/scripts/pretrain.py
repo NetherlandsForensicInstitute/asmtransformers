@@ -18,10 +18,16 @@ def timestamp():
     return dt.datetime.now(tz=get_localzone()).strftime('%Y-%m-%d_%H-%M-%S')
 
 
-def build_output_dir(base_output_dir):
-    slurm_job_id = os.environ.get('SLURM_JOB_ID')
-    run_name = f'pretraining_mlm_slurm_{slurm_job_id}' if slurm_job_id else f'pretraining_mlm_{timestamp()}'
-    return str(Path(base_output_dir) / run_name)
+def build_output_dir(base_output_dir, run_id=None):
+    if run_id is None:
+        run_id = os.environ.get('ASMTRANSFORMERS_RUN_ID')
+    if run_id is None:
+        slurm_job_id = os.environ.get('SLURM_JOB_ID')
+        if slurm_job_id is not None:
+            run_id = f'slurm_{slurm_job_id}'
+    if run_id is None:
+        run_id = timestamp()
+    return str(Path(base_output_dir) / f'pretraining_mlm_{run_id}')
 
 
 def validate_precision_support(*, bf16, tf32):
@@ -124,8 +130,9 @@ def pretrain(
     eval_samples,
     seed,
     resume_from_checkpoint,
+    run_id=None,
 ):
-    output_dir = build_output_dir(output_dir)
+    output_dir = build_output_dir(output_dir, run_id=run_id)
     validate_precision_support(bf16=bf16, tf32=tf32)
     Path(output_dir).mkdir(exist_ok=True, parents=True)
 
@@ -279,6 +286,12 @@ def build_arg_parser():
         type=str,
         default=None,
         help='path to a Trainer checkpoint to resume from',
+    )
+    parser.add_argument(
+        '--run-id',
+        type=str,
+        default=None,
+        help='stable run id used under output_dir; overrides ASMTRANSFORMERS_RUN_ID, SLURM_JOB_ID, and timestamp',
     )
     return parser
 
