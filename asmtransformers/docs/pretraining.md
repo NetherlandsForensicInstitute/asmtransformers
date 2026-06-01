@@ -13,7 +13,7 @@ The training dataset should be a `DatasetDict` with:
 - `test`: tokenized evaluation functions.
 
 The pretraining script consumes tokenized rows with `input_ids` and `attention_mask`. For a raw multi-architecture
-dataset, preprocess it first with `scripts/preprocess.py`. Raw rows must include:
+dataset, tokenize it first with `scripts/tokenize_dataset.py`. Raw rows must include:
 
 - `cfg`: serialized control-flow graph JSON.
 - `architecture`: one of the tokenizer-supported architectures: `arm64`, `amd64`, `i386`, or `riscv64`.
@@ -27,7 +27,7 @@ tokenizer:
 
 ```bash
 cd asmtransformers
-pdm run python scripts/preprocess.py /path/to/tokenizer /path/to/raw-dataset /path/to/tokenized-dataset
+pdm run python scripts/tokenize_dataset.py /path/to/tokenizer /path/to/raw-dataset /path/to/tokenized-dataset
 ```
 
 Launch a single-node dry run before using the cluster. Keep the sample small and verify that the model starts training,
@@ -39,7 +39,7 @@ pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
     output \
     --data /path/to/tokenized-dataset \
     --tokenizer /path/to/tokenizer \
-    --config asmtransformers/models/arm64bert/arm64bert_config.json \
+    --config asmtransformers/models/multilingual_asmbert/config.json \
     --batch-size 1 \
     --gradient-accumulation-steps 1 \
     --max-steps 20 \
