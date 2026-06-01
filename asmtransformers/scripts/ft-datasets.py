@@ -2,13 +2,12 @@ import argparse
 import os
 import random
 
-from datasets import Dataset
+from datasets import Dataset, DatasetDict
 from tqdm import tqdm
 
 
-def generate_train(data_folder, output_folder):
+def generate_train(data_folder):
     train_data_folder = os.path.join(data_folder, 'train')
-    train_output_folder = os.path.join(output_folder, 'train')
 
     print('Opening dataset')
     train_functions = Dataset.load_from_disk(train_data_folder)  # .select(range(100000))
@@ -16,7 +15,7 @@ def generate_train(data_folder, output_folder):
     print('Creating category mapping')
 
     def label_name_mapper(example):
-        label = example['bin_name'] + '/' + example['func_name']
+        label = example['file_name'] + '/' + example['function_name']
         example['label_name'] = label
         return example
 
@@ -32,21 +31,18 @@ def generate_train(data_folder, output_folder):
         return example
 
     train_functions = train_functions.map(labeler, batch_size=1000, num_proc=8)
-
-    print('Saving...')
-    train_functions.save_to_disk(train_output_folder)
+    return train_functions
 
 
 def generate_eval(data_folder, output_folder):
     test_data_folder = os.path.join(data_folder, 'test')
-    test_output_folder = os.path.join(output_folder, 'test')
 
     print('Opening dataset')
     test_functions = Dataset.load_from_disk(test_data_folder).select(range(1000000))
     print(test_functions)
 
     def add_random(example):
-        label = example['bin_name'] + '/' + example['func_name']
+        label = example['file_name'] + '/' + example['function_name']
         example['label'] = label
         # Ensure same labels are sorted together and in random order.
         example['label_random'] = f'{label}\0{random.random()}'
@@ -60,8 +56,8 @@ def generate_eval(data_folder, output_folder):
 
     print('Sorting positives')
     # materialize it to disk because it's A LOT faster
-    test_functions.save_to_disk('/data/temp/pos')
-    test_functions_pos = Dataset.load_from_disk('/data/temp/pos')
+    test_functions.save_to_disk(os.path.join(output_folder, 'temp', 'pos'))
+    test_functions_pos = Dataset.load_from_disk(os.path.join(output_folder, 'temp', 'pos'))
     test_functions_pos = test_functions_pos.sort('label_random')
 
     print('Shuffling negatives')
@@ -87,12 +83,14 @@ def generate_eval(data_folder, output_folder):
         triplets.append({'anchor': anchor['cfg'], 'pos': pos['cfg'], 'neg': neg['cfg']})
     print(f'We have {len(triplets)} usable triplets')
     trip = Dataset.from_list(triplets)
-    trip.save_to_disk(test_output_folder)
+    return trip
 
 
 def main(data_folder, output_folder):
-    generate_train(data_folder, output_folder)
-    generate_eval(data_folder, output_folder)
+    train = generate_train(data_folder)
+    test = generate_eval(data_folder, output_folder)
+    dataset_dict = DatasetDict({'train': train, 'test': test})
+    dataset_dict.save_to_disk(output_folder)
 
 
 def get_parser() -> argparse.ArgumentParser:

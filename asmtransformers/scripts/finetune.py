@@ -70,7 +70,7 @@ def main(data_folder, model, batch_size):
     )
 
     model = build_finetuning_model(
-        base_model_name_or_path=model_name_or_path, model_args={'torch_dtype': torch.bfloat16}
+        base_model_name_or_path=model_name_or_path, model_args={'torch_dtype': torch.float32}
     )
     logging.info(f'pre-trained model {model_name} loaded')
 
