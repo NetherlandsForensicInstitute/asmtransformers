@@ -25,7 +25,11 @@ if __name__ == '__main__':
     dataset = datasets.load_from_disk(data_in)
 
     # let the tokenizer preprocess data from data_in, write the result to data_out
-    # for subset in dataset:
-    dataset = tokenize(tokenizer, dataset)
+
+    if isinstance(dataset, datasets.Dataset):  # datasets.load_from_disk either a Dataset or DatasetDict type
+        dataset = tokenize(tokenizer, dataset)
+    else:
+        for subset in dataset:
+            dataset[subset] = tokenize(tokenizer, dataset[subset])
 
     dataset.save_to_disk(data_out)
