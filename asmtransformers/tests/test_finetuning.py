@@ -6,8 +6,8 @@ import torch
 from transformers import BertConfig
 
 from asmtransformers.models.asmbert import ASMBertModel
-from asmtransformers.models.asmsentencebert import batch_semi_hard_triplet_loss, build_finetuning_model
 from asmtransformers.models.embedder import ASMEmbedder
+from asmtransformers.models.finetuning import batch_semi_hard_triplet_loss, build_finetuning_model
 
 
 @pytest.fixture

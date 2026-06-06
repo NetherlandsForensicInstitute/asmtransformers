@@ -41,7 +41,7 @@ These helpers reduce token explosion caused by raw numeric values. The current t
 
 ### Model wrappers
 
-Model integration lives in [asmtransformers.models.asmbert](../asmtransformers/models/asmbert.py) and [asmtransformers.models.asmsentencebert](../asmtransformers/models/asmsentencebert.py).
+Model integration lives in [asmtransformers.models.asmbert](../asmtransformers/models/asmbert.py) and [asmtransformers.models.finetuning](../asmtransformers/models/finetuning.py).
 
 The main layers are:
 
@@ -129,7 +129,7 @@ The current architecture is anchored by tests in:
 - [tests/test_x86.py](../tests/test_x86.py) and [tests/test_riscv.py](../tests/test_riscv.py) for additional ISA preprocessing behavior
 - [tests/test_operand_formatters.py](../tests/test_operand_formatters.py) for numeric normalization behavior
 - [tests/test_asmbert.py](../tests/test_asmbert.py) for model integration and embedding stability checks
-- [tests/test_asmsentencebert_freeze.py](../tests/test_asmsentencebert_freeze.py) for finetuning freeze policy
+- [tests/test_finetuning.py](../tests/test_finetuning.py) for finetuning freeze policy and triplet-loss behavior
 - [tests/test_embedder.py](../tests/test_embedder.py) for native embedding inference
 
 Contributor changes that affect preprocessing, tokenization, or model composition should preserve the invariants covered there or extend the suite accordingly.

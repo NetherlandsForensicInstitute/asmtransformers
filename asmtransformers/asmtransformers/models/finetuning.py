@@ -7,7 +7,7 @@ from .asmbert import ASMBertModel, ASMTokenizer
 from .embedder import ASMEmbedder
 
 
-class ASMSentenceBert(torch.nn.Module):
+class ASMFinetuningModel(torch.nn.Module):
     """Native embedding model used for triplet-loss finetuning."""
 
     def __init__(
@@ -76,7 +76,7 @@ def build_finetuning_model(
     freeze_layer_count=10,
     normalize_embeddings=True,
 ):
-    model = ASMSentenceBert(
+    model = ASMFinetuningModel(
         base_model_name_or_path,
         model_args=model_args,
         normalize_embeddings=normalize_embeddings,

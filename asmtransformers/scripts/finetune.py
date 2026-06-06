@@ -12,7 +12,7 @@ from transformers import get_linear_schedule_with_warmup
 from tzlocal import get_localzone
 
 from asmtransformers.datasets import LazySentenceLabelDataset
-from asmtransformers.models.asmsentencebert import batch_semi_hard_triplet_loss, build_finetuning_model
+from asmtransformers.models.finetuning import batch_semi_hard_triplet_loss, build_finetuning_model
 
 
 def timestamp():
