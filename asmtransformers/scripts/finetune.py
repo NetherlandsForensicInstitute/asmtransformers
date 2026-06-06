@@ -36,10 +36,13 @@ def encode_cfgs(model, cfgs, *, batch_size=32, architecture='arm64', device=None
     model.eval()
     with torch.no_grad():
         for offset in range(0, len(cfgs), batch_size):
-            inputs = model.tokenizer(cfgs[offset : offset + batch_size], architecture=architecture)
-            if device is not None:
-                inputs = move_to_device(inputs, device)
-            embeddings.append(model(**inputs).cpu())
+            embeddings.append(
+                model.encode_batch(
+                    cfgs[offset : offset + batch_size],
+                    architecture=architecture,
+                    device=device,
+                ).cpu()
+            )
     return torch.cat(embeddings, dim=0)
 
 

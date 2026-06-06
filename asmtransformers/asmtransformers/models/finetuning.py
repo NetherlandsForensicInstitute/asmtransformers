@@ -4,7 +4,11 @@ from typing import Any
 import torch
 
 from .asmbert import ASMBertModel, ASMTokenizer
-from .embedder import ASMEmbedder
+
+
+def mean_pool_embeddings(token_embeddings: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+    mask = attention_mask.unsqueeze(-1).to(token_embeddings.dtype)
+    return (token_embeddings * mask).sum(dim=1) / mask.sum(dim=1).clamp_min(1e-9)
 
 
 class ASMFinetuningModel(torch.nn.Module):
@@ -41,7 +45,7 @@ class ASMFinetuningModel(torch.nn.Module):
             model_inputs['token_type_ids'] = token_type_ids
 
         outputs = self.model(**model_inputs)
-        embeddings = ASMEmbedder.mean_pool(outputs.last_hidden_state, attention_mask)
+        embeddings = mean_pool_embeddings(outputs.last_hidden_state, attention_mask)
         if self.normalize_embeddings:
             embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
         return embeddings
