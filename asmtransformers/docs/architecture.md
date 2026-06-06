@@ -46,8 +46,12 @@ Model integration lives in [asmtransformers.models.asmbert](../asmtransformers/m
 The main layers are:
 
 - `ASMBertForMaskedLM` and `ASMBertModel` adapt Hugging Face BERT classes to the jTrans-style setup, including shared word/position embeddings and jump-target prediction support during pretraining.
-- `build_finetuning_model()` adapts the pretrained transformer into a plain `SentenceTransformer` model for triplet-loss finetuning.
-- `ASMEmbedder` provides native inference without requiring sentence-transformers at deployment time.
+- `build_finetuning_model()` adapts the pretrained transformer into a native embedding model for triplet-loss finetuning.
+- `ASMEmbedder` provides native inference for finetuned embedding checkpoints.
+
+`build_finetuning_model()` returns a native `torch.nn.Module`. It does not provide the old SentenceTransformer methods
+such as `.fit()` or `.save()`, and finetuned checkpoints are saved as `ASMBertModel` checkpoints rather than
+SentenceTransformer module directories.
 
 Tokenizer integration is handled by `ASMTokenizer`:
 
@@ -59,11 +63,11 @@ Tokenizer integration is handled by `ASMTokenizer`:
 
 Dataset helpers live in [asmtransformers.datasets.sentencelabel](../asmtransformers/datasets/sentencelabel.py).
 
-`LazySentenceLabelDataset` bridges Hugging Face datasets and sentence-transformers training by:
+`LazySentenceLabelDataset` bridges Hugging Face datasets and native triplet-loss training by:
 
 - grouping rows by label
 - lazily sampling multiple examples per label
-- emitting `InputExample` objects suitable for triplet-style training
+- emitting plain `cfg` and `label` records suitable for triplet-style training
 
 This layer is largely architecture-agnostic as long as the dataset schema remains consistent.
 
@@ -89,7 +93,7 @@ The current end-to-end flow is:
 3. Operand formatters normalize large numeric values to reduce vocabulary growth.
 4. A tokenizer converts the token stream into model inputs with the expected context length.
 5. Pretraining uses those inputs for masked language modeling plus jump target prediction.
-6. Finetuning wraps the transformer in a sentence-transformers pipeline and optimizes embedding similarity.
+6. Finetuning wraps the transformer in a native embedding module and optimizes embedding similarity.
 7. Inference uses the native embedder to encode previously unseen functions for downstream similarity search.
 
 ## What Is Still ARM64-Specific Today
@@ -110,7 +114,7 @@ The following patterns are reusable across instruction sets:
 - the `ASMPreprocessor` hook model for custom operand formatting
 - `ASMTokenizer` architecture dispatch
 - Hugging Face BERT wrapping in `ASMBertModel` and `ASMBertForMaskedLM`
-- sentence-transformers finetuning integration via `build_finetuning_model()`
+- native triplet-loss finetuning integration via `build_finetuning_model()`
 - native embedding inference in `ASMEmbedder`
 - label-grouped dataset sampling in `LazySentenceLabelDataset`
 - the script-level workflow stages: preprocess, vocab build, pretrain, finetune, evaluate, infer

@@ -3,14 +3,12 @@ from itertools import groupby
 from operator import itemgetter
 
 from datasets import Dataset
-from sentence_transformers import InputExample
 from torch.utils.data import IterableDataset
 from tqdm import tqdm
 
 
 class LazySentenceLabelDataset(IterableDataset):
-    """A lazy-loading version of sentence_transformers.datasets.SentenceLabelDataset designed for use with Hugging
-    Face datasets.
+    """Lazy label-grouped dataset designed for use with Hugging Face datasets.
 
     This dataset class is optimized for scenarios where data is loaded from disk on-the-fly, reducing memory
     footprint. It supports sampling multiple examples per label in a lazy manner, making it suitable for training
@@ -70,4 +68,4 @@ class LazySentenceLabelDataset(IterableDataset):
 
     def example(self, idx):
         row = self.dataset[idx]
-        return InputExample(guid=str(idx), texts=[row['cfg']], label=row['label'])
+        return {'guid': str(idx), 'cfg': row['cfg'], 'label': row['label']}

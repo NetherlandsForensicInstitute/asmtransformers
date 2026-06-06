@@ -33,6 +33,7 @@ def test_len_matches_number_of_yielded_examples():
 
     assert len(dataset) == 4
     assert len(yielded) == len(dataset)
-    assert [example.label for example in yielded].count('a') == 2
-    assert [example.label for example in yielded].count('b') == 2
-    assert [example.label for example in yielded].count('c') == 0
+    assert [example['label'] for example in yielded].count('a') == 2
+    assert [example['label'] for example in yielded].count('b') == 2
+    assert [example['label'] for example in yielded].count('c') == 0
+    assert all('cfg' in example for example in yielded)

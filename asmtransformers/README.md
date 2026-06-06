@@ -105,12 +105,14 @@ Finetuning
       -b BATCH_SIZE, --batch-size BATCH_SIZE
                             Feed the data to the model in batches for a potential speed-up
 
-The finetune code will take the data and turn it into "triplets": it takes one function that has been compiled in two
-different ways. These are the anchor and positive example (similar to [Sentence BERT](https://sbert.net/docs/sentence_transformer/dataset_overview.html)).
-Then, 2 negative examples are randomly sampled from the data. These triplets are passed to the model and the model is
-trained such that the anchor and the positive example are closer to each other in embedding space (e.g. by measuring
-Cosine distance) than the anchor and the negative examples. We use [BatchSemiHardTripletLoss](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#batchsemihardtripletloss)
-to train the model.
+The finetune code expects a Hugging Face `DatasetDict` prepared by `scripts/ft-datasets.py`. The `train` split contains
+functions with labels derived from `file_name/function_name`; batches are sampled so multiple rows with the same label
+can be compared. The `test` split contains prebuilt `anchor`, `pos`, and `neg` triplets for evaluation.
+
+Training uses a native PyTorch embedding model built from `ASMBertModel` and `ASMTokenizer`. The model is optimized with
+a cosine-distance semi-hard triplet loss so functions with the same label are pulled closer together in embedding space
+than functions with different labels. The finetuned output is saved as a standard `ASMBertModel` checkpoint plus
+tokenizer files and can be loaded with `ASMEmbedder`.
 
 The resulting model,
 <a href='https://huggingface.co/NetherlandsForensicInstitute/ARM64bert-embedding'>NetherlandsForensicInstitute/ARM64bert-embedding</a>
