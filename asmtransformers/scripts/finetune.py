@@ -1,51 +1,90 @@
 import argparse
+import csv
 import datetime as dt
 import logging
-import os
 from pathlib import Path
 
 import datasets
 import torch
-from sentence_transformers import InputExample, LoggingHandler, losses
-from sentence_transformers.evaluation import TripletEvaluator
-from sentence_transformers.losses import BatchHardTripletLossDistanceFunction
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from transformers import get_linear_schedule_with_warmup
 from tzlocal import get_localzone
 
 from asmtransformers.datasets import LazySentenceLabelDataset
-from asmtransformers.models.asmsentencebert import build_finetuning_model
+from asmtransformers.models.finetuning import batch_semi_hard_triplet_loss, build_finetuning_model
 
 
 def timestamp():
     return dt.datetime.now(tz=get_localzone()).strftime('%Y-%m-%d_%H-%M-%S')
 
 
-def wrap_method(instance, method, new_method):
-    """
-    Wrap the specified method with another method that can inspect the paramters and original return
-    value of the method and change the return value.
+def move_to_device(batch, device):
+    return {key: value.to(device) for key, value in batch.items()}
 
-    :param instance: The instance that contains the method to wrap
-    :param method: The method to wrap
-    :param new_method: The wrapper method, of the form func(args, kwargs, return_value)
-    """
-    orig_method = getattr(instance, method)
 
-    def wrapper(*args, **kwargs):
-        result = orig_method(*args, **kwargs)
-        return new_method(args, kwargs, result)
+def collate_labeled_batch(tokenizer, examples, *, architecture='arm64'):
+    cfgs = [example['cfg'] for example in examples]
+    labels = torch.tensor([example['label'] for example in examples], dtype=torch.long)
+    batch = tokenizer(cfgs, architecture=architecture)
+    batch['labels'] = labels
+    return batch
 
-    setattr(instance, method, wrapper)
+
+def encode_cfgs(model, cfgs, *, batch_size=32, architecture='arm64', device=None):
+    embeddings = []
+    model.eval()
+    with torch.no_grad():
+        for offset in range(0, len(cfgs), batch_size):
+            embeddings.append(
+                model.encode_batch(
+                    cfgs[offset : offset + batch_size],
+                    architecture=architecture,
+                    device=device,
+                ).cpu()
+            )
+    return torch.cat(embeddings, dim=0)
+
+
+def evaluate_triplets(model, triplets, output_path, *, batch_size=32, architecture='arm64', epoch=-1, steps=-1):
+    anchors = [example['anchor'] for example in triplets]
+    positives = [example['pos'] for example in triplets]
+    negatives = [example['neg'] for example in triplets]
+    device = next(model.parameters()).device
+
+    anchor_embeddings = encode_cfgs(model, anchors, batch_size=batch_size, architecture=architecture, device=device)
+    positive_embeddings = encode_cfgs(model, positives, batch_size=batch_size, architecture=architecture, device=device)
+    negative_embeddings = encode_cfgs(model, negatives, batch_size=batch_size, architecture=architecture, device=device)
+
+    positive_scores = torch.nn.functional.cosine_similarity(anchor_embeddings, positive_embeddings)
+    negative_scores = torch.nn.functional.cosine_similarity(anchor_embeddings, negative_embeddings)
+    accuracy = (positive_scores > negative_scores).float().mean().item()
+
+    eval_path = Path(output_path) / 'eval'
+    eval_path.mkdir(exist_ok=True)
+    csv_path = eval_path / 'triplet_evaluation_results.csv'
+    write_header = not csv_path.exists()
+    with csv_path.open('a', newline='') as handle:
+        writer = csv.writer(handle)
+        if write_header:
+            writer.writerow(['epoch', 'steps', 'cosine_accuracy'])
+        writer.writerow([epoch, steps, accuracy])
+
+    logging.info(f'Triplet cosine accuracy: {accuracy:.2%}')
+    return accuracy
+
+
+def save_checkpoint(model, model_save_path, step):
+    checkpoint_path = Path(model_save_path) / f'checkpoint-{step}'
+    checkpoint_path.mkdir(exist_ok=True)
+    model.save_pretrained(str(checkpoint_path))
 
 
 def main(data_folder, model, batch_size):
     """
-    This script takes a language model and finetunes it for the task of semantic
-    text similarity. This model, together with some logging and evaluation is dropped in
-    an output folder
+    This script takes a language model and finetunes it for semantic similarity.
 
-    :param data_folder: a folder with .jsonl.gz files in it. This is the training data
+    :param data_folder: a folder with a saved Hugging Face DatasetDict
     :param model: the model to be finetuned
     :param batch_size: the batch size
     """
@@ -53,75 +92,102 @@ def main(data_folder, model, batch_size):
     model_name_or_path = model
     model_name = Path(model_name_or_path).stem if Path(model_name_or_path).is_dir() else model_name_or_path
     num_epochs = 3
-    use_amp = True  # Set to False, if you use a CPU or your GPU does not support FP16 operations
     evaluation_steps = 50_000
     warmup_steps = 500
+    learning_rate = 2e-5
 
-    # Save path of the model
     model_save_path = f'output/aarch64_ft_{model_name.replace("/", "-")}-{timestamp()}'
     Path(model_save_path).mkdir(exist_ok=True, parents=True)
 
-    # Logging to a file
     logging.basicConfig(
         format='%(asctime)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
         level=logging.INFO,
-        handlers=[LoggingHandler(), logging.FileHandler(filename=f'{model_save_path}/training_logging.log')],
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(filename=f'{model_save_path}/training_logging.log'),
+        ],
     )
 
-    model = build_finetuning_model(
+    finetuning_model = build_finetuning_model(
         base_model_name_or_path=model_name_or_path, model_args={'torch_dtype': torch.float32}
     )
     logging.info(f'pre-trained model {model_name} loaded')
 
     functions = datasets.load_from_disk(data_folder)
     train_functions = functions['train']
+    test_functions = functions['test']
     logging.info('training data loaded')
 
     train_data_sampler = LazySentenceLabelDataset(train_functions)
-    train_data_loader = DataLoader(train_data_sampler, batch_size=batch_size)
+    train_data_loader = DataLoader(
+        train_data_sampler,
+        batch_size=batch_size,
+        collate_fn=lambda examples: collate_labeled_batch(finetuning_model.tokenizer, examples),
+    )
     logging.info('training data created')
 
-    def eval_triplets(functions):
-        for example in tqdm(functions, desc='making InputExamples: test'):
-            yield InputExample(texts=[example['anchor'], example['pos'], example['neg']])
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    finetuning_model.to(device)
 
-    test_functions = functions['test']
-    dev_evaluator = TripletEvaluator.from_input_examples(eval_triplets(test_functions))
-
-    # Configure the training.
-    # The jTrans loss is all triplets (including easy) with a cosine metric and a margin of 0.2 (BatchAllTripletLoss)
-    # BatchSemiHardTripletLoss works on all non-easy triplets. That seems to give better training losses.
-    train_loss = losses.BatchSemiHardTripletLoss(
-        model, distance_metric=BatchHardTripletLossDistanceFunction.cosine_distance, margin=0.2
+    optimizer = torch.optim.AdamW(
+        [param for param in finetuning_model.parameters() if param.requires_grad],
+        lr=learning_rate,
+    )
+    total_steps = len(train_data_loader) * num_epochs
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=min(warmup_steps, total_steps),
+        num_training_steps=total_steps,
     )
 
-    def log_loss(args, kwargs, result):
-        # log it. Open and close the file to prevent loss.
-        loss = result.item()
-        with open(os.path.join(model_save_path, 'train_loss.log'), 'a') as loss_log:
-            loss_log.write(f'{loss}\n')
-        # Return the original result, unchanged.
-        return result
+    global_step = 0
+    checkpoint_save_steps = 100_000 * 16 // batch_size
 
-    wrap_method(train_loss, 'batch_semi_hard_triplet_loss', log_loss)
+    for epoch in range(num_epochs):
+        finetuning_model.train()
+        progress = tqdm(train_data_loader, desc=f'epoch {epoch + 1}/{num_epochs}')
+        for batch in progress:
+            labels = batch.pop('labels').to(device)
+            inputs = move_to_device(batch, device)
 
-    # Train the model
-    def train_callback(score, epoch, steps):
-        print(f'{score=}, {epoch=}, {steps=}')
+            optimizer.zero_grad()
+            embeddings = finetuning_model(**inputs)
+            loss = batch_semi_hard_triplet_loss(labels, embeddings, margin=0.2)
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
 
-    model.fit(
-        train_objectives=[(train_data_loader, train_loss)],
-        epochs=num_epochs,
-        evaluator=dev_evaluator,
-        evaluation_steps=evaluation_steps,
-        warmup_steps=warmup_steps,
-        output_path=model_save_path,
-        use_amp=use_amp,
-        checkpoint_path=model_save_path,
-        checkpoint_save_steps=100_000 * 16 // batch_size,
-        callback=train_callback,
+            global_step += 1
+            loss_value = loss.item()
+            progress.set_postfix(loss=loss_value)
+            with open(Path(model_save_path) / 'train_loss.log', 'a') as loss_log:
+                loss_log.write(f'{loss_value}\n')
+
+            if global_step % evaluation_steps == 0:
+                score = evaluate_triplets(
+                    finetuning_model,
+                    test_functions,
+                    model_save_path,
+                    batch_size=batch_size,
+                    epoch=epoch,
+                    steps=global_step,
+                )
+                print(f'score={score}, epoch={epoch}, steps={global_step}')
+                finetuning_model.train()
+
+            if global_step % checkpoint_save_steps == 0:
+                save_checkpoint(finetuning_model, model_save_path, global_step)
+
+    evaluate_triplets(
+        finetuning_model,
+        test_functions,
+        model_save_path,
+        batch_size=batch_size,
+        epoch=num_epochs - 1,
+        steps=global_step,
     )
+    finetuning_model.save_pretrained(model_save_path)
 
 
 def get_parser() -> argparse.ArgumentParser:
