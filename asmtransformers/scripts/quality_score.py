@@ -29,8 +29,8 @@ def make_scorer(dataset):
     }
 
     def normalize(val, col):
-        min, max = cfg_info[col]['min'], cfg_info[col]['max']
-        return (val - min) / (max - min) if max != min else 0
+        mn, mx = cfg_info[col]['min'], cfg_info[col]['max']
+        return (val - mn) / (mx - mn) if mx != mn else 0
 
     def add_score(example):
         """
