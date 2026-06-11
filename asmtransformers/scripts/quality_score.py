@@ -50,10 +50,10 @@ def make_scorer(dataset):
 
 if __name__ == '__main__':
     # With mktokenizer and tokenize_dataset.py
-    tokenized_dataset = datasets.load_from_disk(sys.argv[1])  
+    tokenized_dataset = datasets.load_from_disk(sys.argv[1])
 
     # Need two passes of `map`` because to normalize we have to know min and max of values
     tokenized_dataset = tokenized_dataset.map(map_tokens_to_df)
     # In this pass we determine quality_score
-    scored_dataset = tokenized_dataset.map(make_scorer(tokenized_dataset))  
+    scored_dataset = tokenized_dataset.map(make_scorer(tokenized_dataset))
     scored_dataset.save_to_disk(OUTPUT)
