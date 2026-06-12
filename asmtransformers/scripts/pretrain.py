@@ -285,7 +285,7 @@ def pretrain(
 def build_arg_parser():
     parser = argparse.ArgumentParser(description='ASM-Pretrain')
     parser.add_argument(
-        'output_dir',
+        '--output-dir',
         type=str,
         help='the directory where the pretrained model will be saved',
     )
