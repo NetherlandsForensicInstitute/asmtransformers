@@ -50,6 +50,64 @@ pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
     --tf32
 ```
 
+## Docker Container
+
+The repository includes `pretrain.Containerfile` for building a pretraining image with Python, PDM, the
+`asmtransformers` package, and the training scripts installed under `/app`.
+
+Build the image from the repository root:
+
+```bash
+cd asmtransformers
+docker build -f pretrain.Containerfile -t asmtransformers-pretrain .
+```
+
+Run a small CPU smoke test by bind-mounting the tokenized dataset, tokenizer, and output directory into the container.
+Omit `--bf16` and `--tf32` for CPU-only runs:
+
+```bash
+mkdir -p output
+docker run --rm \
+    -v /path/to/tokenized-dataset:/data/tokenized-dataset:ro \
+    -v /path/to/tokenizer:/data/tokenizer:ro \
+    -v "$PWD/output:/output" \
+    asmtransformers-pretrain \
+    pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
+        /output \
+        --data /data/tokenized-dataset \
+        --tokenizer /data/tokenizer \
+        --config asmtransformers/models/multilingual_asmbert/config.json \
+        --batch-size 1 \
+        --gradient-accumulation-steps 1 \
+        --max-steps 20 \
+        --save-steps 100 \
+        --logging-steps 10 \
+        --eval-samples 1000
+```
+
+For a CUDA GPU run, install and configure the NVIDIA Container Toolkit on the Docker host, then expose GPUs with
+`--gpus all`. Use `--bf16` and `--tf32` only when the exposed GPUs support those modes:
+
+```bash
+docker run --rm --gpus all \
+    -v /path/to/tokenized-dataset:/data/tokenized-dataset:ro \
+    -v /path/to/tokenizer:/data/tokenizer:ro \
+    -v /path/to/output:/output \
+    asmtransformers-pretrain \
+    pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
+        /output \
+        --data /data/tokenized-dataset \
+        --tokenizer /data/tokenizer \
+        --config asmtransformers/models/multilingual_asmbert/config.json \
+        --batch-size 16 \
+        --gradient-accumulation-steps 4 \
+        --save-steps 10000 \
+        --logging-steps 100 \
+        --eval-samples 100000 \
+        --bf16 \
+        --tf32
+```
+
 For SLURM, edit the `#SBATCH` header in `scripts/slurm_pretrain.sh` for the target partition, account, wall time,
 node count, and GPU count. Submit with dataset, tokenizer, and output paths:
 
