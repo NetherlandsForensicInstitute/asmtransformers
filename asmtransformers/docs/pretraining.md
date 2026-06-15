@@ -72,11 +72,11 @@ docker run --rm \
     -v /path/to/tokenizer:/data/tokenizer:ro \
     -v /path/to/output:/output \
     asmtransformers-pretrain \
-    pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
+    pdm run torchrun --nproc-per-node 1 /app/scripts/pretrain.py \
         /output \
         --data /data/tokenized-dataset \
         --tokenizer /data/tokenizer \
-        --config asmtransformers/models/multilingual_asmbert/config.json \
+        --config /app/asmtransformers/models/multilingual_asmbert/config.json \
         --batch-size 1 \
         --gradient-accumulation-steps 1 \
         --max-steps 20 \
@@ -94,11 +94,11 @@ docker run --rm --gpus all \
     -v /path/to/tokenizer:/data/tokenizer:ro \
     -v /path/to/output:/output \
     asmtransformers-pretrain \
-    pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
+    pdm run torchrun --nproc-per-node 1 /app/scripts/pretrain.py \
         /output \
         --data /data/tokenized-dataset \
         --tokenizer /data/tokenizer \
-        --config asmtransformers/models/multilingual_asmbert/config.json \
+        --config /app/asmtransformers/models/multilingual_asmbert/config.json \
         --batch-size 16 \
         --gradient-accumulation-steps 4 \
         --save-steps 10000 \
