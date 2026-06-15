@@ -55,7 +55,7 @@ pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
 The repository includes `pretrain.Containerfile` for building a pretraining image with Python, PDM, the
 `asmtransformers` package, and the training scripts installed under `/app`.
 
-Build the image from the repository root:
+Build the image from the `asmtransformers` folder that contains `pretrain.Containerfile`:
 
 ```bash
 cd asmtransformers
@@ -70,7 +70,7 @@ mkdir -p output
 docker run --rm \
     -v /path/to/tokenized-dataset:/data/tokenized-dataset:ro \
     -v /path/to/tokenizer:/data/tokenizer:ro \
-    -v "$PWD/output:/output" \
+    -v /path/to/output:/output \
     asmtransformers-pretrain \
     pdm run torchrun --nproc-per-node 1 scripts/pretrain.py \
         /output \
