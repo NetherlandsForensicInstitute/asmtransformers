@@ -63,7 +63,8 @@ if __name__ == '__main__':
     tokenized_dataset = datasets.load_from_disk(dataset_path)
 
     # Need two passes of `map`` because to normalize we have to know min and max of values
-    tokenized_dataset = tokenized_dataset.map(map_tokens_to_dataset, fn_kwargs={'tokenizer': tokenizer})
+    tokenized_dataset = tokenized_dataset.map(map_tokens_to_dataset, fn_kwargs={'tokenizer': tokenizer}, num_proc=10)
+
     # In this pass we determine quality_score
-    scored_dataset = tokenized_dataset.map(make_scorer(tokenized_dataset))
+    scored_dataset = tokenized_dataset.map(make_scorer(tokenized_dataset), num_proc=10)
     scored_dataset.save_to_disk(OUTPUT)
