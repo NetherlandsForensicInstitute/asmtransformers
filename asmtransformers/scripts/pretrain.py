@@ -6,7 +6,7 @@ from importlib import resources
 from pathlib import Path
 
 import torch
-from datasets import load_from_disk
+from datasets import DatasetDict, load_from_disk
 from transformers import BertConfig, DataCollatorForLanguageModeling, Trainer, TrainingArguments
 from tzlocal import get_localzone
 
@@ -226,7 +226,7 @@ def pretrain(
 
     # Load the training and evaluation datasets
     functions = load_from_disk(data)
-    if 'train' in functions:
+    if isinstance(functions, DatasetDict) and 'train' in functions:
         train_tokenized = functions['train']
         eval_tokenized = load_eval_dataset(functions, eval_samples)
     else:
