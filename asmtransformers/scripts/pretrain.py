@@ -226,7 +226,7 @@ def pretrain(
 
     # Load the training and evaluation datasets
     functions = load_from_disk(data)
-    train_tokenized = functions['train'].shuffle(seed=42)
+    train_tokenized = functions['train']
     eval_tokenized = load_eval_dataset(functions, eval_samples)
     logging.info('Datasets loaded')
 
