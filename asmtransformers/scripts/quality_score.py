@@ -1,12 +1,8 @@
 import json
 import sys
-from pathlib import Path
 
 import datasets
 import numpy as np
-
-
-OUTPUT = Path('./results')
 
 
 def map_tokens_to_dataset(dataset, tokenizer):
@@ -56,7 +52,7 @@ def make_scorer(dataset):
 
 if __name__ == '__main__':
     # Make sure tokenized dataset has been made With mktokenizer and tokenize_dataset.py
-    dataset_path, tokenizer_path = sys.argv[1:]
+    dataset_path, tokenizer_path, output_path = sys.argv[1:]
     with open(tokenizer_path) as f:
         tokenizer = json.load(f)
 
@@ -67,4 +63,4 @@ if __name__ == '__main__':
 
     # In this pass we determine quality_score
     scored_dataset = tokenized_dataset.map(make_scorer(tokenized_dataset), num_proc=10)
-    scored_dataset.save_to_disk(OUTPUT)
+    scored_dataset.save_to_disk(output_path)
