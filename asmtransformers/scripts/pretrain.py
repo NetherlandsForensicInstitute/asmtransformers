@@ -226,8 +226,12 @@ def pretrain(
 
     # Load the training and evaluation datasets
     functions = load_from_disk(data)
-    train_tokenized = functions['train']
-    eval_tokenized = load_eval_dataset(functions, eval_samples)
+    if 'train' in functions:
+        train_tokenized = functions['train']
+        eval_tokenized = load_eval_dataset(functions, eval_samples)
+    else:
+        train_tokenized = functions
+        eval_tokenized = None
     logging.info('Datasets loaded')
 
     # given our tokenization, there's no sense in differentiating between whole word and token masking
