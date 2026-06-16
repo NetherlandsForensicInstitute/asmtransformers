@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 
@@ -6,18 +7,26 @@ import numpy as np
 
 
 OUTPUT = Path('./results')
+# TOKEN_PATH = str('/home/lasse/Documents/gitlab-projecten/asmtransformers/asmtransformers/results/tokenizer.json')
 
 
-def map_tokens_to_df(dataset):
+def map_tokens_to_dataset(dataset, tokenizer_path):
+    with open(tokenizer_path) as f:
+        tokenizer = json.load(f)
+    jtp_out_of_range_token = tokenizer['model']['vocab']['JUMP_ADDR_EXCEEDED']
+    jtp_unknown = tokenizer['model']['vocab']['UNK_JUMP_ADDR']
+    minlength = max(jtp_out_of_range_token, jtp_unknown) + 1
     token = np.asarray(dataset['input_ids']).ravel()
-    token = token[token != 3920]  # 3920 is padding token
-    bincount = np.bincount(token, minlength=3497)
+    token_to_id = {t['content']: t['id'] for t in tokenizer['added_tokens']}
+    padding_token = token_to_id['[SEP]']
+    token = token[token != padding_token]
+    bincount = np.bincount(token, minlength=minlength)
 
     return {
         'len_cfg': len(token),
         'jtp_in_range': int(bincount[:512].sum()),
-        'jtp_out_of_range': int(bincount[1600]),  # Jump target exceeded token (from tokenizer)
-        'jtp_unknown': int(bincount[3496]),  #  Jump Target Unknown token  (from tokenizer)
+        'jtp_out_of_range': int(bincount[jtp_out_of_range_token]),  # Jump target exceeded token (from tokenizer)
+        'jtp_unknown': int(bincount[jtp_unknown]),  #  Jump Target Unknown token  (from tokenizer)
     }
 
 
@@ -50,10 +59,11 @@ def make_scorer(dataset):
 
 if __name__ == '__main__':
     # With mktokenizer and tokenize_dataset.py
+    dataset_path, tokenizer_path = sys.argv[1:]
     tokenized_dataset = datasets.load_from_disk(sys.argv[1])
 
     # Need two passes of `map`` because to normalize we have to know min and max of values
-    tokenized_dataset = tokenized_dataset.map(map_tokens_to_df)
+    tokenized_dataset = tokenized_dataset.map(map_tokens_to_dataset, fn_kwargs={'tokenizer_path': tokenizer_path})
     # In this pass we determine quality_score
     scored_dataset = tokenized_dataset.map(make_scorer(tokenized_dataset))
     scored_dataset.save_to_disk(OUTPUT)
