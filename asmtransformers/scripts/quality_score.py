@@ -1,25 +1,24 @@
-import json
 import sys
 from pathlib import Path
+import json
 
 import datasets
 import numpy as np
 
 
 OUTPUT = Path('./results')
-# TOKEN_PATH = str('/home/lasse/Documents/gitlab-projecten/asmtransformers/asmtransformers/results/tokenizer.json')
 
 
 def map_tokens_to_dataset(dataset, tokenizer_path):
     with open(tokenizer_path) as f:
         tokenizer = json.load(f)
-    jtp_out_of_range_token = tokenizer['model']['vocab']['JUMP_ADDR_EXCEEDED']
-    jtp_unknown = tokenizer['model']['vocab']['UNK_JUMP_ADDR']
+    jtp_out_of_range_token = tokenizer["model"]["vocab"]["JUMP_ADDR_EXCEEDED"]
+    jtp_unknown = tokenizer["model"]["vocab"]["UNK_JUMP_ADDR"]
     minlength = max(jtp_out_of_range_token, jtp_unknown) + 1
     token = np.asarray(dataset['input_ids']).ravel()
-    token_to_id = {t['content']: t['id'] for t in tokenizer['added_tokens']}
+    token_to_id = {t["content"]: t["id"] for t in tokenizer["added_tokens"]}
     padding_token = token_to_id['[SEP]']
-    token = token[token != padding_token]
+    token = token[token != padding_token] 
     bincount = np.bincount(token, minlength=minlength)
 
     return {
@@ -58,12 +57,12 @@ def make_scorer(dataset):
 
 
 if __name__ == '__main__':
-    # With mktokenizer and tokenize_dataset.py
+    # Make sure tokenized dataset has been made With mktokenizer and tokenize_dataset.py
     dataset_path, tokenizer_path = sys.argv[1:]
     tokenized_dataset = datasets.load_from_disk(sys.argv[1])
 
     # Need two passes of `map`` because to normalize we have to know min and max of values
-    tokenized_dataset = tokenized_dataset.map(map_tokens_to_dataset, fn_kwargs={'tokenizer_path': tokenizer_path})
+    tokenized_dataset = tokenized_dataset.map(map_tokens_to_dataset, fn_kwargs={"tokenizer_path": tokenizer_path})
     # In this pass we determine quality_score
     scored_dataset = tokenized_dataset.map(make_scorer(tokenized_dataset))
     scored_dataset.save_to_disk(OUTPUT)
