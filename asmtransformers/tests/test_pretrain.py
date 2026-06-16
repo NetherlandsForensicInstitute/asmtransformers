@@ -4,7 +4,10 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+import torch
 from datasets import Dataset, DatasetDict
+from torch.utils.data import RandomSampler
+from transformers import Trainer, TrainingArguments
 
 from scripts import pretrain as pretrain_module
 from scripts.pretrain import (
@@ -98,7 +101,7 @@ def install_fake_pretrain_dependencies(monkeypatch, calls, *, world_process_zero
     def build_trainer(*, model, args, data_collator, train_dataset, eval_dataset):
         calls['trainer_args'] = args
         calls['train_size'] = len(train_dataset)
-        calls['eval_size'] = len(eval_dataset)
+        calls['eval_size'] = None if eval_dataset is None else len(eval_dataset)
         return SimpleNamespace(
             is_world_process_zero=lambda: world_process_zero,
             train=train,
@@ -282,6 +285,18 @@ def test_build_training_args_passes_supported_precision_through(monkeypatch):
     assert args.max_steps == 20
     assert args.eval_strategy == 'steps'
     assert args.eval_steps == 10
+
+
+def test_trainer_uses_random_sampler_for_train_dataset_with_length(tmp_path):
+    dataset = Dataset.from_dict({'input_ids': [[1], [2], [3]], 'attention_mask': [[1], [1], [1]]})
+    trainer = Trainer(
+        model=torch.nn.Linear(1, 1),
+        args=TrainingArguments(output_dir=tmp_path, report_to=[], remove_unused_columns=False),
+        train_dataset=dataset,
+    )
+
+    assert isinstance(trainer._get_train_sampler(), RandomSampler)
+    assert isinstance(trainer.get_train_dataloader().batch_sampler.sampler, RandomSampler)
 
 
 def test_load_eval_dataset_bounds_eval_samples():
