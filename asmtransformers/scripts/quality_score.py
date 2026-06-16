@@ -15,7 +15,7 @@ def map_tokens_to_dataset(dataset, tokenizer):
     minlength = max(jtp_out_of_range_token, jtp_unknown) + 1
     token = np.asarray(dataset['input_ids']).ravel()
     token_to_id = {t['content']: t['id'] for t in tokenizer['added_tokens']}
-    padding_token = token_to_id['[SEP]']
+    padding_token = token_to_id['[PAD]']
     token = token[token != padding_token]
     bincount = np.bincount(token, minlength=minlength)
 
