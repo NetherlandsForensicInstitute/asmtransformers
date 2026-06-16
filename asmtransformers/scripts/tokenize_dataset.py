@@ -43,11 +43,9 @@ def get_parser():
     parser.add_argument('--output-folder', type=str, required=True, help='folder to leave the tokenized data')
     parser.add_argument(
         '--split',
-        nargs='?',
-        type=int,
-        const=0.05,  # by default use 5% of the data for testing
-        default=False,  # if not listed store False
-        help='split between train and test; uses 5% split by default',
+        type=float,
+        required=False,
+        help='split between train and test; define percentage of test data as number between 0 and 1',
     )
 
     return parser
