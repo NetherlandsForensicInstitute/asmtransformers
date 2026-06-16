@@ -6,7 +6,7 @@ from importlib import resources
 from pathlib import Path
 
 import torch
-from datasets import load_from_disk, DatasetDict
+from datasets import DatasetDict, load_from_disk
 from transformers import BertConfig, DataCollatorForLanguageModeling, Trainer, TrainingArguments
 from tzlocal import get_localzone
 
