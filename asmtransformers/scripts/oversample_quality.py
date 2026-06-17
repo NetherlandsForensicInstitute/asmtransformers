@@ -107,4 +107,4 @@ if __name__ == '__main__':
         seed=args.seed,
     )
     oversampled.save_to_disk(args.output)
-    logging.info('Saved oversampled dataset to %s', args.output)
+    logging.info(f'Saved oversampled dataset to {args.output}')
