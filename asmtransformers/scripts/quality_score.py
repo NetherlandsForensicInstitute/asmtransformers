@@ -3,6 +3,7 @@ import sys
 
 import datasets
 import numpy as np
+import pyarrow.compute as pc
 
 
 def map_tokens_to_dataset(dataset, tokenizer):
@@ -29,13 +30,20 @@ SCORE_COLUMNS = ['len_cfg', 'jtp_in_range', 'jtp_unknown', 'jtp_out_of_range']
 def column_stats(dataset, columns=SCORE_COLUMNS):
     """Min/max per column over a ``Dataset`` or globally across all splits of a ``DatasetDict``.
 
-    Computing one global range keeps the normalized scores comparable across splits.
+    Computing one global range keeps the normalized scores comparable across splits. Min/max are computed in C with
+    pyarrow over the memory-mapped Arrow column, rather than materializing a multi-gigabyte Python list per column
+    (which would thrash memory on large corpora).
     """
     splits = list(dataset.values()) if isinstance(dataset, datasets.DatasetDict) else [dataset]
-    return {
-        col: {'min': min(min(split[col]) for split in splits), 'max': max(max(split[col]) for split in splits)}
-        for col in columns
-    }
+    stats = {col: {'min': None, 'max': None} for col in columns}
+    for split in splits:
+        for col in columns:
+            min_max = pc.min_max(split.data.column(col))
+            split_min, split_max = min_max['min'].as_py(), min_max['max'].as_py()
+            current = stats[col]
+            current['min'] = split_min if current['min'] is None else min(current['min'], split_min)
+            current['max'] = split_max if current['max'] is None else max(current['max'], split_max)
+    return stats
 
 
 def make_scorer(cfg_info):
