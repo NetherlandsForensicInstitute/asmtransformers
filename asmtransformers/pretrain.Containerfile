@@ -5,5 +5,5 @@ WORKDIR /app
 RUN pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org --break-system-packages --root-user-action ignore pdm
 RUN pdm config pypi.verify_ssl False
 RUN pdm config pypi.url $PIP_PYPI_URL
-RUN pdm install --prod --no-editable --frozen-lockfile
+RUN pdm install --prod --no-editable
 CMD ["bash"]
