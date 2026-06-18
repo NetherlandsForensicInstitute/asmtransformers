@@ -4,6 +4,7 @@ import numpy as np
 import torch
 
 from asmtransformers.models.asmbert import ASMBertModel, ASMTokenizer
+from asmtransformers.models.finetuning import mean_pool_embeddings
 
 
 class ASMEmbedder:
@@ -27,8 +28,7 @@ class ASMEmbedder:
 
     @staticmethod
     def mean_pool(token_embeddings, attention_mask):
-        mask = attention_mask.unsqueeze(-1).to(token_embeddings.dtype)
-        return (token_embeddings * mask).sum(dim=1) / mask.sum(dim=1).clamp_min(1e-9)
+        return mean_pool_embeddings(token_embeddings, attention_mask)
 
     def encode(
         self,
