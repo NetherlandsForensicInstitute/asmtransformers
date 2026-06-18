@@ -161,7 +161,6 @@ pdm run torchrun --nproc-per-node 8 scripts/pretrain.py \
     --tokenizer /path/to/tokenizer \
     --learning-rate 2e-5 \
     --warmup-ratio 0.0 \
-    --epoch 1 \
     --run-id anneal \
     --bf16 \
     --tf32
