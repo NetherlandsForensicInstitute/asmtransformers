@@ -92,8 +92,7 @@ pdm run python scripts/oversample_quality.py /path/to/scored-dataset /path/to/an
 corpus). The full corpus is retained, which limits forgetting; the `test` split is passed through unchanged. The
 output is a pretrain-ready `DatasetDict`.
 
-Run the annealing phase from the phase-1 model with a smaller learning rate and a short step budget. With direct GPU
-access (no SLURM), launch `torchrun` against the local GPUs:
+Run the annealing phase from the phase-1 model with a smaller learning rate and a short step budget. Launch `torchrun` against the local GPUs:
 
 ```bash
 cd asmtransformers
@@ -111,8 +110,8 @@ pdm run torchrun --nproc-per-node 8 scripts/pretrain.py \
 ```
 
 Use `--model-path` (not `--resume-from-checkpoint`): this starts a fresh, short cosine schedule from the phase-1
-weights rather than resuming phase-1's optimizer state and step count. Keep the learning rate well below the
-phase-1 `1e-4` (a low-LR anneal) and the step budget small relative to phase 1.
+weights rather than resuming phase-1's optimizer state and step count. Keep the learning rate below the
+phase-1 LR.
 
 ## Precision
 
