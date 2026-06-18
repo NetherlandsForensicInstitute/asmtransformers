@@ -23,12 +23,22 @@ def map_tokens_to_dataset(dataset, tokenizer):
     }
 
 
-def make_scorer(dataset):
+SCORE_COLUMNS = ['len_cfg', 'jtp_in_range', 'jtp_unknown', 'jtp_out_of_range']
 
-    cfg_info = {
-        col: {'min': min(dataset[col]), 'max': max(dataset[col])}
-        for col in ['len_cfg', 'jtp_in_range', 'jtp_unknown', 'jtp_out_of_range']
+
+def column_stats(dataset, columns=SCORE_COLUMNS):
+    """Min/max per column over a ``Dataset`` or globally across all splits of a ``DatasetDict``.
+
+    Computing one global range keeps the normalized scores comparable across splits.
+    """
+    splits = list(dataset.values()) if isinstance(dataset, datasets.DatasetDict) else [dataset]
+    return {
+        col: {'min': min(min(split[col]) for split in splits), 'max': max(max(split[col]) for split in splits)}
+        for col in columns
     }
+
+
+def make_scorer(cfg_info):
 
     def normalize(val, col):
         mn, mx = cfg_info[col]['min'], cfg_info[col]['max']
@@ -61,6 +71,7 @@ if __name__ == '__main__':
     # Need two passes of `map`` because to normalize we have to know min and max of values
     tokenized_dataset = tokenized_dataset.map(map_tokens_to_dataset, fn_kwargs={'tokenizer': tokenizer}, num_proc=10)
 
-    # In this pass we determine quality_score
-    scored_dataset = tokenized_dataset.map(make_scorer(tokenized_dataset), num_proc=10)
+    # In this pass we determine quality_score, normalizing against a single global range across all splits
+    cfg_info = column_stats(tokenized_dataset)
+    scored_dataset = tokenized_dataset.map(make_scorer(cfg_info), num_proc=10)
     scored_dataset.save_to_disk(output_path)
