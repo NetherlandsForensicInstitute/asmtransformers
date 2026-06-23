@@ -133,7 +133,7 @@ def generate_triplets(dataset, pool_size, static_pool):
             yield {'anchor': anchors[i], 'pos': positives[i], 'negs': pool}
 
 
-def generate_test_pools(data_folder, pool_size, static_pool):
+def generate_test_pools(data_folder, pool_size, static_pool, architecture=None):
     """order data in such a way that we can make triplets consisting of an anchor, a positive and pool_size * negative
     examples, then call generate_triplets() to generate said triplets
     :param data_folder: Path to data
@@ -143,6 +143,9 @@ def generate_test_pools(data_folder, pool_size, static_pool):
     return
     Generator yielding triplets: anchor, positive, numpy.array(negative_embeddings * POOL_SIZE)"""
     dataset = datasets.load_from_disk(data_folder)  # .select(range(11000, 45000))
+    if architecture:
+        print(f'Selecting examples with architecture=={architecture}')
+        dataset = dataset.filter(lambda x: x['architecture'] == architecture)
 
     print('Adding columns')
     # Don't use all 3M examples because sort is really slow.
@@ -200,15 +203,15 @@ def calculate_all(test_pools, output_path, output_file):
             csvfile.flush()
 
 
-def run_tests(data_folder, output_path, pool_size, static_pool):
+def run_tests(data_folder, output_path, pool_size, static_pool, architecture):
     print('\ngenerate test_pools\n')
-    test_pools = generate_test_pools(data_folder, pool_size, static_pool=static_pool)
+    test_pools = generate_test_pools(data_folder, pool_size, static_pool=static_pool, architecture=architecture)
     print('\ncalculate cosine similarities\n')
     model_name = data_folder.split('/')[-1]
     output_file = f'{model_name}-{pool_size}-{static_pool}-{timestamp()}'
     calculate_all(test_pools, output_path, output_file)
     with open(os.path.join(output_path, output_file + '-parameters.txt'), 'w') as file:
-        file.write(f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=}\n')
+        file.write(f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=},\n {architecture=}\n')
 
 
 if __name__ == '__main__':
@@ -216,9 +219,10 @@ if __name__ == '__main__':
     parser.add_argument('--input-path', type=str, help='the path to the test data')
     parser.add_argument('--output-path', type=str, help='the path to write the final scores to')
     parser.add_argument('--pool-size', type=int, help='the poolsize to pick the positive example from')
+    parser.add_argument('--architecture', type=str, help='only use examples from specified architecture')
     parser.add_argument(
         '--static-pool', action='store_true', help='keep the negatives pool or refresh for every anchor-pos pair'
     )
 
     args = parser.parse_args()
-    run_tests(args.input_path, args.output_path, args.pool_size, args.static_pool)
+    run_tests(args.input_path, args.output_path, args.pool_size, args.static_pool, args.architecture)
