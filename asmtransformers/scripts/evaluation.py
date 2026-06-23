@@ -22,7 +22,7 @@ def add_label(example):
 
     :param example: row in dataset
     :returns example with an extra column containing the label"""
-    label = example['bin_name'] + '/' + example['func_name']
+    label = example['file_name'] + '/' + example['function_name']
     example['label'] = label
     # Ensure same labels are sorted together and in random order.
     example['label_random'] = f'{label}\0{random.random()}'
