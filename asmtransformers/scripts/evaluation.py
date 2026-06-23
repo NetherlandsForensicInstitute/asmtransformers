@@ -145,7 +145,7 @@ def generate_test_pools(data_folder, pool_size, static_pool, architecture=None):
     dataset = datasets.load_from_disk(data_folder)  # .select(range(11000, 45000))
     if architecture:
         print(f'Selecting examples with architecture=={architecture}')
-        dataset = dataset.filter(lambda x:x['architecture'] == architecture)
+        dataset = dataset.filter(lambda x: x['architecture'] == architecture)
 
     print('Adding columns')
     # Don't use all 3M examples because sort is really slow.
