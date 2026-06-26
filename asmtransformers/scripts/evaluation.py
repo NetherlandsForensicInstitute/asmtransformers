@@ -188,6 +188,8 @@ def calculate_all(test_pools, output_path, output_file):
     """
     sum_rr = 0
     sum_acc = 0
+    final_mrr = 0.0
+    final_acc = 0.0
     with open(os.path.join(output_path, output_file + '-results.csv'), 'w') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(('iteration', 'MRR', 'P@1'))
@@ -197,24 +199,52 @@ def calculate_all(test_pools, output_path, output_file):
             sum_rr += rr
             if rr == 1.0:
                 sum_acc += 1.0
-            row_result = (i, sum_rr / (i + 1), sum_acc / (i + 1))
+            final_mrr = sum_rr / (i + 1)
+            final_acc = sum_acc / (i + 1)
+            row_result = (i, final_mrr, final_acc)
             print(row_result)
             writer.writerow(row_result)
             csvfile.flush()
+    return final_mrr, final_acc
 
 
-def run_tests(data_folder, output_path, pool_size, static_pool, architecture, seed):
-    if seed is not None:
-        random.seed(seed)
-    print('\ngenerate test_pools\n')
-    test_pools = generate_test_pools(data_folder, pool_size, static_pool=static_pool, architecture=architecture)
-    print('\ncalculate cosine similarities\n')
+def run_tests(data_folder, output_path, pool_size, static_pool, architecture, seed, repeats=1):
+    if repeats < 1:
+        raise ValueError('repeats must be at least 1')
+    if repeats > 1 and not static_pool:
+        raise ValueError('repeats greater than 1 are only supported with --static-pool')
+
     model_name = data_folder.split('/')[-1]
     output_file = f'{model_name}-{pool_size}-{static_pool}-{timestamp()}'
-    calculate_all(test_pools, output_path, output_file)
+    repeat_seeds = [None] * repeats if seed is None else [seed + i for i in range(repeats)]
+    aggregate_rows = []
+
+    for repeat, repeat_seed in enumerate(repeat_seeds):
+        if repeat_seed is not None:
+            random.seed(repeat_seed)
+        print('\ngenerate test_pools\n')
+        test_pools = generate_test_pools(data_folder, pool_size, static_pool=static_pool, architecture=architecture)
+        print('\ncalculate cosine similarities\n')
+        repeat_output_file = output_file if repeats == 1 else f'{output_file}-repeat-{repeat}'
+        final_mrr, final_acc = calculate_all(test_pools, output_path, repeat_output_file)
+        aggregate_rows.append((repeat, repeat_seed, final_mrr, final_acc))
+
+    if repeats > 1:
+        mrrs = np.array([row[2] for row in aggregate_rows])
+        accuracies = np.array([row[3] for row in aggregate_rows])
+        with open(os.path.join(output_path, output_file + '-aggregate.csv'), 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(('repeat', 'seed', 'MRR', 'P@1'))
+            writer.writerows(aggregate_rows)
+            writer.writerow(('mean', '', float(np.mean(mrrs)), float(np.mean(accuracies))))
+            writer.writerow(('std', '', float(np.std(mrrs)), float(np.std(accuracies))))
+            writer.writerow(('min', '', float(np.min(mrrs)), float(np.min(accuracies))))
+            writer.writerow(('max', '', float(np.max(mrrs)), float(np.max(accuracies))))
+
     with open(os.path.join(output_path, output_file + '-parameters.txt'), 'w') as file:
         file.write(
-            f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=},\n {architecture=},\n {seed=}\n'
+            f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=},\n {architecture=},\n'
+            f' {seed=},\n {repeats=},\n {repeat_seeds=}\n'
         )
 
 
@@ -225,6 +255,7 @@ def get_parser():
     parser.add_argument('--pool-size', type=int, help='the poolsize to pick the positive example from')
     parser.add_argument('--architecture', type=str, help='only use examples from specified architecture')
     parser.add_argument('--seed', type=int, help='seed random evaluation sampling')
+    parser.add_argument('--repeats', type=int, default=1, help='number of static-pool evaluation repeats')
     parser.add_argument(
         '--static-pool', action='store_true', help='keep the negatives pool or refresh for every anchor-pos pair'
     )
@@ -234,4 +265,15 @@ def get_parser():
 if __name__ == '__main__':
     parser = get_parser()
     args = parser.parse_args()
-    run_tests(args.input_path, args.output_path, args.pool_size, args.static_pool, args.architecture, args.seed)
+    try:
+        run_tests(
+            args.input_path,
+            args.output_path,
+            args.pool_size,
+            args.static_pool,
+            args.architecture,
+            args.seed,
+            args.repeats,
+        )
+    except ValueError as error:
+        parser.error(str(error))

@@ -120,7 +120,7 @@ Evaluation
 ----------
 
     usage: scripts/evaluation.py [-h] [--input-path INPUT_PATH] [--output-path OUTPUT_PATH] [--pool-size POOL_SIZE]
-                                 [--architecture ARCHITECTURE] [--seed SEED] [--static-pool]
+                                 [--architecture ARCHITECTURE] [--seed SEED] [--repeats REPEATS] [--static-pool]
 
     evaluation
 
@@ -135,6 +135,8 @@ Evaluation
       --architecture ARCHITECTURE
                         only use examples from specified architecture
       --seed SEED       seed random evaluation sampling
+      --repeats REPEATS
+                        number of static-pool evaluation repeats
       --static-pool         keep the negatives pool or refresh for every anchor-pos pair
 
 Keep in mind that the pool-size-parameter does not include the positive example. For example if we want to conduct the
@@ -143,6 +145,10 @@ size parameter is 31.
 
 Pass `--seed` to make anchor/positive and negative sampling reproducible. If omitted, evaluation keeps using the
 current unseeded random sampling behavior.
+
+Pass `--repeats` with `--static-pool` to run multiple static-pool evaluations and write an aggregate CSV with
+per-repeat final MRR/P@1 plus mean, standard deviation, minimum, and maximum. Repeats greater than 1 are not supported
+for dynamic pools.
 
 The performance of the models is evaluated according to the methods in jTrans. For this evaluation we create triplets of
 any chosen function (which we call the anchor); the same function on a different compilation level (the positive
