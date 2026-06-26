@@ -146,9 +146,9 @@ size parameter is 31.
 Pass `--seed` to make anchor/positive and negative sampling reproducible. If omitted, evaluation keeps using the
 current unseeded random sampling behavior.
 
-Pass `--repeats` with `--static-pool` to run multiple static-pool evaluations and write an aggregate CSV with
-per-repeat final MRR/P@1 plus mean, standard deviation, minimum, and maximum. Repeats greater than 1 are not supported
-for dynamic pools.
+Pass `--repeats` with `--static-pool` to reuse one sampled anchor/positive set while varying only the negative pool.
+Repeated runs write an aggregate CSV with per-repeat final MRR/P@1 plus mean, standard deviation, minimum, and maximum.
+Repeats greater than 1 are not supported for dynamic pools.
 
 The performance of the models is evaluated according to the methods in jTrans. For this evaluation we create triplets of
 any chosen function (which we call the anchor); the same function on a different compilation level (the positive

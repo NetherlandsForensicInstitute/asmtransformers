@@ -64,17 +64,8 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs):
     return np.array(neg_embeddings)
 
 
-def generate_triplets(dataset, pool_size, static_pool):
-    """generates triplets consisting of an anchor, a positive example and a pool of negative examples, while making
-    sure that none of the negative examples contain the same cfg as the positive and anchor they are linked to.
-    Also check that the anchor and pos are not exactly the same.
-    Negative samples are chosen by randomly choosing a row from the dataset.
-
-    :param dataset: huggingface dataset
-    :param pool_size: number of negative samples in triplets
-    :param static_pool: keep or regenerate the negative pool for every anchor-pos pair.
-    :return: Generator containing triplets: anchor, pos, numpy.array([neg_embedding ...])
-    """
+def generate_anchor_pos_pairs(dataset):
+    """generates anchor/positive pairs while rejecting identical CFGs."""
     labels = dataset['label']
     labels_with_indices = list(enumerate(labels))
     labels_with_indices.sort(key=itemgetter(1))
@@ -122,6 +113,20 @@ def generate_triplets(dataset, pool_size, static_pool):
         anchor_cfgs.add(anchor['cfg'])
         pos_cfgs.add(pos['cfg'])
 
+    return anchors, positives, anchor_labels, anchor_cfgs, pos_cfgs
+
+
+def generate_triplets(dataset, anchor_pairs, pool_size, static_pool):
+    """generates triplets from fixed anchor/positive pairs and sampled negative pools.
+
+    :param dataset: huggingface dataset
+    :param anchor_pairs: anchor/positive rows and exclusion sets
+    :param pool_size: number of negative samples in triplets
+    :param static_pool: keep or regenerate the negative pool for every anchor-pos pair.
+    :return: Generator containing triplets: anchor, pos, numpy.array([neg_embedding ...])
+    """
+    anchors, positives, anchor_labels, anchor_cfgs, pos_cfgs = anchor_pairs
+
     if static_pool:
         pool = generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs)
         for i in range(len(anchors)):
@@ -133,15 +138,7 @@ def generate_triplets(dataset, pool_size, static_pool):
             yield {'anchor': anchors[i], 'pos': positives[i], 'negs': pool}
 
 
-def generate_test_pools(data_folder, pool_size, static_pool, architecture=None):
-    """order data in such a way that we can make triplets consisting of an anchor, a positive and pool_size * negative
-    examples, then call generate_triplets() to generate said triplets
-    :param data_folder: Path to data
-    :param pool_size: number of negative items to compare with
-    :param static_pool: use the same pool of negatives for every pos/anchor pair (faster)
-
-    return
-    Generator yielding triplets: anchor, positive, numpy.array(negative_embeddings * POOL_SIZE)"""
+def load_test_functions(data_folder, architecture=None):
     dataset = datasets.load_from_disk(data_folder)  # .select(range(11000, 45000))
     if architecture:
         print(f'Selecting examples with architecture=={architecture}')
@@ -151,8 +148,21 @@ def generate_test_pools(data_folder, pool_size, static_pool, architecture=None):
     # Don't use all 3M examples because sort is really slow.
     test_functions = dataset.map(add_label, batch_size=10000, num_proc=8)
     print('Sorting dataset')
-    test_functions = test_functions.sort('label')
-    yield from generate_triplets(dataset=test_functions, pool_size=pool_size, static_pool=static_pool)
+    return test_functions.sort('label')
+
+
+def generate_test_pools(data_folder, pool_size, static_pool, architecture=None):
+    """order data in such a way that we can make triplets consisting of an anchor, a positive and pool_size * negative
+    examples, then call generate_triplets() to generate said triplets
+    :param data_folder: Path to data
+    :param pool_size: number of negative items to compare with
+    :param static_pool: use the same pool of negatives for every pos/anchor pair (faster)
+
+    return
+    Generator yielding triplets: anchor, positive, numpy.array(negative_embeddings * POOL_SIZE)"""
+    test_functions = load_test_functions(data_folder, architecture)
+    anchor_pairs = generate_anchor_pos_pairs(test_functions)
+    yield from generate_triplets(test_functions, anchor_pairs, pool_size=pool_size, static_pool=static_pool)
 
 
 def calculate_one_rank(row):
@@ -214,16 +224,22 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
     if repeats > 1 and not static_pool:
         raise ValueError('repeats greater than 1 are only supported with --static-pool')
 
+    if seed is not None:
+        random.seed(seed)
+
+    print('\ngenerate test_pools\n')
+    test_functions = load_test_functions(data_folder, architecture)
+    anchor_pairs = generate_anchor_pos_pairs(test_functions)
+
     model_name = data_folder.split('/')[-1]
     output_file = f'{model_name}-{pool_size}-{static_pool}-{timestamp()}'
-    repeat_seeds = [None] * repeats if seed is None else [seed + i for i in range(repeats)]
+    repeat_seeds = [None] * repeats if seed is None else [seed + repeat + 1 for repeat in range(repeats)]
     aggregate_rows = []
 
     for repeat, repeat_seed in enumerate(repeat_seeds):
         if repeat_seed is not None:
             random.seed(repeat_seed)
-        print('\ngenerate test_pools\n')
-        test_pools = generate_test_pools(data_folder, pool_size, static_pool=static_pool, architecture=architecture)
+        test_pools = generate_triplets(test_functions, anchor_pairs, pool_size=pool_size, static_pool=static_pool)
         print('\ncalculate cosine similarities\n')
         repeat_output_file = output_file if repeats == 1 else f'{output_file}-repeat-{repeat}'
         final_mrr, final_acc = calculate_all(test_pools, output_path, repeat_output_file)
