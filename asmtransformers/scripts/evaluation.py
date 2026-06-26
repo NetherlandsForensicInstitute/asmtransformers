@@ -29,14 +29,6 @@ def add_label(example):
     return example
 
 
-def generate_single_neg(dataset):
-    """chooses a random row from the dataset
-
-    :param dataset: huggingface dataset
-    :return: random row from the dataset"""
-    return dataset[random.randint(0, len(dataset) - 1)]
-
-
 def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs):
     """
     Generate a pool that does not contain the labels and cfgs in the anchors/pos
@@ -49,8 +41,10 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs):
     :return: a numpy array containing the embeddings of the items in the pool
     """
     neg_embeddings = []
-    while len(neg_embeddings) < pool_size:
-        neg = generate_single_neg(dataset)
+    candidate_indices = list(range(len(dataset)))
+    random.shuffle(candidate_indices)
+    for index in candidate_indices:
+        neg = dataset[index]
         if neg['label'] in anchor_labels:
             # same label, reject
             continue
@@ -61,6 +55,10 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs):
             # same content, reject
             continue
         neg_embeddings.append(neg['embeddings'])
+        if len(neg_embeddings) == pool_size:
+            break
+    if len(neg_embeddings) < pool_size:
+        raise ValueError(f'only {len(neg_embeddings)} eligible negative examples available for pool_size={pool_size}')
     return np.array(neg_embeddings)
 
 
