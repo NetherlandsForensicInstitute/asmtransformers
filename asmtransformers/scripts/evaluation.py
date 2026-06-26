@@ -203,7 +203,9 @@ def calculate_all(test_pools, output_path, output_file):
             csvfile.flush()
 
 
-def run_tests(data_folder, output_path, pool_size, static_pool, architecture):
+def run_tests(data_folder, output_path, pool_size, static_pool, architecture, seed):
+    if seed is not None:
+        random.seed(seed)
     print('\ngenerate test_pools\n')
     test_pools = generate_test_pools(data_folder, pool_size, static_pool=static_pool, architecture=architecture)
     print('\ncalculate cosine similarities\n')
@@ -211,18 +213,25 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture):
     output_file = f'{model_name}-{pool_size}-{static_pool}-{timestamp()}'
     calculate_all(test_pools, output_path, output_file)
     with open(os.path.join(output_path, output_file + '-parameters.txt'), 'w') as file:
-        file.write(f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=},\n {architecture=}\n')
+        file.write(
+            f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=},\n {architecture=},\n {seed=}\n'
+        )
 
 
-if __name__ == '__main__':
+def get_parser():
     parser = argparse.ArgumentParser(description='evaluation')
     parser.add_argument('--input-path', type=str, help='the path to the test data')
     parser.add_argument('--output-path', type=str, help='the path to write the final scores to')
     parser.add_argument('--pool-size', type=int, help='the poolsize to pick the positive example from')
     parser.add_argument('--architecture', type=str, help='only use examples from specified architecture')
+    parser.add_argument('--seed', type=int, help='seed random evaluation sampling')
     parser.add_argument(
         '--static-pool', action='store_true', help='keep the negatives pool or refresh for every anchor-pos pair'
     )
+    return parser
 
+
+if __name__ == '__main__':
+    parser = get_parser()
     args = parser.parse_args()
-    run_tests(args.input_path, args.output_path, args.pool_size, args.static_pool, args.architecture)
+    run_tests(args.input_path, args.output_path, args.pool_size, args.static_pool, args.architecture, args.seed)
