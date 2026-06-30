@@ -22,7 +22,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('data_folder', type=str, help='folder with data')
     parser.add_argument('output_folder', type=str, help='folder with data')
 
-    parser.add_argument('model-path', type=str, help='model')
+    parser.add_argument('model_path', type=str, help='model')
     return parser
 
 
