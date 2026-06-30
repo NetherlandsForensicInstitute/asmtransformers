@@ -1,8 +1,9 @@
+import argparse
 import json
-import sys
 
 import datasets
 import numpy as np
+import pyarrow.compute as pc
 
 
 def map_tokens_to_dataset(dataset, tokenizer):
@@ -23,12 +24,29 @@ def map_tokens_to_dataset(dataset, tokenizer):
     }
 
 
-def make_scorer(dataset):
+SCORE_COLUMNS = ['len_cfg', 'jtp_in_range', 'jtp_unknown', 'jtp_out_of_range']
 
-    cfg_info = {
-        col: {'min': min(dataset[col]), 'max': max(dataset[col])}
-        for col in ['len_cfg', 'jtp_in_range', 'jtp_unknown', 'jtp_out_of_range']
-    }
+
+def column_stats(dataset, columns=SCORE_COLUMNS):
+    """Min/max per column over a ``Dataset`` or globally across all splits of a ``DatasetDict``.
+
+    Computing one global range keeps the normalized scores comparable across splits. Min/max are computed in C with
+    pyarrow over the memory-mapped Arrow column, rather than materializing a multi-gigabyte Python list per column
+    (which would thrash memory on large corpora).
+    """
+    splits = list(dataset.values()) if isinstance(dataset, datasets.DatasetDict) else [dataset]
+    stats = {col: {'min': None, 'max': None} for col in columns}
+    for split in splits:
+        for col in columns:
+            min_max = pc.min_max(split.data.column(col))
+            split_min, split_max = min_max['min'].as_py(), min_max['max'].as_py()
+            current = stats[col]
+            current['min'] = split_min if current['min'] is None else min(current['min'], split_min)
+            current['max'] = split_max if current['max'] is None else max(current['max'], split_max)
+    return stats
+
+
+def make_scorer(cfg_info):
 
     def normalize(val, col):
         mn, mx = cfg_info[col]['min'], cfg_info[col]['max']
@@ -50,17 +68,30 @@ def make_scorer(dataset):
     return add_score
 
 
-if __name__ == '__main__':
-    # Make sure tokenized dataset has been made With mktokenizer and tokenize_dataset.py
-    dataset_path, tokenizer_path, output_path = sys.argv[1:]
-    with open(tokenizer_path) as f:
+def get_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('data_folder', type=str, help='folder with data')
+    parser.add_argument('output_folder', type=str, help='folder with data')
+    parser.add_argument('-t', '--tokenizer', type=str, required=True, help='path to tokenizer.json')
+    return parser
+
+
+def main(data_folder, output_folder, tokenizer):
+    with open(tokenizer) as f:
         tokenizer = json.load(f)
 
-    tokenized_dataset = datasets.load_from_disk(dataset_path)
+    tokenized_dataset = datasets.load_from_disk(data_folder)
 
     # Need two passes of `map`` because to normalize we have to know min and max of values
     tokenized_dataset = tokenized_dataset.map(map_tokens_to_dataset, fn_kwargs={'tokenizer': tokenizer}, num_proc=10)
 
-    # In this pass we determine quality_score
-    scored_dataset = tokenized_dataset.map(make_scorer(tokenized_dataset), num_proc=10)
-    scored_dataset.save_to_disk(output_path)
+    # In this pass we determine quality_score, normalizing against a single global range across all splits
+    cfg_info = column_stats(tokenized_dataset)
+    scored_dataset = tokenized_dataset.map(make_scorer(cfg_info), num_proc=10)
+    scored_dataset.save_to_disk(output_folder)
+
+
+if __name__ == '__main__':
+    parser = get_parser()
+    args = parser.parse_args()
+    main(**vars(args))

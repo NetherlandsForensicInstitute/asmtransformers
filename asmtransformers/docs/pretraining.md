@@ -130,6 +130,47 @@ nodes * gpus_per_node * batch_size * gradient_accumulation_steps
 For example, 2 nodes with 8 GPUs each, `BATCH_SIZE=16`, and `GRADIENT_ACCUMULATION_STEPS=4` gives a global batch size
 of 1024 sequences.
 
+## Quality Annealing (Final Phase)
+
+The last phase of pretraining oversamples high-quality functions so the model finishes on a corpus skewed toward
+clean control-flow graphs (i.e. with the least out of range and unknown jump targets). This is a separate, short run 
+that continues from the phase-1 model.
+
+First score the tokenized dataset (adds a `score` column per function), then build an oversampled training set:
+
+```bash
+cd asmtransformers
+pdm run python scripts/quality_score.py /path/to/tokenized-dataset /path/to/tokenizer.json /path/to/scored-dataset
+pdm run python scripts/oversample_quality.py /path/to/scored-dataset /path/to/annealing-dataset \
+    --top-fraction 0.25 \
+    --repeats 3
+```
+
+`oversample_quality.py` keeps every function once and adds `--repeats` extra copies of those in the top
+`--top-fraction` of scores (so `--top-fraction 0.25 --repeats 3` quadruples the highest-quality quarter of the
+corpus). The full corpus is retained, which limits forgetting; the `test` split is passed through unchanged. The
+output is a pretrain-ready `DatasetDict`.
+
+Run the annealing phase from the phase-1 model with a smaller learning rate and a short step budget. Launch `torchrun` against the local GPUs:
+
+```bash
+cd asmtransformers
+pdm run torchrun --nproc-per-node 8 scripts/pretrain.py \
+    /path/to/output \
+    --model-path /path/to/output/pretraining_mlm_<phase-1>/ \
+    --data /path/to/annealing-dataset \
+    --tokenizer /path/to/tokenizer \
+    --learning-rate 2e-5 \
+    --warmup-ratio 0.0 \
+    --run-id anneal \
+    --bf16 \
+    --tf32
+```
+
+Use `--model-path` (not `--resume-from-checkpoint`): this starts a fresh, short cosine schedule from the phase-1
+weights rather than resuming phase-1's optimizer state and step count. Keep the learning rate below the
+phase-1 LR.
+
 ## Precision
 
 Use `--bf16` for CUDA bfloat16 mixed precision. This enables Hugging Face `TrainingArguments(bf16=True)`, so autocast
