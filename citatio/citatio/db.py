@@ -125,7 +125,9 @@ class PostgreSQLDatabase:
         cfg = str(cfg)
         try:
             return await self.connection.fetchval(
-                'INSERT INTO functions (cfg, embedding) VALUES ($1, $2) RETURNING id', cfg, embedding,
+                'INSERT INTO functions (cfg, embedding) VALUES ($1, $2) RETURNING id',
+                cfg,
+                embedding,
             )
         except asyncpg.IntegrityConstraintViolationError:
             return await self.connection.fetchval('SELECT id FROM functions WHERE cfg = $1', cfg)
@@ -133,7 +135,10 @@ class PostgreSQLDatabase:
     async def _insert_label(self, function_id, name, binary_name, binary_sha256):
         await self.connection.execute(
             'INSERT INTO labels (function_id, label, binary_name, binary_sha256) VALUES ($1, $2, $3, $4)',
-            function_id, name, binary_name, binary_sha256,
+            function_id,
+            name,
+            binary_name,
+            binary_sha256,
         )
 
     def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
@@ -150,7 +155,8 @@ class PostgreSQLDatabase:
             ORDER BY similarity DESC
             LIMIT $2
             """,
-            embedding, top_n,
+            embedding,
+            top_n,
         )
 
     def search_function(self, embedding, top_n=25):
