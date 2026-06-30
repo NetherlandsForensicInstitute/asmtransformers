@@ -133,7 +133,8 @@ of 1024 sequences.
 ## Quality Annealing (Final Phase)
 
 The last phase of pretraining oversamples high-quality functions so the model finishes on a corpus skewed toward
-clean control-flow graphs. This is a separate, short run that continues from the phase-1 model.
+clean control-flow graphs (i.e. with the least out of range and unknown jump targets). This is a separate, short run 
+that continues from the phase-1 model.
 
 First score the tokenized dataset (adds a `score` column per function), then build an oversampled training set:
 
