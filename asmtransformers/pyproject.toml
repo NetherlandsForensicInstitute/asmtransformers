@@ -1,10 +1,10 @@
 [build-system]
-requires = ["pdm-backend"]
+requires = ["pdm-backend", "verri"]
 build-backend = "pdm.backend"
 
 [project]
+dynamic = ["version"]
 name = "asmtransformers"
-version = "1.0.0"
 description = "Language model for semantic code search using assembly"
 license = "EUPL-1.2"
 authors = [
@@ -37,6 +37,10 @@ test = [
     "pytest>=8.1.1",
     "coverage"
 ]
+
+[tool.pdm.version]
+source = "call"
+getter = "verri.tasty:pineapple"
 
 [tool.pdm.scripts]
 all = {composite = [
