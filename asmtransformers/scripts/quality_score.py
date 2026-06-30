@@ -1,3 +1,4 @@
+import argparse
 import json
 import sys
 
@@ -68,13 +69,18 @@ def make_scorer(cfg_info):
     return add_score
 
 
-if __name__ == '__main__':
-    # Make sure tokenized dataset has been made With mktokenizer and tokenize_dataset.py
-    dataset_path, tokenizer_path, output_path = sys.argv[1:]
-    with open(tokenizer_path) as f:
+def get_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('-d', '--data-folder', type=str, required=True, help='folder with data')
+    parser.add_argument('-t', '--tokenizer', type=str, required=True, help='path to tokenizer.json')
+    parser.add_argument('-o', '--output-folder', type=str, required=True, help='folder with data')
+    return parser
+
+def main(data_folder, tokenizer, output_folder):
+    with open(tokenizer) as f:
         tokenizer = json.load(f)
 
-    tokenized_dataset = datasets.load_from_disk(dataset_path)
+    tokenized_dataset = datasets.load_from_disk(data_folder)
 
     # Need two passes of `map`` because to normalize we have to know min and max of values
     tokenized_dataset = tokenized_dataset.map(map_tokens_to_dataset, fn_kwargs={'tokenizer': tokenizer}, num_proc=10)
@@ -82,4 +88,10 @@ if __name__ == '__main__':
     # In this pass we determine quality_score, normalizing against a single global range across all splits
     cfg_info = column_stats(tokenized_dataset)
     scored_dataset = tokenized_dataset.map(make_scorer(cfg_info), num_proc=10)
-    scored_dataset.save_to_disk(output_path)
+    scored_dataset.save_to_disk(output_folder)
+
+
+if __name__ == '__main__':
+    parser = get_parser()
+    args = parser.parse_args()
+    main(**vars(args))
