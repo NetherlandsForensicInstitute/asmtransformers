@@ -110,8 +110,9 @@ class SQLiteDatabase(Database):
 
 class PostgreSQLDatabase:
     def __init__(self, **kwargs):
+        self._runner = asyncio.Runner()
         # TODO: use something better than **kwargs
-        self.connection = asyncio.run(self._init_database(**kwargs))
+        self.connection = self._runner.run(self._init_database(**kwargs))
 
     async def _init_database(self, **kwargs):
         connection = await asyncpg.connect(**kwargs)
@@ -124,37 +125,36 @@ class PostgreSQLDatabase:
         cfg = str(cfg)
         try:
             return await self.connection.fetchval(
-                'INSERT INTO functions (cfg, embedding) VALUES ($1, $2) RETURNING id',
-                (cfg, embedding),
+                'INSERT INTO functions (cfg, embedding) VALUES ($1, $2) RETURNING id', cfg, embedding,
             )
-        except asyncpg.DataError:
-            return await self.connection.fetchval('SELECT id FROM functions WHERE cfg = $1', (cfg,))
+        except asyncpg.IntegrityConstraintViolationError:
+            return await self.connection.fetchval('SELECT id FROM functions WHERE cfg = $1', cfg)
 
     async def _insert_label(self, function_id, name, binary_name, binary_sha256):
         await self.connection.execute(
             'INSERT INTO labels (function_id, label, binary_name, binary_sha256) VALUES ($1, $2, $3, $4)',
-            (function_id, name, binary_name, binary_sha256),
+            function_id, name, binary_name, binary_sha256,
         )
 
     def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
-        function_id = asyncio.run(self._insert_or_get_function(cfg, embedding))
-        asyncio.run(self._insert_label(function_id, name, binary_name, binary_sha256))
+        function_id = self._runner.run(self._insert_or_get_function(cfg, embedding))
+        self._runner.run(self._insert_label(function_id, name, binary_name, binary_sha256))
         return function_id
 
     async def _search_near(self, embedding, top_n):
         return await self.connection.fetch(
             """
-            SELECT label, (2 - distance) / 2 AS similarity, binary_name, binary_sha256
+            SELECT label, (2 - (embedding <-> $1)) / 2 AS similarity, binary_name, binary_sha256
             FROM labels
                 JOIN functions ON labels.function_id = functions.id 
-            ORDER BY embedding <-> $1 AS distance
+            ORDER BY similarity DESC
             LIMIT $2
             """,
-            (embedding, top_n),
+            embedding, top_n,
         )
 
     def search_function(self, embedding, top_n=25):
-        results = asyncio.run(self._search_near(embedding, top_n))
+        results = self._runner.run(self._search_near(embedding, top_n))
 
         return [
             dict(
