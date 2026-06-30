@@ -19,10 +19,10 @@ def main(data_folder, output_folder, model_path):
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('-d', '--data-folder', type=str, required=True, help='folder with data')
-    parser.add_argument('-o', '--output-folder', type=str, required=True, help='folder with data')
+    parser.add_argument('data_folder', type=str, help='folder with data')
+    parser.add_argument('output_folder', type=str, help='folder with data')
 
-    parser.add_argument('-m', '--model-path', type=str, required=True, help='model')
+    parser.add_argument('model-path', type=str, help='model')
     return parser
 
 
