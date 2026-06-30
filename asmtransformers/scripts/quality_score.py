@@ -70,13 +70,13 @@ def make_scorer(cfg_info):
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('data-folder', type=str, required=True, help='folder with data')
-    parser.add_argument('output-folder', type=str, required=True, help='folder with data')
+    parser.add_argument('data_folder', type=str, help='folder with data')
+    parser.add_argument('output_folder', type=str, help='folder with data')
     parser.add_argument('-t', '--tokenizer', type=str, required=True, help='path to tokenizer.json')
     return parser
 
 
-def main(data_folder, tokenizer, output_folder):
+def main(data_folder, output_folder, tokenizer):
     with open(tokenizer) as f:
         tokenizer = json.load(f)
 
