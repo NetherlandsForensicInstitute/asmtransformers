@@ -1,10 +1,10 @@
 [build-system]
-requires = ["pdm-backend"]
+requires = ["pdm-backend", "verri"]
 build-backend = "pdm.backend"
 
 [project]
+dynamic = ["version"]
 name = "citatio"
-version = "1.0.0"
 description = "REST API for the ingestion and subsequent search of Ghidra-CFG-based assembly code."
 license = "EUPL-1.2"
 authors = [
@@ -39,6 +39,10 @@ test = [
     "coverage>=7.8.0",
     "pytest>=8.3.5",
 ]
+
+[tool.pdm.version]
+source = "call"
+getter = "verri.tasty:pineapple"
 
 [tool.pdm.scripts]
 all = {composite = [
