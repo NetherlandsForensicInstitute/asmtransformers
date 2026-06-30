@@ -1,6 +1,5 @@
 import argparse
 import json
-import sys
 
 import datasets
 import numpy as np
@@ -75,6 +74,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('-t', '--tokenizer', type=str, required=True, help='path to tokenizer.json')
     parser.add_argument('-o', '--output-folder', type=str, required=True, help='folder with data')
     return parser
+
 
 def main(data_folder, tokenizer, output_folder):
     with open(tokenizer) as f:
