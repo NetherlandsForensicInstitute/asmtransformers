@@ -1,14 +1,14 @@
 CREATE TABLE IF NOT EXISTS functions (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     -- UNIQUE constraint allows using an error trigger as a 'cfg is already known' signal
     cfg TEXT NOT NULL UNIQUE,
     embedding VECTOR(768)
 );
 
-CREATE INDEX IF NOT EXISTS ON functions USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS embeddings_cosine ON functions USING hnsw (embedding vector_cosine_ops);
 
 CREATE TABLE IF NOT EXISTS labels (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     function_id INTEGER NOT NULL,
     label TEXT NOT NULL,
     -- (binary_name, binary_sha256) to identify the source of this label
