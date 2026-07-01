@@ -109,8 +109,8 @@ class SQLiteDatabase(Database):
 
 
 class PostgreSQLDatabase:
-    def __init__(self, **kwargs):
-        self._runner = asyncio.Runner()
+    def __init__(self, runner=None, **kwargs):
+        self._runner = runner or asyncio.Runner()
         # TODO: use something better than **kwargs
         self.connection = self._runner.run(self._init_database(**kwargs))
 

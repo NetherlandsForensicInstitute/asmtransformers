@@ -25,18 +25,32 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: check
-    strategy:
-      matrix:
-        python-version: ['3.13']
     defaults:
       run:
         working-directory: citatio/
+    services:
+      pgvector:
+        image: pgvector/pgvector:pg18
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: wieditleestisgek
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v6
       - uses: pdm-project/setup-pdm@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.13'
           cache: true
           cache-dependency-path: 'citatio/pdm.lock'
       - run: pdm install --group test
       - run: pdm run test
+      - run: pdm run integration-test
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_PASSWORD: wieditleestisgek
