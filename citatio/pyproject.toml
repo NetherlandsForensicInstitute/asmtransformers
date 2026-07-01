@@ -52,6 +52,7 @@ getter = "verri.tasty:pineapple"
 all = {composite = [
     "check",
     "test",
+    "integration-test",
     "report",
 ]}
 check = {composite = [
