@@ -26,6 +26,7 @@ dependencies = [
     "pydantic>=2.11.5",
     "scipy",
     "sqlite-vec>=0.1.6",
+    "testcontainers[postgres]>=4.14.2",
     "torch",
     "transformers",
 ]
@@ -39,6 +40,7 @@ dev = [
 ]
 test = [
     "coverage>=7.8.0",
+    "httpx2",  # avoid deprecation warnings for fastapi / starlette tests
     "pytest>=8.3.5",
 ]
 
@@ -61,8 +63,14 @@ fix = {composite = [
     "ruff format citatio/ tests/",
     "ruff check --fix citatio/ tests/",
 ]}
+integration-test = "coverage run --append --branch --source citatio --module pytest --strict-markers -m 'postgresql' tests/"
 report = "coverage report"
-test = "coverage run --branch --source citatio --module pytest --junit-xml pytest.xml --strict-markers tests/"
+test = "coverage run --branch --source citatio --module pytest --strict-markers -m 'not postgresql' tests/"
+
+[tool.pytest]
+markers = [
+    "postgresql",
+]
 
 [tool.ruff]
 format.quote-style = "single"
