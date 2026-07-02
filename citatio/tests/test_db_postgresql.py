@@ -73,14 +73,14 @@ async def filled_database(empty_database, functions, embeddings):
 
 async def test_auto_create_schema_idempotent(connect_pgvector, database):
     select_tables = 'SELECT table_name FROM information_schema.tables'
-    tables = {name.lower() for name in await database.connection.fetch(select_tables)}
+    tables = {name.get('table_name').lower() for name in await database.connection.fetch(select_tables)}
     expected = {'functions', 'labels'}
     assert tables & expected == expected
 
-    database2 = PostgreSQLDatabase(**connect_pgvector)
+    database2 = await PostgreSQLDatabase.connect(**connect_pgvector)
     assert database != database2
     assert database.connection != database2.connection
-    assert tables == {name.lower() for name in await database2.connection.fetch(select_tables)}
+    assert tables == {name.get('table_name').lower() for name in await database2.connection.fetch(select_tables)}
 
 
 async def test_add_duplicate(empty_database, functions, embeddings):
