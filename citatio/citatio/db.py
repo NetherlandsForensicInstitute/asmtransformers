@@ -153,7 +153,7 @@ class PostgreSQLDatabase:
     async def _search_near(self, embedding, top_n):
         return await self.connection.fetch(
             """
-            SELECT label, (2 - (embedding <-> $1)) / 2 AS similarity, binary_name, binary_sha256
+            SELECT label, (2 - (embedding <=> $1)) / 2 AS similarity, binary_name, binary_sha256
             FROM labels
                 JOIN functions ON labels.function_id = functions.id 
             ORDER BY similarity DESC
