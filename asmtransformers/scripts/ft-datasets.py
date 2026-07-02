@@ -6,7 +6,7 @@ from datasets import Dataset, DatasetDict
 from tqdm import tqdm
 
 
-def generate_train(data_folder):
+def generate_train(data_folder, crosslingual):
     train_data_folder = os.path.join(data_folder, 'train')
 
     print('Opening dataset')
@@ -14,12 +14,17 @@ def generate_train(data_folder):
 
     print('Creating category mapping')
 
-    def label_name_mapper(example):
-        label = example['file_name'] + '/' + example['function_name']
+    def label_name_mapper(example, crosslingual):
+        if not crosslingual:
+            # architecture at the end, because we will sort this dataset before finetuning and we don't want to
+            # finetune one language at the time
+            label = example['file_name'] + '/' + example['function_name'] + '/' + example['architecture']
+        else:
+            label = example['file_name'] + '/' + example['function_name']
         example['label_name'] = label
         return example
 
-    train_functions = train_functions.map(label_name_mapper, batch_size=1000, num_proc=8)
+    train_functions = train_functions.map(label_name_mapper, batch_size=1000, num_proc=8, fn_kwargs={'crosslingual': crosslingual})
     unique_labels = train_functions.unique('label_name')
     label2id = {label: i for i, label in enumerate(unique_labels)}
     print(label2id)
@@ -34,14 +39,20 @@ def generate_train(data_folder):
     return train_functions
 
 
-def generate_eval(data_folder, output_folder):
+def generate_eval(data_folder, output_folder, crosslingual):
     test_data_folder = os.path.join(data_folder, 'test')
 
     print('Opening dataset')
     test_functions = Dataset.load_from_disk(test_data_folder).select(range(1000000))
     print(test_functions)
 
-    def add_random(example):
+    def add_random(example, crosslingual):
+        if not crosslingual:
+            # architecture at the end, because we will sort this dataset before finetuning and we don't want to
+            # finetune one language at the time
+            label = example['file_name'] + '/' + example['function_name'] + '/' + example['architecture']
+        else:
+            label = example['file_name'] + '/' + example['function_name']
         label = example['file_name'] + '/' + example['function_name']
         example['label'] = label
         # Ensure same labels are sorted together and in random order.
@@ -50,7 +61,7 @@ def generate_eval(data_folder, output_folder):
 
     print('Adding columns')
     # Don't use all 3M examples because sort is really slow.
-    test_functions = test_functions.map(add_random, batch_size=10000, num_proc=8)
+    test_functions = test_functions.map(add_random, batch_size=10000, num_proc=8, fn_kwargs={'crosslingual': crosslingual})
     print('Sorting dataset')
     test_functions = test_functions.sort('label')
 
@@ -86,9 +97,9 @@ def generate_eval(data_folder, output_folder):
     return trip
 
 
-def main(data_folder, output_folder):
-    train = generate_train(data_folder)
-    test = generate_eval(data_folder, output_folder)
+def main(data_folder, output_folder, crosslingual):
+    train = generate_train(data_folder, crosslingual)
+    test = generate_eval(data_folder, output_folder, crosslingual)
     dataset_dict = DatasetDict({'train': train, 'test': test})
     dataset_dict.save_to_disk(output_folder)
 
@@ -97,6 +108,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-d', '--data-folder', type=str, required=True, help='folder with data')
     parser.add_argument('-o', '--output-folder', type=str, required=True, help='folder with data')
+    parser.add_argument('-c', '--crosslingual', action='store_true', help='evaluate similar functions across architectures')
     return parser
 
 
