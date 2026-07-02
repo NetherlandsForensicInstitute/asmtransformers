@@ -38,9 +38,9 @@ def main(tokenizer, input_data, output_folder, split):
 def get_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--tokenizer', type=str, required=True, help='folder with tokenizer')
-    parser.add_argument('--input-data', type=str, required=True, help='data to be used for training')
-    parser.add_argument('--output-folder', type=str, required=True, help='folder to leave the tokenized data')
+    parser.add_argument('input_data', type=str, help='data to be used for training')
+    parser.add_argument('output_folder', type=str, help='folder to leave the tokenized data')
+    parser.add_argument('tokenizer', type=str, help='folder with tokenizer')
     parser.add_argument(
         '--split',
         type=float,

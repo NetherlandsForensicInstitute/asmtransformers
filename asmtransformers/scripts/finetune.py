@@ -126,9 +126,9 @@ def main(data_folder, model, batch_size):
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data-folder', type=str, required=True, help='folder with data')
+    parser.add_argument('data_folder', type=str, help='folder with input data')
 
-    parser.add_argument('-m', '--model', type=str, required=True, help='The name of the model used for finetuning')
+    parser.add_argument('model', type=str, help='The name of the model used for finetuning')
 
     parser.add_argument(
         '-b',

@@ -251,8 +251,8 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
 
 def get_parser():
     parser = argparse.ArgumentParser(description='evaluation')
-    parser.add_argument('--input-path', type=str, help='the path to the test data')
-    parser.add_argument('--output-path', type=str, help='the path to write the final scores to')
+    parser.add_argument('input_path', type=str, help='the path to the test data')
+    parser.add_argument('output_path', type=str, help='the path to write the final scores to')
     parser.add_argument('--pool-size', type=int, help='the poolsize to pick the positive example from')
     parser.add_argument('--architecture', type=str, help='only use examples from specified architecture')
     parser.add_argument('--seed', type=int, help='seed random evaluation sampling')

@@ -95,8 +95,8 @@ def main(data_folder, output_folder):
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('-d', '--data-folder', type=str, required=True, help='folder with data')
-    parser.add_argument('-o', '--output-folder', type=str, required=True, help='folder with data')
+    parser.add_argument('data_folder', type=str, help='folder with input data')
+    parser.add_argument('output_folder', type=str, help='folder to leave output data')
     return parser
 
 
