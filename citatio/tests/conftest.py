@@ -3,9 +3,18 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 
 
 TEST_ROOT = Path(__file__).parent
+
+
+@pytest.fixture(scope='session')
+def monkeypatch_session():
+    # regular monkeypatch fixture is function scope, provide a session-scoped one
+    mp = MonkeyPatch()
+    yield mp
+    mp.undo()
 
 
 @pytest.fixture(scope='session')
