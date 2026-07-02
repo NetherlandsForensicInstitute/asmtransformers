@@ -1,4 +1,3 @@
-import asyncio
 import sqlite3
 from importlib import resources
 
@@ -109,17 +108,16 @@ class SQLiteDatabase(Database):
 
 
 class PostgreSQLDatabase:
-    def __init__(self, runner=None, **kwargs):
-        self._runner = runner or asyncio.Runner()
-        # TODO: use something better than **kwargs
-        self.connection = self._runner.run(self._init_database(**kwargs))
+    def __init__(self, connection):
+        self.connection = connection
 
-    async def _init_database(self, **kwargs):
+    @classmethod
+    async def connect(cls, **kwargs):
         connection = await asyncpg.connect(**kwargs)
         await connection.execute('CREATE EXTENSION IF NOT EXISTS vector')
         await register_vector(connection)
         await connection.execute(resources.read_text('citatio', 'schema-postgresql.sql'))
-        return connection
+        return cls(connection)
 
     async def _insert_or_get_function(self, cfg, embedding):
         cfg = str(cfg)
@@ -141,9 +139,9 @@ class PostgreSQLDatabase:
             binary_sha256,
         )
 
-    def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
-        function_id = self._runner.run(self._insert_or_get_function(cfg, embedding))
-        self._runner.run(self._insert_label(function_id, name, binary_name, binary_sha256))
+    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
+        function_id = await self._insert_or_get_function(cfg, embedding)
+        await self._insert_label(function_id, name, binary_name, binary_sha256)
         return function_id
 
     async def _search_near(self, embedding, top_n):
@@ -159,8 +157,8 @@ class PostgreSQLDatabase:
             top_n,
         )
 
-    def search_function(self, embedding, top_n=25):
-        results = self._runner.run(self._search_near(embedding, top_n))
+    async def search_function(self, embedding, top_n=25):
+        results = await self._search_near(embedding, top_n)
 
         return [
             dict(
