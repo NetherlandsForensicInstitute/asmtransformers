@@ -1,12 +1,12 @@
-import os
 from contextlib import asynccontextmanager
 from typing import Annotated
 
+import confidence
 from asmtransformers.models.embedder import ASMEmbedder
 from fastapi import FastAPI, Request
 from fastapi.params import Body
 
-from citatio.db import SQLiteDatabase
+from citatio.db import PostgreSQLDatabase
 from citatio.models import ControlFlowGraph
 
 
@@ -15,18 +15,14 @@ DEFAULT_MODEL = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    model = os.environ.get('CITATIO_MODEL', DEFAULT_MODEL)
-    database = os.environ.get('CITATIO_SQLITE_DATABASE', ':memory:')
+    config = confidence.load_name('citatio')
+    if not config.model or config.database:
+        raise ValueError(f'missing model or database configuration: {config}')
 
-    if database == ':memory:':
-        # TODO: log warning that we're running in in-memory database
-        pass
+    app.state.model = ASMEmbedder.from_pretrained(config.model)
 
-    app.state.model = ASMEmbedder.from_pretrained(model)
-
-    with SQLiteDatabase.from_name(database) as database:
+    async with await PostgreSQLDatabase.connect(**config.database) as database:
         app.state.database = database
-
         yield
 
 
