@@ -119,6 +119,12 @@ class PostgreSQLDatabase:
         await connection.execute(resources.read_text('citatio', 'schema-postgresql.sql'))
         return cls(connection)
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.connection.close()
+
     async def _insert_or_get_function(self, cfg, embedding):
         cfg = str(cfg)
         try:
