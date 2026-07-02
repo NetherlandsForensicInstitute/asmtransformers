@@ -36,7 +36,7 @@ async def connect_pgvector():
             async with local_pgvector_container() as container:
                 yield {
                     'host': container.get_container_host_ip(),
-                    'port': container.port,
+                    'port': container.get_exposed_port(5432),
                     'user': container.username,
                     'password': container.password,
                     'database': container.dbname,
