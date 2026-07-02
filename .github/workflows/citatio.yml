@@ -15,6 +15,8 @@ jobs:
         working-directory: citatio/
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 20
       - uses: pdm-project/setup-pdm@v4
         with:
           python-version: '3.13'
@@ -33,6 +35,8 @@ jobs:
         working-directory: citatio/
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 20
       - uses: pdm-project/setup-pdm@v4
         with:
           python-version: ${{ matrix.python-version }}
