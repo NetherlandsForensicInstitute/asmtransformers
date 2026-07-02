@@ -64,7 +64,7 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs):
     return np.array(neg_embeddings)
 
 
-def generate_triplets(dataset, pool_size, static_pool):
+def generate_triplets(dataset, pool_size, static_pool, crosslingual):
     """generates triplets consisting of an anchor, a positive example and a pool of negative examples, while making
     sure that none of the negative examples contain the same cfg as the positive and anchor they are linked to.
     Also check that the anchor and pos are not exactly the same.
@@ -115,6 +115,10 @@ def generate_triplets(dataset, pool_size, static_pool):
             # same content, reject
             rejected += 1
             continue
+        # if we don't want to evaluate crosslingual anchor/pos pairs
+        if not crosslingual and anchor['architecture'] != pos['architecture']:
+            rejected += 1
+            continue
 
         anchors.append(anchor)
         positives.append(pos)
@@ -133,12 +137,13 @@ def generate_triplets(dataset, pool_size, static_pool):
             yield {'anchor': anchors[i], 'pos': positives[i], 'negs': pool}
 
 
-def generate_test_pools(data_folder, pool_size, static_pool, architecture=None):
+def generate_test_pools(data_folder, pool_size, static_pool, architecture=None, crosslingual=False):
     """order data in such a way that we can make triplets consisting of an anchor, a positive and pool_size * negative
     examples, then call generate_triplets() to generate said triplets
     :param data_folder: Path to data
     :param pool_size: number of negative items to compare with
     :param static_pool: use the same pool of negatives for every pos/anchor pair (faster)
+    :param crosslingual: allow pos/anchor pairs to be from different architectures
 
     return
     Generator yielding triplets: anchor, positive, numpy.array(negative_embeddings * POOL_SIZE)"""
@@ -152,7 +157,9 @@ def generate_test_pools(data_folder, pool_size, static_pool, architecture=None):
     test_functions = dataset.map(add_label, batch_size=10000, num_proc=8)
     print('Sorting dataset')
     test_functions = test_functions.sort('label')
-    yield from generate_triplets(dataset=test_functions, pool_size=pool_size, static_pool=static_pool)
+    yield from generate_triplets(
+        dataset=test_functions, pool_size=pool_size, static_pool=static_pool, crosslingual=crosslingual
+    )
 
 
 def calculate_one_rank(row):
@@ -203,9 +210,11 @@ def calculate_all(test_pools, output_path, output_file):
             csvfile.flush()
 
 
-def run_tests(data_folder, output_path, pool_size, static_pool, architecture):
+def run_tests(data_folder, output_path, pool_size, static_pool, architecture, crosslingual):
     print('\ngenerate test_pools\n')
-    test_pools = generate_test_pools(data_folder, pool_size, static_pool=static_pool, architecture=architecture)
+    test_pools = generate_test_pools(
+        data_folder, pool_size, static_pool=static_pool, architecture=architecture, crosslingual=crosslingual
+    )
     print('\ncalculate cosine similarities\n')
     model_name = data_folder.split('/')[-1]
     output_file = f'{model_name}-{pool_size}-{static_pool}-{timestamp()}'
@@ -223,6 +232,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '--static-pool', action='store_true', help='keep the negatives pool or refresh for every anchor-pos pair'
     )
+    parser.add_argument(
+        '--crosslingual',
+        action='store_true',
+        help='allow positive/anchor-pairs to be from different architectures (negative pools are still multilingual, '
+        'if you do not want this, run evaluation per architecture with --architecture)',
+    )
 
     args = parser.parse_args()
-    run_tests(args.input_path, args.output_path, args.pool_size, args.static_pool, args.architecture)
+    run_tests(args.input_path, args.output_path, args.pool_size, args.static_pool, args.architecture, args.crosslingual)
