@@ -8,6 +8,8 @@ import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from testcontainers.postgres import PostgresContainer
 
+from citatio.db import SQLiteDatabase
+
 
 TEST_ROOT = Path(__file__).parent
 
@@ -81,3 +83,16 @@ async def connect_pgvector(monkeypatch_session):
                         'database': container.dbname,
                     },
                 )
+
+
+@pytest.fixture(
+    params=[
+        pytest.param('sqlite', marks=pytest.mark.sqlite),
+    ]
+)
+async def database(request):
+    match request.param:
+        case 'sqlite':
+            yield await SQLiteDatabase.from_name(':memory:')
+        case _:
+            raise ValueError
