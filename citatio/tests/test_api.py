@@ -1,26 +1,15 @@
 import os
 
-import asyncpg
 import pytest
 from fastapi.testclient import TestClient
 
 from citatio.api import app
 
 
-pytestmark = pytest.mark.postgresql
-
-
 @pytest.fixture
-async def client(connect_pgvector):
+async def client(database_env):
     with TestClient(app) as client:
         yield client
-
-    # after the test (post-yield), make sure to empty the tables that we might have inserted into during the test
-    connection = await asyncpg.connect(**connect_pgvector)
-    await connection.execute("""
-        DELETE FROM labels;
-        DELETE FROM functions;
-    """)
 
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
