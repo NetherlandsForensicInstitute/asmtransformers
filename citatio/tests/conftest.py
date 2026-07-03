@@ -1,5 +1,5 @@
 import json
-from contextlib import asynccontextmanager
+from contextlib import contextmanager
 from os import environ
 from pathlib import Path
 
@@ -8,7 +8,7 @@ import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from testcontainers.postgres import PostgresContainer
 
-from citatio.db import SQLiteDatabase
+from citatio.db import PostgreSQLDatabase, SQLiteDatabase
 
 
 TEST_ROOT = Path(__file__).parent
@@ -33,8 +33,8 @@ def embeddings(functions):
     return {function['name']: embedding for function, embedding in zip(functions, arrays, strict=True)}
 
 
-@asynccontextmanager
-async def local_pgvector_container():
+@contextmanager
+def local_pgvector_container():
     with PostgresContainer('pgvector/pgvector:pg18', driver=None) as container:
         yield container
 
@@ -54,7 +54,7 @@ def _patch_database_env(monkeypatch, env):
 
 
 @pytest.fixture(scope='session')
-async def connect_pgvector(monkeypatch_session):
+def connect_pgvector(monkeypatch_session):
     # translate PostgreSQL connection details into environment variables that will be picked up by confidence.load_name
     # in the app's lifecycle
     match environ:
@@ -72,7 +72,7 @@ async def connect_pgvector(monkeypatch_session):
             )
         case _:
             # running locally, provide connection details to local pgvector container
-            async with local_pgvector_container() as container:
+            with local_pgvector_container() as container:
                 yield _patch_database_env(
                     monkeypatch_session,
                     {
@@ -88,11 +88,25 @@ async def connect_pgvector(monkeypatch_session):
 @pytest.fixture(
     params=[
         pytest.param('sqlite', marks=pytest.mark.sqlite),
+        pytest.param('postgresql', marks=pytest.mark.postgresql),
     ]
 )
 async def database(request):
     match request.param:
         case 'sqlite':
-            yield await SQLiteDatabase.from_name(':memory:')
+            # create an in-memory database that will be empty after use by design
+            async with await SQLiteDatabase.from_name(':memory:') as db:
+                yield db
+        case 'postgresql':
+            # request pgvector connection settings from a named fixture
+            # (a pytest.param cannot use pytest.mark.usefixtures, it seems)
+            connect = request.getfixturevalue('connect_pgvector')
+            async with await PostgreSQLDatabase.connect(**connect) as db:
+                yield db
+                # empty the database after use
+                await db.connection.execute("""
+                    DELETE FROM labels;
+                    DELETE FROM functions;
+                """)
         case _:
             raise ValueError
