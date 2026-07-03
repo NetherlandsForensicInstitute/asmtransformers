@@ -18,12 +18,15 @@ authors = [
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "asmtransformers @ file:///${PROJECT_ROOT}/../asmtransformers",
+    "asyncpg>=0.31.0",
     "datasets",
     "fastapi[all]>=0.115.12",
     "numpy",
+    "pgvector>=0.4.2",
     "pydantic>=2.11.5",
     "scipy",
     "sqlite-vec>=0.1.6",
+    "testcontainers[postgres]>=4.14.2",
     "torch",
     "transformers",
 ]
@@ -37,7 +40,9 @@ dev = [
 ]
 test = [
     "coverage>=7.8.0",
+    "httpx2",  # avoid deprecation warnings for fastapi / starlette tests
     "pytest>=8.3.5",
+    "pytest-asyncio>=1.4.0",
 ]
 
 [tool.pdm.version]
@@ -48,6 +53,7 @@ getter = "verri.tasty:pineapple"
 all = {composite = [
     "check",
     "test",
+    "integration-test",
     "report",
 ]}
 check = {composite = [
@@ -59,8 +65,15 @@ fix = {composite = [
     "ruff format citatio/ tests/",
     "ruff check --fix citatio/ tests/",
 ]}
+integration-test = "coverage run --append --branch --source citatio --module pytest --strict-markers -m 'postgresql' tests/"
 report = "coverage report"
-test = "coverage run --branch --source citatio --module pytest --junit-xml pytest.xml --strict-markers tests/"
+test = "coverage run --branch --source citatio --module pytest --strict-markers -m 'not postgresql' tests/"
+
+[tool.pytest]
+asyncio_default_test_loop_scope = "session"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_mode = "auto"
+markers = ["postgresql"]
 
 [tool.ruff]
 format.quote-style = "single"
