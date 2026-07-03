@@ -6,7 +6,7 @@ from asmtransformers.models.embedder import ASMEmbedder
 from fastapi import FastAPI, Request
 from fastapi.params import Body
 
-from citatio.db import PostgreSQLDatabase
+from citatio.db import PostgreSQLDatabase, SQLiteDatabase
 from citatio.models import ControlFlowGraph
 
 
@@ -16,12 +16,19 @@ DEFAULT_MODEL = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     config = confidence.load_name('citatio')
-    if not config.database:
-        raise ValueError(f'missing database configuration, available: {config}')
+
+    match config:
+        case {'database.sqlite': name}:
+            # explicit sqlite name to connect to, use SQLiteDatabase
+            database = await SQLiteDatabase.connect(name)
+        case {'database': connect}:
+            # database settings *not* mentioning sqlite, use PostgreSQLDatabase
+            database = await PostgreSQLDatabase.connect(**connect)
+        case _:
+            raise ValueError(f'missing database configuration, available: {config}')
 
     app.state.model = ASMEmbedder.from_pretrained(config.model or DEFAULT_MODEL)
-
-    async with await PostgreSQLDatabase.connect(**config.database) as database:
+    async with database:
         app.state.database = database
         yield
 
