@@ -29,15 +29,7 @@ def add_label(example):
     return example
 
 
-def generate_single_neg(dataset):
-    """chooses a random row from the dataset
-
-    :param dataset: huggingface dataset
-    :return: random row from the dataset"""
-    return dataset[random.randint(0, len(dataset) - 1)]
-
-
-def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs):
+def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, rng):
     """
     Generate a pool that does not contain the labels and cfgs in the anchors/pos
 
@@ -46,11 +38,14 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs):
     :param anchor_labels: item labels to avoid
     :param anchor_cfgs: item cfgs to avoid
     :param pos_cfgs: item cfgs to avoid
+    :param rng: random number generator
     :return: a numpy array containing the embeddings of the items in the pool
     """
     neg_embeddings = []
-    while len(neg_embeddings) < pool_size:
-        neg = generate_single_neg(dataset)
+    candidate_indices = list(range(len(dataset)))
+    rng.shuffle(candidate_indices)
+    for index in candidate_indices:
+        neg = dataset[index]
         if neg['label'] in anchor_labels:
             # same label, reject
             continue
@@ -61,20 +56,15 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs):
             # same content, reject
             continue
         neg_embeddings.append(neg['embeddings'])
+        if len(neg_embeddings) == pool_size:
+            break
+    if len(neg_embeddings) < pool_size:
+        raise ValueError(f'only {len(neg_embeddings)} eligible negative examples available for pool_size={pool_size}')
     return np.array(neg_embeddings)
 
 
-def generate_triplets(dataset, pool_size, static_pool, crosslingual):
-    """generates triplets consisting of an anchor, a positive example and a pool of negative examples, while making
-    sure that none of the negative examples contain the same cfg as the positive and anchor they are linked to.
-    Also check that the anchor and pos are not exactly the same.
-    Negative samples are chosen by randomly choosing a row from the dataset.
-
-    :param dataset: huggingface dataset
-    :param pool_size: number of negative samples in triplets
-    :param static_pool: keep or regenerate the negative pool for every anchor-pos pair.
-    :return: Generator containing triplets: anchor, pos, numpy.array([neg_embedding ...])
-    """
+def generate_anchor_pos_pairs(dataset, rng, crosslingual):
+    """generates anchor/positive pairs while rejecting identical CFGs."""
     labels = dataset['label']
     labels_with_indices = list(enumerate(labels))
     labels_with_indices.sort(key=itemgetter(1))
@@ -98,13 +88,13 @@ def generate_triplets(dataset, pool_size, static_pool, crosslingual):
 
     while len(anchors) < 1000:  # Should take about an hour
         # Pick a random label
-        label = random.choice(labels)
+        label = rng.choice(labels)
         indexes = label2index[label]
         if len(indexes) < 2:
             # Not enough examples
             continue
 
-        index_anchor, index_pos = random.sample(indexes, 2)
+        index_anchor, index_pos = rng.sample(indexes, 2)
         anchor = dataset[index_anchor]
         pos = dataset[index_pos]
 
@@ -126,27 +116,33 @@ def generate_triplets(dataset, pool_size, static_pool, crosslingual):
         anchor_cfgs.add(anchor['cfg'])
         pos_cfgs.add(pos['cfg'])
 
+    return anchors, positives, anchor_labels, anchor_cfgs, pos_cfgs
+
+
+def generate_triplets(dataset, anchor_pairs, pool_size, static_pool, rng):
+    """generates triplets from fixed anchor/positive pairs and sampled negative pools.
+
+    :param dataset: huggingface dataset
+    :param anchor_pairs: anchor/positive rows and exclusion sets
+    :param pool_size: number of negative samples in triplets
+    :param static_pool: keep or regenerate the negative pool for every anchor-pos pair.
+    :param rng: random number generator
+    :return: Generator containing triplets: anchor, pos, numpy.array([neg_embedding ...])
+    """
+    anchors, positives, anchor_labels, anchor_cfgs, pos_cfgs = anchor_pairs
+
     if static_pool:
-        pool = generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs)
+        pool = generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, rng)
         for i in range(len(anchors)):
             yield {'anchor': anchors[i], 'pos': positives[i], 'negs': pool}
     else:
         for i in range(len(anchors)):
             # Generate a new negatives pool for every anchor/pos pair
-            pool = generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs)
+            pool = generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, rng)
             yield {'anchor': anchors[i], 'pos': positives[i], 'negs': pool}
 
 
-def generate_test_pools(data_folder, pool_size, static_pool, architecture=None, crosslingual=False):
-    """order data in such a way that we can make triplets consisting of an anchor, a positive and pool_size * negative
-    examples, then call generate_triplets() to generate said triplets
-    :param data_folder: Path to data
-    :param pool_size: number of negative items to compare with
-    :param static_pool: use the same pool of negatives for every pos/anchor pair (faster)
-    :param crosslingual: allow pos/anchor pairs to be from different architectures
-
-    return
-    Generator yielding triplets: anchor, positive, numpy.array(negative_embeddings * POOL_SIZE)"""
+def load_test_functions(data_folder, architecture=None):
     dataset = datasets.load_from_disk(data_folder)  # .select(range(11000, 45000))
     if architecture:
         print(f'Selecting examples with architecture=={architecture}')
@@ -156,10 +152,7 @@ def generate_test_pools(data_folder, pool_size, static_pool, architecture=None, 
     # Don't use all 3M examples because sort is really slow.
     test_functions = dataset.map(add_label, batch_size=10000, num_proc=8)
     print('Sorting dataset')
-    test_functions = test_functions.sort('label')
-    yield from generate_triplets(
-        dataset=test_functions, pool_size=pool_size, static_pool=static_pool, crosslingual=crosslingual
-    )
+    return test_functions.sort('label')
 
 
 def calculate_one_rank(row):
@@ -195,6 +188,8 @@ def calculate_all(test_pools, output_path, output_file):
     """
     sum_rr = 0
     sum_acc = 0
+    final_mrr = 0.0
+    final_acc = 0.0
     with open(os.path.join(output_path, output_file + '-results.csv'), 'w') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(('iteration', 'MRR', 'P@1'))
@@ -204,29 +199,64 @@ def calculate_all(test_pools, output_path, output_file):
             sum_rr += rr
             if rr == 1.0:
                 sum_acc += 1.0
-            row_result = (i, sum_rr / (i + 1), sum_acc / (i + 1))
+            final_mrr = sum_rr / (i + 1)
+            final_acc = sum_acc / (i + 1)
+            row_result = (i, final_mrr, final_acc)
             print(row_result)
             writer.writerow(row_result)
             csvfile.flush()
+    return final_mrr, final_acc
 
 
-def run_tests(data_folder, output_path, pool_size, static_pool, architecture, crosslingual):
+def run_tests(data_folder, output_path, pool_size, architecture, static_pool, crosslingual, seed, repeats=1):
+    if repeats < 1:
+        raise ValueError('repeats must be at least 1')
+    if repeats > 1 and not static_pool:
+        raise ValueError('repeats greater than 1 are only supported with --static-pool')
+
     print('\ngenerate test_pools\n')
-    test_pools = generate_test_pools(
-        data_folder, pool_size, static_pool=static_pool, architecture=architecture, crosslingual=crosslingual
-    )
-    print('\ncalculate cosine similarities\n')
+    test_functions = load_test_functions(data_folder, architecture)
+    anchor_rng = random.Random(seed)
+    anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng, crosslingual=crosslingual)
+
     model_name = data_folder.split('/')[-1]
     output_file = f'{model_name}-{pool_size}-{static_pool}-{timestamp()}'
-    calculate_all(test_pools, output_path, output_file)
+    repeat_seeds = [None] * repeats if seed is None else [seed + repeat + 1 for repeat in range(repeats)]
+    aggregate_rows = []
+
+    for repeat, repeat_seed in enumerate(repeat_seeds):
+        pool_rng = random.Random(repeat_seed)
+        test_pools = generate_triplets(
+            test_functions, anchor_pairs, pool_size=pool_size, static_pool=static_pool, rng=pool_rng
+        )
+        print('\ncalculate cosine similarities\n')
+        repeat_output_file = output_file if repeats == 1 else f'{output_file}-repeat-{repeat}'
+        final_mrr, final_acc = calculate_all(test_pools, output_path, repeat_output_file)
+        aggregate_rows.append((repeat, repeat_seed, final_mrr, final_acc))
+
+    if repeats > 1:
+        mrrs = np.array([row[2] for row in aggregate_rows])
+        accuracies = np.array([row[3] for row in aggregate_rows])
+        with open(os.path.join(output_path, output_file + '-aggregate.csv'), 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(('repeat', 'seed', 'MRR', 'P@1'))
+            writer.writerows(aggregate_rows)
+            writer.writerow(('mean', '', float(np.mean(mrrs)), float(np.mean(accuracies))))
+            writer.writerow(('std', '', float(np.std(mrrs)), float(np.std(accuracies))))
+            writer.writerow(('min', '', float(np.min(mrrs)), float(np.min(accuracies))))
+            writer.writerow(('max', '', float(np.max(mrrs)), float(np.max(accuracies))))
+
     with open(os.path.join(output_path, output_file + '-parameters.txt'), 'w') as file:
-        file.write(f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=},\n {architecture=}\n')
+        file.write(
+            f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=},\n {architecture=},\n'
+            f' {seed=},\n {repeats=},\n {repeat_seeds=}\n'
+        )
 
 
-if __name__ == '__main__':
+def get_parser():
     parser = argparse.ArgumentParser(description='evaluation')
-    parser.add_argument('--input-path', type=str, help='the path to the test data')
-    parser.add_argument('--output-path', type=str, help='the path to write the final scores to')
+    parser.add_argument('input_path', type=str, help='the path to the test data')
+    parser.add_argument('output_path', type=str, help='the path to write the final scores to')
     parser.add_argument('--pool-size', type=int, help='the poolsize to pick the positive example from')
     parser.add_argument('--architecture', type=str, help='only use examples from specified architecture')
     parser.add_argument(
@@ -238,6 +268,24 @@ if __name__ == '__main__':
         help='allow positive/anchor-pairs to be from different architectures. (even without this flag, negative pools '
         'are still multilingual, if you want monolingual negs, run evaluation per architecture with --architecture)',
     )
+    parser.add_argument('--seed', type=int, help='seed random evaluation sampling')
+    parser.add_argument('--repeats', type=int, default=1, help='number of static-pool evaluation repeats')
+    return parser
 
+
+if __name__ == '__main__':
+    parser = get_parser()
     args = parser.parse_args()
-    run_tests(args.input_path, args.output_path, args.pool_size, args.static_pool, args.architecture, args.crosslingual)
+    try:
+        run_tests(
+            args.input_path,
+            args.output_path,
+            args.pool_size,
+            args.static_pool,
+            args.crosslingual,
+            args.architecture,
+            args.seed,
+            args.repeats,
+        )
+    except ValueError as error:
+        parser.error(str(error))
