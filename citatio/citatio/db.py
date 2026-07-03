@@ -25,7 +25,7 @@ class Database:
 
 class SQLiteDatabase(Database):
     @classmethod
-    async def from_name(cls, name):
+    async def connect(cls, name):
         # make sure to pass check_same_thread=False, Python 3.11+ has thread-safe sqlite
         connection = sqlite3.connect(name, check_same_thread=False)
         return cls(connection)

@@ -95,7 +95,7 @@ async def database(request):
     match request.param:
         case 'sqlite':
             # create an in-memory database that will be empty after use by design
-            async with await SQLiteDatabase.from_name(':memory:') as db:
+            async with await SQLiteDatabase.connect(':memory:') as db:
                 yield db
         case 'postgresql':
             # request pgvector connection settings from a named fixture
