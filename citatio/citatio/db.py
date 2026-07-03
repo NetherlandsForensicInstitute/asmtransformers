@@ -8,7 +8,7 @@ from pgvector.asyncpg import register_vector
 
 
 class Database:
-    def add_function(
+    async def add_function(
         self,
         name: str,
         cfg: dict[int, list[str]],
@@ -19,13 +19,13 @@ class Database:
     ):
         pass
 
-    def search_function(self, embedding: np.array, top_n: int = 25):
+    async def search_function(self, embedding: np.array, top_n: int = 25):
         pass
 
 
 class SQLiteDatabase(Database):
     @classmethod
-    def from_name(cls, name):
+    async def from_name(cls, name):
         # make sure to pass check_same_thread=False, Python 3.11+ has thread-safe sqlite
         connection = sqlite3.connect(name, check_same_thread=False)
         return cls(connection)
@@ -38,18 +38,17 @@ class SQLiteDatabase(Database):
             sqlite_vec.load(self.connection)
             self.connection.enable_load_extension(False)
 
-            # NB: read_text() shows up as deprecated in 3.11, it has since been un-deprecated (causing confusing errors)
             schema = resources.read_text('citatio', 'schema-sqlite.sql')
             self.connection.executescript(schema)
 
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.connection.close()
         self.connection = None
 
-    def _insert_or_get_function(self, cursor, cfg, embedding):
+    async def _insert_or_get_function(self, cursor, cfg, embedding):
         # coerce cfg to str for database storage (keep the cfg type responsible for that (de)serialization)
         parameters = (str(cfg),)
         try:
@@ -66,10 +65,10 @@ class SQLiteDatabase(Database):
 
         return function_id
 
-    def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
+    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
         with self.connection:
             cursor = self.connection.cursor()
-            function_id = self._insert_or_get_function(cursor, cfg, embedding)
+            function_id = await self._insert_or_get_function(cursor, cfg, embedding)
             cursor.execute(
                 """INSERT INTO labels (function_id, label, binary_name, binary_sha256) VALUES (?, ?, ?, ?)""",
                 (function_id, name, binary_name, binary_sha256),
@@ -78,7 +77,7 @@ class SQLiteDatabase(Database):
             # return the function id for convenience
             return function_id
 
-    def search_function(self, embedding, top_n=25):
+    async def search_function(self, embedding, top_n=25):
         cursor = self.connection.cursor()
         cursor.execute(
             """
