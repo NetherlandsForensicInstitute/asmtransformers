@@ -115,7 +115,7 @@ def generate_triplets(dataset, pool_size, static_pool, crosslingual):
             # same content, reject
             rejected += 1
             continue
-        # if we don't want to evaluate crosslingual anchor/pos pairs
+        # if we want monolingual anchor/pos pairs, check if they have the same architecture:
         if not crosslingual and anchor['architecture'] != pos['architecture']:
             rejected += 1
             continue
@@ -235,8 +235,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--crosslingual',
         action='store_true',
-        help='allow positive/anchor-pairs to be from different architectures (negative pools are still multilingual, '
-        'if you do not want this, run evaluation per architecture with --architecture)',
+        help='allow positive/anchor-pairs to be from different architectures. (even without this flag, negative pools '
+        'are still multilingual, if you want monolingual negs, run evaluation per architecture with --architecture)',
     )
 
     args = parser.parse_args()
