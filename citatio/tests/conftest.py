@@ -31,20 +31,6 @@ def local_pgvector_container():
         yield container
 
 
-def _patch_database_env(monkeypatch, env):
-    for var, value in env.items():
-        # use environment variables to communicate configuration
-        var = f'CITATIO_DATABASE_{var}'.upper()
-        if value:
-            monkeypatch.setenv(var, str(value))
-        else:
-            # env vars have no concept of 'no value' other than removing the var
-            monkeypatch.delenv(var)
-
-    # return the original env that's still suitable for use with asyncpg.connect()
-    return env
-
-
 @pytest.fixture
 def connect_pgvector(request, monkeypatch):
     # translate PostgreSQL connection details into environment variables that will be picked up by confidence.load_name
@@ -52,29 +38,23 @@ def connect_pgvector(request, monkeypatch):
     match environ:
         case {'GITHUB_ACTIONS': _}:
             # running on GHA, provide connection details to pgvector service defined in .github/workflows/citatio.yml
-            yield _patch_database_env(
-                monkeypatch,
-                {
-                    'host': environ.get('POSTGRES_HOST', 'postgres'),
-                    'port': environ.get('POSTGRES_PORT', 5432),
-                    'user': environ.get('POSTGRES_USER', 'postgres'),
-                    'password': environ.get('POSTGRES_PASSWORD'),
-                    'database': environ.get('POSTGRES_DATABASE', 'postgres'),
-                },
-            )
+            yield {
+                'host': environ.get('POSTGRES_HOST', 'postgres'),
+                'port': environ.get('POSTGRES_PORT', 5432),
+                'user': environ.get('POSTGRES_USER', 'postgres'),
+                'password': environ.get('POSTGRES_PASSWORD'),
+                'database': environ.get('POSTGRES_DATABASE', 'postgres'),
+            }
         case _:
             # running locally, provide connection details to local pgvector container
             container = request.getfixturevalue('local_pgvector_container')
-            yield _patch_database_env(
-                monkeypatch,
-                {
-                    'host': container.get_container_host_ip(),
-                    'port': container.get_exposed_port(5432),
-                    'user': container.username,
-                    'password': container.password,
-                    'database': container.dbname,
-                },
-            )
+            yield {
+                'host': container.get_container_host_ip(),
+                'port': container.get_exposed_port(5432),
+                'user': container.username,
+                'password': container.password,
+                'database': container.dbname,
+            }
 
 
 @pytest.fixture(
