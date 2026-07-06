@@ -72,6 +72,13 @@ async def database_config(request):
             # run a session-scope ephemeral database
             connect = request.getfixturevalue('connect_pgvector')
             yield Configuration({'database': connect})
+            # empty the database after use
+            connection = await asyncpg.connect(**connect)
+            await connection.execute("""
+                DROP TABLE IF EXISTS labels CASCADE;
+                DROP TABLE IF EXISTS functions CASCADE;
+            """)
+            await connection.close()
 
 
 @pytest.fixture
@@ -88,13 +95,6 @@ async def database_env(monkeypatch, database_config):
             for var, value in connect.items():
                 monkeypatch.setenv(f'CITATIO_DATABASE_{var}'.upper(), str(value))
             yield
-            # empty the database after use
-            connection = await asyncpg.connect(**connect)
-            await connection.execute("""
-                DELETE FROM labels;
-                DELETE FROM functions;
-            """)
-            await connection.close()
         case _:
             raise ValueError
 
@@ -109,10 +109,5 @@ async def database(database_config):
         case {'database': connect}:
             async with await PostgreSQLDatabase.connect(**connect) as db:
                 yield db
-                # empty the database after use
-                await db.connection.execute("""
-                    DELETE FROM labels;
-                    DELETE FROM functions;
-                """)
         case _:
             raise ValueError
