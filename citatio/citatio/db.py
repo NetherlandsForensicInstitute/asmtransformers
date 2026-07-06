@@ -119,6 +119,12 @@ class PostgreSQLDatabase:
         await connection.execute(resources.read_text('citatio', 'schema-postgresql.sql'))
         return cls(connection)
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.connection.close()
+
     async def _insert_or_get_function(self, cfg, embedding):
         cfg = str(cfg)
         try:
@@ -147,7 +153,7 @@ class PostgreSQLDatabase:
     async def _search_near(self, embedding, top_n):
         return await self.connection.fetch(
             """
-            SELECT label, (2 - (embedding <-> $1)) / 2 AS similarity, binary_name, binary_sha256
+            SELECT label, (2 - (embedding <=> $1)) / 2 AS similarity, binary_name, binary_sha256
             FROM labels
                 JOIN functions ON labels.function_id = functions.id 
             ORDER BY similarity DESC

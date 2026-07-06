@@ -1,12 +1,12 @@
-import os
 from contextlib import asynccontextmanager
 from typing import Annotated
 
+import confidence
 from asmtransformers.models.embedder import ASMEmbedder
 from fastapi import FastAPI, Request
 from fastapi.params import Body
 
-from citatio.db import SQLiteDatabase
+from citatio.db import PostgreSQLDatabase
 from citatio.models import ControlFlowGraph
 
 
@@ -15,18 +15,14 @@ DEFAULT_MODEL = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    model = os.environ.get('CITATIO_MODEL', DEFAULT_MODEL)
-    database = os.environ.get('CITATIO_SQLITE_DATABASE', ':memory:')
+    config = confidence.load_name('citatio')
+    if not config.database:
+        raise ValueError(f'missing database configuration, available: {config}')
 
-    if database == ':memory:':
-        # TODO: log warning that we're running in in-memory database
-        pass
+    app.state.model = ASMEmbedder.from_pretrained(config.model or DEFAULT_MODEL)
 
-    app.state.model = ASMEmbedder.from_pretrained(model)
-
-    with SQLiteDatabase.from_name(database) as database:
+    async with await PostgreSQLDatabase.connect(**config.database) as database:
         app.state.database = database
-
         yield
 
 
@@ -34,7 +30,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post('/api/v1/add')
-async def add_function(  # NB: function body isn't actually async, forcing it to run blocking on the event loop
+async def add_function(
     request: Request,
     name: Annotated[str, Body()],
     cfg: Annotated[ControlFlowGraph, Body()],
@@ -43,15 +39,15 @@ async def add_function(  # NB: function body isn't actually async, forcing it to
     binary_sha256: Annotated[str, Body()] = None,
 ):
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
-    request.app.state.database.add_function(name, cfg, embedding, binary_name, binary_sha256)
+    await request.app.state.database.add_function(name, cfg, embedding, binary_name, binary_sha256)
 
 
 @app.post('/api/v1/search')
-async def search_function(  # NB: function body isn't actually async, forcing it to run blocking on the event loop
+async def search_function(
     request: Request,
     cfg: Annotated[ControlFlowGraph, Body()],
     architecture: str = 'arm64',
     top_n: Annotated[int, Body()] = 25,
 ):
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
-    return request.app.state.database.search_function(embedding, top_n)
+    return await request.app.state.database.search_function(embedding, top_n)

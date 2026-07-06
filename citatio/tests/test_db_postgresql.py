@@ -45,7 +45,8 @@ async def connect_pgvector():
 
 @pytest.fixture(scope='session')
 async def database(connect_pgvector):
-    return await PostgreSQLDatabase.connect(**connect_pgvector)
+    async with await PostgreSQLDatabase.connect(**connect_pgvector) as database:
+        yield database
 
 
 @pytest.fixture(scope='function')
