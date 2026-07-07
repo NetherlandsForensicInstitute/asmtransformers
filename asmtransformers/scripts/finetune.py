@@ -110,7 +110,11 @@ def main(data_folder, model, batch_size):
     def train_callback(score, epoch, steps):
         print(f'{score=}, {epoch=}, {steps=}')
 
-    model.fit(
+    # The new version if `fit` does not actually iterate the data loader for every epoch,
+    # it materializes the dataset to HF format and uses the exact same data.
+    # Since we rely on the loader to give us randomized batches (and therefore triplets), we fall back
+    # to `old_fit` instead.
+    model.old_fit(
         train_objectives=[(train_data_loader, train_loss)],
         epochs=num_epochs,
         evaluator=dev_evaluator,

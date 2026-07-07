@@ -38,7 +38,7 @@ def generate_eval(data_folder, output_folder):
     test_data_folder = os.path.join(data_folder, 'test')
 
     print('Opening dataset')
-    test_functions = Dataset.load_from_disk(test_data_folder).select(range(1000000))
+    test_functions = Dataset.load_from_disk(test_data_folder) #.select(range(1000000))
     print(test_functions)
 
     def add_random(example):
