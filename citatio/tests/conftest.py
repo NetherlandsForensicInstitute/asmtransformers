@@ -84,12 +84,9 @@ async def database_config(request):
 @pytest.fixture
 async def database_env(monkeypatch, database_config):
     match database_config:
-        case {'database.sqlite': ':memory:'}:
-            # NB: add quotes to avoid the configuration's format misparsing :memory:
-            monkeypatch.setenv('CITATIO_DATABASE_SQLITE', '":memory:"')
-            yield
         case {'database.sqlite': fname}:
-            monkeypatch.setenv('CITATIO_DATABASE_SQLITE', fname)
+            # NB: add quotes to avoid the configuration's format misparsing :memory:
+            monkeypatch.setenv('CITATIO_DATABASE_SQLITE', f'"{fname}"')
             yield
         case {'database': connect}:
             for var, value in connect.items():
