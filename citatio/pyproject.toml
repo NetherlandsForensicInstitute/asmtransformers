@@ -27,7 +27,6 @@ dependencies = [
     "pydantic>=2.11.5",
     "scipy",
     "sqlite-vec>=0.1.6",
-    "testcontainers[postgres]>=4.14.2",
     "torch",
     "transformers",
 ]
@@ -44,6 +43,7 @@ test = [
     "httpx2",  # avoid deprecation warnings for fastapi / starlette tests
     "pytest>=8.3.5",
     "pytest-asyncio>=1.4.0",
+    "testcontainers[postgres]>=4.14.2",
 ]
 
 [tool.pdm.version]
@@ -74,7 +74,7 @@ test = "coverage run --branch --source citatio --module pytest --strict-markers 
 asyncio_default_test_loop_scope = "session"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_mode = "auto"
-markers = ["postgresql"]
+markers = ["postgresql", "sqlite"]
 
 [tool.ruff]
 format.quote-style = "single"

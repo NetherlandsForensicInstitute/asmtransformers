@@ -8,7 +8,7 @@ from pgvector.asyncpg import register_vector
 
 
 class Database:
-    def add_function(
+    async def add_function(
         self,
         name: str,
         cfg: dict[int, list[str]],
@@ -19,13 +19,13 @@ class Database:
     ):
         pass
 
-    def search_function(self, embedding: np.array, top_n: int = 25):
+    async def search_function(self, embedding: np.array, top_n: int = 25):
         pass
 
 
 class SQLiteDatabase(Database):
     @classmethod
-    def from_name(cls, name):
+    async def connect(cls, name):
         # make sure to pass check_same_thread=False, Python 3.11+ has thread-safe sqlite
         connection = sqlite3.connect(name, check_same_thread=False)
         return cls(connection)
@@ -38,18 +38,17 @@ class SQLiteDatabase(Database):
             sqlite_vec.load(self.connection)
             self.connection.enable_load_extension(False)
 
-            # NB: read_text() shows up as deprecated in 3.11, it has since been un-deprecated (causing confusing errors)
             schema = resources.read_text('citatio', 'schema-sqlite.sql')
             self.connection.executescript(schema)
 
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.connection.close()
         self.connection = None
 
-    def _insert_or_get_function(self, cursor, cfg, embedding):
+    async def _insert_or_get_function(self, cursor, cfg, embedding):
         # coerce cfg to str for database storage (keep the cfg type responsible for that (de)serialization)
         parameters = (str(cfg),)
         try:
@@ -66,10 +65,10 @@ class SQLiteDatabase(Database):
 
         return function_id
 
-    def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
+    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
         with self.connection:
             cursor = self.connection.cursor()
-            function_id = self._insert_or_get_function(cursor, cfg, embedding)
+            function_id = await self._insert_or_get_function(cursor, cfg, embedding)
             cursor.execute(
                 """INSERT INTO labels (function_id, label, binary_name, binary_sha256) VALUES (?, ?, ?, ?)""",
                 (function_id, name, binary_name, binary_sha256),
@@ -78,7 +77,7 @@ class SQLiteDatabase(Database):
             # return the function id for convenience
             return function_id
 
-    def search_function(self, embedding, top_n=25):
+    async def search_function(self, embedding, top_n=25):
         cursor = self.connection.cursor()
         cursor.execute(
             """
@@ -125,33 +124,30 @@ class PostgreSQLDatabase:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.connection.close()
 
-    async def _insert_or_get_function(self, cfg, embedding):
-        cfg = str(cfg)
-        try:
-            return await self.connection.fetchval(
-                'INSERT INTO functions (cfg, embedding) VALUES ($1, $2) RETURNING id',
-                cfg,
+    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
+        async with self.connection.transaction():
+            function_id = await self.connection.fetchval(
+                # use PostgreSQL's conflict resolution to issue an update-or-get
+                # NB: the conflict resolution update is idempotent, but needed to make sure RETURNING id works
+                """
+                INSERT INTO functions (cfg, embedding) VALUES ($1, $2)
+                ON CONFLICT (cfg) DO UPDATE SET cfg = EXCLUDED.cfg RETURNING id
+                """,
+                str(cfg),
                 embedding,
             )
-        except asyncpg.IntegrityConstraintViolationError:
-            return await self.connection.fetchval('SELECT id FROM functions WHERE cfg = $1', cfg)
+            await self.connection.execute(
+                'INSERT INTO labels (function_id, label, binary_name, binary_sha256) VALUES ($1, $2, $3, $4)',
+                function_id,
+                name,
+                binary_name,
+                binary_sha256,
+            )
 
-    async def _insert_label(self, function_id, name, binary_name, binary_sha256):
-        await self.connection.execute(
-            'INSERT INTO labels (function_id, label, binary_name, binary_sha256) VALUES ($1, $2, $3, $4)',
-            function_id,
-            name,
-            binary_name,
-            binary_sha256,
-        )
-
-    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
-        function_id = await self._insert_or_get_function(cfg, embedding)
-        await self._insert_label(function_id, name, binary_name, binary_sha256)
         return function_id
 
-    async def _search_near(self, embedding, top_n):
-        return await self.connection.fetch(
+    async def search_function(self, embedding, top_n=25):
+        results = await self.connection.fetch(
             """
             SELECT label, (2 - (embedding <=> $1)) / 2 AS similarity, binary_name, binary_sha256
             FROM labels
@@ -162,9 +158,6 @@ class PostgreSQLDatabase:
             embedding,
             top_n,
         )
-
-    async def search_function(self, embedding, top_n=25):
-        results = await self._search_near(embedding, top_n)
 
         return [
             dict(

@@ -13,19 +13,19 @@ Configuration and runtime
 The citatio REST API takes 2 configuration options:
 
 - The model to be used for embedding (currently, only `NetherlandsForensicInstitute/ARM64BERT-embedding` is supported);
-- The database to store both assembly and embeddings in (currently, only SQLite is implemented).
+- The database to store both assembly and embeddings in, either SQLite+sqlitevec or PostgreSQL+pgvector.
 
-Both of these can be configured through environment variables:
+These can be configured through environment variables:
 
 - `CITATIO_MODEL`: a local path or huggingface model name (though again, currently on the `ARM64BERT-embedding` model is supported);
-- `CITATIO_SQLITE_DATABASE`: either `:memory:` or a local path to a SQLite database (will be created if it doesn't currently exist).
+- when using SQLite: `CITATIO_DATABASE_SQLITE`: either `:memory:` or a local path to a SQLite database (will be created if it doesn't currently exist).
+- when using PostgreSQL: either `CITATIO_DATABASE_HOST`, `..._PORT`, `..._USER`, `..._PASSWORD`, `..._DATABASE` to connect to the database in question,
+  or `CITATIO_DATABASE_DSN` with the full connection url to connect to that same database.
 
-The defaults for these values are `NetherlandsForensicInstitute/ARM64BERT-embedding` and `:memory:`, 
-resulting in a functioning but non-persistent service.
+The database configuration is required, the default model to be loaded is `NetherlandsForensicInstitute/ARM64BERT-embedding`.
 
 > [!NOTE]  
-> After observing concurrency issues with SQLite and `sqlite-vec`, the REST API is currently served fully serialized and is consequently fairly slow.
-> We're expecting to be able to solve this by using PostgreSQL and `pgvector`.
+> After observing concurrency issues with SQLite and `sqlite-vec`, the REST API is currently served fully serialized when using SQLite and is consequently fairly slow.
 
 Running the REST API service follows the default FastAPI command line setup, 
 where the application is available from the `citatio` module:
@@ -44,7 +44,7 @@ though end users are encouraged to use the [ready-made Ghidra plugin (sententia)
 Prerequisites
 -------------
 
-Python 3.12 or newer with SQLite version 3.35.0 or newer.
+Python 3.13 or newer with SQLite version 3.35.0 or newer.
 
 Requirements
 ------------
