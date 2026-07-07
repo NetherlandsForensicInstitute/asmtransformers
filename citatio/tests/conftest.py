@@ -64,6 +64,17 @@ def connect_pgvector(request, monkeypatch):
     ]
 )
 async def database_config(request):
+    """
+    NB: database parametrization between SQLite and PostgreSQL happens here:
+        - the function parameter `request` here is not a fixture, it's pytest's way of supplying details about this
+          fixture's usage by a test that *requested* it
+        - this fixture's parameters are nothing but strings, but they trigger a parametrization much like
+          pytest.mark.parametrize would (once with the value "sqlite", once with the value "postgresql")
+        - the parameter's values are marked with pytest.mark.<database_type>, allowing selection of tests that use the
+          respective fixture(s) through pytest -m
+        - only the "postgresql" parameter value will actually spin up a PostgreSQL container through the
+          `connect_pgvector` fixture, the request for which is hidden inside the implementation below
+    """
     match request.param:
         case 'sqlite':
             # use a in-memory sqlite database
