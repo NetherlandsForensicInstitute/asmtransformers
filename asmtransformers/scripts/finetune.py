@@ -52,7 +52,7 @@ def main(data_folder, model, batch_size):
 
     model_name_or_path = model
     model_name = Path(model_name_or_path).stem if Path(model_name_or_path).is_dir() else model_name_or_path
-    num_epochs = 3
+    num_epochs = 24
     use_amp = True  # Set to False, if you use a CPU or your GPU does not support FP16 operations
     evaluation_steps = 50_000
     warmup_steps = 500
