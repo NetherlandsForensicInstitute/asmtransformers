@@ -51,6 +51,51 @@ class DistributedLogFilter(logging.Filter):
         return True
 
 
+class ASMBertPretrainingTrainer(Trainer):
+    """Trainer that exposes ASMBert's component losses to standard HF logging callbacks."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._component_loss_sums = {'masked_lm_loss': 0.0, 'jtp_loss': 0.0}
+        self._component_loss_count = 0
+
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+        loss, outputs = super().compute_loss(
+            model,
+            inputs,
+            return_outputs=True,
+            num_items_in_batch=num_items_in_batch,
+        )
+        self._record_component_losses(outputs)
+        return (loss, outputs) if return_outputs else loss
+
+    def _record_component_losses(self, outputs):
+        component_losses = {}
+        for name in self._component_loss_sums:
+            component_loss = getattr(outputs, name, None)
+            if component_loss is None:
+                return
+            component_losses[name] = component_loss.detach().float().mean().item()
+
+        for name, value in component_losses.items():
+            self._component_loss_sums[name] += value
+        self._component_loss_count += 1
+
+    def log(self, logs, start_time=None):
+        if 'loss' in logs and self._component_loss_count > 0:
+            logs = {
+                **logs,
+                **{
+                    name: loss_sum / self._component_loss_count
+                    for name, loss_sum in self._component_loss_sums.items()
+                },
+            }
+            self._component_loss_sums = dict.fromkeys(self._component_loss_sums, 0.0)
+            self._component_loss_count = 0
+
+        super().log(logs, start_time=start_time)
+
+
 def configure_pretrain_logging(output_dir):
     rank, local_rank, world_size = distributed_logging_context()
     output_path = Path(output_dir)
@@ -255,7 +300,7 @@ def pretrain(
         seed=seed,
     )
 
-    trainer = Trainer(
+    trainer = ASMBertPretrainingTrainer(
         model=model,
         args=training_args,
         data_collator=data_collator,
