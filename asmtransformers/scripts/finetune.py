@@ -70,6 +70,15 @@ class OldFitScalarEvaluator:
         return getattr(self.evaluator, name)
 
 
+def collate_tokenized_batch(batch):
+    features = {
+        'input_ids': torch.tensor([example['input_ids'] for example in batch], dtype=torch.long),
+        'attention_mask': torch.tensor([example['attention_mask'] for example in batch], dtype=torch.long),
+    }
+    labels = torch.tensor([example['label'] for example in batch], dtype=torch.long)
+    return [features], labels
+
+
 def main(data_folder, model, batch_size):
     """
     This script takes a language model and finetunes it for the task of semantic
@@ -106,7 +115,7 @@ def main(data_folder, model, batch_size):
     logging.info(f'pre-trained model {model_name} loaded')
 
     functions = datasets.load_from_disk(data_folder)
-    train_functions = functions['train']
+    train_functions = functions['train'].select_columns(['input_ids', 'attention_mask', 'label'])
     logging.info('training data loaded')
 
     train_data_sampler = LazySentenceLabelDataset(train_functions)
@@ -136,6 +145,7 @@ def main(data_folder, model, batch_size):
         return result
 
     wrap_method(train_loss, 'batch_semi_hard_triplet_loss', log_loss)
+    model.smart_batching_collate = collate_tokenized_batch
 
     # Train the model
     def train_callback(score, epoch, steps):
