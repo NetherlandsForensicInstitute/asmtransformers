@@ -1,6 +1,7 @@
 import argparse
 import datetime as dt
 import logging
+import numbers
 import os
 from pathlib import Path
 
@@ -37,6 +38,36 @@ def wrap_method(instance, method, new_method):
         return new_method(args, kwargs, result)
 
     setattr(instance, method, wrapper)
+
+
+class OldFitScalarEvaluator:
+    """Adapter for SentenceTransformers 5.x evaluators used with old_fit."""
+
+    def __init__(self, evaluator):
+        self.evaluator = evaluator
+
+    def __call__(self, *args, **kwargs):
+        # SentenceTransformers 5.x evaluators return metric dicts, while old_fit compares a scalar best score.
+        # This adapter calls the underlying evaluator and returns the scalar score specified as "primary_metric"
+
+        result = self.evaluator(*args, **kwargs)
+        if isinstance(result, numbers.Number):
+            return result
+
+        if not isinstance(result, dict):
+            raise RuntimeError(f'Expected evaluator to return a number or metrics dict, got {type(result).__name__}')
+
+        primary_metric = getattr(self.evaluator, 'primary_metric', None)
+        if primary_metric is None:
+            raise RuntimeError('Evaluator returned a metrics dict without setting primary_metric')
+
+        if primary_metric not in result:
+            raise RuntimeError(f'Evaluator primary metric {primary_metric!r} not found in metrics: {sorted(result)}')
+
+        return result[primary_metric]
+
+    def __getattr__(self, name):
+        return getattr(self.evaluator, name)
 
 
 def main(data_folder, model, batch_size):
@@ -87,7 +118,7 @@ def main(data_folder, model, batch_size):
             yield InputExample(texts=[example['anchor'], example['pos'], example['neg']])
 
     test_functions = functions['test']
-    dev_evaluator = TripletEvaluator.from_input_examples(eval_triplets(test_functions))
+    dev_evaluator = OldFitScalarEvaluator(TripletEvaluator.from_input_examples(eval_triplets(test_functions)))
 
     # Configure the training.
     # The jTrans loss is all triplets (including easy) with a cosine metric and a margin of 0.2 (BatchAllTripletLoss)
@@ -110,7 +141,7 @@ def main(data_folder, model, batch_size):
     def train_callback(score, epoch, steps):
         print(f'{score=}, {epoch=}, {steps=}')
 
-    # The new version if `fit` does not actually iterate the data loader for every epoch,
+    # The new version of `fit` does not actually iterate the data loader for every epoch,
     # it materializes the dataset to HF format and uses the exact same data.
     # Since we rely on the loader to give us randomized batches (and therefore triplets), we fall back
     # to `old_fit` instead.
