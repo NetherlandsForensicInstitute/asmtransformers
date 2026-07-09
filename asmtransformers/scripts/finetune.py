@@ -98,7 +98,7 @@ def main(data_folder, model, batch_size):
     warmup_steps = 500
 
     # Save path of the model
-    model_save_path = f'output/aarch64_ft_{model_name.replace("/", "-")}-{timestamp()}'
+    model_save_path = f'output/asmtransformers_ft_{model_name.replace("/", "-")}-{timestamp()}'
     Path(model_save_path).mkdir(exist_ok=True, parents=True)
 
     # Logging to a file
