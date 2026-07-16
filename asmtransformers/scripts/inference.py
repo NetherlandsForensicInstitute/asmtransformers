@@ -11,7 +11,9 @@ def main(data_folder, output_folder, model_path):
     print('Load model')
     model = ASMEmbedder.from_pretrained(model_path)
     print('Start creating embeddings')
-    embedded_functions = Dataset.from_dict({'embeddings': model.encode(eval_functions['cfg'])})
+    embedded_functions = Dataset.from_dict(
+        {'embeddings': model.get_embeddings(eval_functions['input_ids'], eval_functions['attention_mask'])}
+    )
     embedded_dataset = concatenate_datasets([eval_functions, embedded_functions], axis=1)
     print('Embeddings created, save to disk')
     embedded_dataset.save_to_disk(output_folder)
