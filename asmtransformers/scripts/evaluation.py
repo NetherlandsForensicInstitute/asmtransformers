@@ -278,14 +278,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         run_tests(
-            data_folder = args.input_path,
-            output_path = args.output_path,
-            pool_size = args.pool_size,
-            static_pool= args.static_pool,
-            crosslingual= args.crosslingual,
-            architecture = args.architecture,
-            seed = args.seed,
-            repeats = args.repeats,
+            data_folder=args.input_path,
+            output_path=args.output_path,
+            pool_size=args.pool_size,
+            static_pool=args.static_pool,
+            crosslingual=args.crosslingual,
+            architecture=args.architecture,
+            seed=args.seed,
+            repeats=args.repeats,
         )
     except ValueError as error:
         parser.error(str(error))
