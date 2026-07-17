@@ -2,6 +2,7 @@ from itertools import batched
 
 import numpy as np
 import torch
+from tqdm import tqdm
 
 from asmtransformers.models.asmbert import ASMBertModel, ASMTokenizer
 
@@ -84,7 +85,7 @@ class ASMEmbedder:
 
         embeddings = []
         with torch.no_grad():
-            for batch in batched(inputs, batch_size, strict=False):
+            for batch in tqdm(batched(inputs, batch_size, strict=False)):
                 inputs = self.turn_into_tensors(batch, self.device)
                 outputs = self.model(**inputs)
                 pooled = self.mean_pool(outputs.last_hidden_state, inputs['attention_mask'])
