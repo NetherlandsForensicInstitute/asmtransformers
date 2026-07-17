@@ -127,6 +127,13 @@ def main(data_folder, model, batch_size):
             yield InputExample(texts=[example['anchor'], example['pos'], example['neg']])
 
     test_functions = functions['test']
+
+    # The evaluator is responsible for generating the training-time metrics. We use triplets from the test-split
+    # that have been formatted by the `eval_triplets` function above. The train loop (`old_fit`) will use the
+    # TripletEvaluator to calculate triplet performance across this set.
+    # We're going to be using old_fit to perform the actual training, and the output of TripletEvaluator is in the
+    # new dictionary style. The OldFitScalarEvaluator class wraps the new-style evaluator and returns the raw metric
+    # expected by `old_fit`.
     dev_evaluator = OldFitScalarEvaluator(TripletEvaluator.from_input_examples(eval_triplets(test_functions)))
 
     # Configure the training.
