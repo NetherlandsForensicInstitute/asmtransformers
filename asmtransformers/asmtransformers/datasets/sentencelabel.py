@@ -3,7 +3,6 @@ from itertools import groupby
 from operator import itemgetter
 
 from datasets import Dataset
-from sentence_transformers import InputExample
 from torch.utils.data import IterableDataset
 from tqdm import tqdm
 
@@ -70,4 +69,8 @@ class LazySentenceLabelDataset(IterableDataset):
 
     def example(self, idx):
         row = self.dataset[idx]
-        return InputExample(guid=str(idx), texts=[row['cfg']], label=row['label'])
+        return {
+            'input_ids': row['input_ids'],
+            'attention_mask': row['attention_mask'],
+            'label': row['label'],
+        }

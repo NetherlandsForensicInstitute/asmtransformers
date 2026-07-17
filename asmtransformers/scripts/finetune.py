@@ -1,6 +1,7 @@
 import argparse
 import datetime as dt
 import logging
+import numbers
 import os
 from pathlib import Path
 
@@ -39,6 +40,45 @@ def wrap_method(instance, method, new_method):
     setattr(instance, method, wrapper)
 
 
+class OldFitScalarEvaluator:
+    """Adapter for SentenceTransformers 5.x evaluators used with old_fit."""
+
+    def __init__(self, evaluator):
+        self.evaluator = evaluator
+
+    def __call__(self, *args, **kwargs):
+        # SentenceTransformers 5.x evaluators return metric dicts, while old_fit compares a scalar best score.
+        # This adapter calls the underlying evaluator and returns the scalar score specified as "primary_metric"
+
+        result = self.evaluator(*args, **kwargs)
+        if isinstance(result, numbers.Number):
+            return result
+
+        if not isinstance(result, dict):
+            raise RuntimeError(f'Expected evaluator to return a number or metrics dict, got {type(result).__name__}')
+
+        primary_metric = getattr(self.evaluator, 'primary_metric', None)
+        if primary_metric is None:
+            raise RuntimeError('Evaluator returned a metrics dict without setting primary_metric')
+
+        if primary_metric not in result:
+            raise RuntimeError(f'Evaluator primary metric {primary_metric!r} not found in metrics: {sorted(result)}')
+
+        return result[primary_metric]
+
+    def __getattr__(self, name):
+        return getattr(self.evaluator, name)
+
+
+def collate_tokenized_batch(batch):
+    features = {
+        'input_ids': torch.tensor([example['input_ids'] for example in batch], dtype=torch.long),
+        'attention_mask': torch.tensor([example['attention_mask'] for example in batch], dtype=torch.long),
+    }
+    labels = torch.tensor([example['label'] for example in batch], dtype=torch.long)
+    return [features], labels
+
+
 def main(data_folder, model, batch_size):
     """
     This script takes a language model and finetunes it for the task of semantic
@@ -52,13 +92,13 @@ def main(data_folder, model, batch_size):
 
     model_name_or_path = model
     model_name = Path(model_name_or_path).stem if Path(model_name_or_path).is_dir() else model_name_or_path
-    num_epochs = 3
+    num_epochs = 24
     use_amp = True  # Set to False, if you use a CPU or your GPU does not support FP16 operations
     evaluation_steps = 50_000
     warmup_steps = 500
 
     # Save path of the model
-    model_save_path = f'output/aarch64_ft_{model_name.replace("/", "-")}-{timestamp()}'
+    model_save_path = f'output/asmtransformers_ft_{model_name.replace("/", "-")}-{timestamp()}'
     Path(model_save_path).mkdir(exist_ok=True, parents=True)
 
     # Logging to a file
@@ -75,7 +115,7 @@ def main(data_folder, model, batch_size):
     logging.info(f'pre-trained model {model_name} loaded')
 
     functions = datasets.load_from_disk(data_folder)
-    train_functions = functions['train']
+    train_functions = functions['train'].select_columns(['input_ids', 'attention_mask', 'label'])
     logging.info('training data loaded')
 
     train_data_sampler = LazySentenceLabelDataset(train_functions)
@@ -87,7 +127,14 @@ def main(data_folder, model, batch_size):
             yield InputExample(texts=[example['anchor'], example['pos'], example['neg']])
 
     test_functions = functions['test']
-    dev_evaluator = TripletEvaluator.from_input_examples(eval_triplets(test_functions))
+
+    # The evaluator is responsible for generating the training-time metrics. We use triplets from the test-split
+    # that have been formatted by the `eval_triplets` function above. The train loop (`old_fit`) will use the
+    # TripletEvaluator to calculate triplet performance across this set.
+    # We're going to be using old_fit to perform the actual training, and the output of TripletEvaluator is in the
+    # new dictionary style. The OldFitScalarEvaluator class wraps the new-style evaluator and returns the raw metric
+    # expected by `old_fit`.
+    dev_evaluator = OldFitScalarEvaluator(TripletEvaluator.from_input_examples(eval_triplets(test_functions)))
 
     # Configure the training.
     # The jTrans loss is all triplets (including easy) with a cosine metric and a margin of 0.2 (BatchAllTripletLoss)
@@ -105,12 +152,17 @@ def main(data_folder, model, batch_size):
         return result
 
     wrap_method(train_loss, 'batch_semi_hard_triplet_loss', log_loss)
+    model.smart_batching_collate = collate_tokenized_batch
 
     # Train the model
     def train_callback(score, epoch, steps):
         print(f'{score=}, {epoch=}, {steps=}')
 
-    model.fit(
+    # The new version of `fit` does not actually iterate the data loader for every epoch,
+    # it materializes the dataset to HF format and uses the exact same data.
+    # Since we rely on the loader to give us randomized batches (and therefore triplets), we fall back
+    # to `old_fit` instead.
+    model.old_fit(
         train_objectives=[(train_data_loader, train_loss)],
         epochs=num_epochs,
         evaluator=dev_evaluator,
