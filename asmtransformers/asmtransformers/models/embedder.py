@@ -46,7 +46,7 @@ class ASMEmbedder:
 
         embeddings = []
         with torch.no_grad():
-            for batch in batched(sentences, batch_size, strict=False):
+            for batch in tqdm(batched(sentences, batch_size, strict=False)):
                 inputs = self.tokenizer(batch, architecture=architecture)
                 inputs = {key: value.to(self.device) for key, value in inputs.items()}
                 outputs = self.model(**inputs)
