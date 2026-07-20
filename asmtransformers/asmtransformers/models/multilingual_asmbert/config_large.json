@@ -1,3 +1,4 @@
+// To use this config, point --config in pretrain.py to this file.
 {
   "architectures": [
     "BertForMaskedLM"
