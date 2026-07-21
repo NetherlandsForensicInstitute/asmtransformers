@@ -15,7 +15,6 @@ class Database:
         embedding: np.array,
         binary_name: str,
         binary_sha256: bytes,
-        model_identifier: str = None,
     ):
         pass
 
@@ -65,7 +64,7 @@ class SQLiteDatabase(Database):
 
         return function_id
 
-    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
+    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256):
         with self.connection:
             cursor = self.connection.cursor()
             function_id = await self._insert_or_get_function(cursor, cfg, embedding)
@@ -124,7 +123,7 @@ class PostgreSQLDatabase(Database):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.connection.close()
 
-    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
+    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256):
         async with self.connection.transaction():
             function_id = await self.connection.fetchval(
                 # use PostgreSQL's conflict resolution to issue an update-or-get
