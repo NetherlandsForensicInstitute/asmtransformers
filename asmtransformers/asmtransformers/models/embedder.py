@@ -62,7 +62,7 @@ class ASMEmbedder:
             return embeddings.numpy().astype(np.float32, copy=False)
         return embeddings
 
-    def turn_into_tensors(self, batch, device):
+    def turn_into_tensors(self, batch):
         # there might be a smarter way to do this, suggestions welcome!
         features = {
             'input_ids': torch.tensor([example[0] for example in batch], dtype=torch.long).to(self.device),
