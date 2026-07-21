@@ -22,6 +22,7 @@ dependencies = [
     "confidence>=0.17.2",
     "datasets",
     "fastapi[all]>=0.115.12",
+    "fastapi-oidc>=0.1.0",
     "numpy",
     "pgvector>=0.4.2",
     "pydantic>=2.11.5",
