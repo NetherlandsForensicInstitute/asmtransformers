@@ -8,6 +8,10 @@ from pgvector.asyncpg import register_vector
 
 
 class Database:
+    async def __aenter__(self): ...
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
+
     async def add_function(
         self,
         name: str,
@@ -17,11 +21,9 @@ class Database:
         user_id: str | None = None,
         binary_name: str | None = None,
         binary_sha256: bytes | None = None,
-    ):
-        pass
+    ): ...
 
-    async def search_function(self, embedding: np.array, top_n: int = 25):
-        pass
+    async def search_function(self, embedding: np.array, top_n: int = 25): ...
 
 
 class SQLiteDatabase(Database):
