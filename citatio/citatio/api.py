@@ -3,15 +3,19 @@ from typing import Annotated
 
 import confidence
 from asmtransformers.models.embedder import ASMEmbedder
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.params import Body
-from fastapi_oidc import IDToken
+from fastapi_oidc import IDToken, get_auth
 
 from citatio.db import Database, PostgreSQLDatabase, SQLiteDatabase
 from citatio.models import ControlFlowGraph
 
 
 DEFAULT_MODEL = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
+
+
+def _auth_unavailable(*args, **kwargs):
+    raise HTTPException(503, 'Authentication unavailable')
 
 
 async def connect_database(**connect) -> Database:
@@ -32,11 +36,16 @@ async def lifespan(app: FastAPI):
 
     app.state.model = ASMEmbedder.from_pretrained(config.model or DEFAULT_MODEL)
 
+    if config.auth:
+        # create an OIDC Authorization header → IDToken function from the configured authentication settings
+        app.state.authenticate_user = get_auth(**config.auth)
+    else:
+        # config.auth either not set or explicitly turned off, raise exception on presence of Authorization header
+        app.state.authenticate_user = _auth_unavailable
+
     async with await connect_database(**config.database) as database:
         app.state.database = database
         yield
-
-    # FIXME: resolve and set app.state.authenticate_user (created through fastapi_oidc.get_auth())
 
 
 async def authenticated_user(request: Request) -> IDToken | None:
