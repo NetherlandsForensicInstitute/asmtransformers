@@ -15,6 +15,7 @@ DEFAULT_MODEL = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
 
 
 def _auth_unavailable(*args, **kwargs):
+    # utility callback that *always* raises a 503 error stating that authentication is not supported
     raise HTTPException(503, 'Authentication unavailable')
 
 

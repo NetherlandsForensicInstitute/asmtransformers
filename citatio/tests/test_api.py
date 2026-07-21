@@ -13,6 +13,13 @@ async def client(database_env):
 
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
+def test_no_auth(client, functions):
+    response = client.post('/api/v1/add', headers={'Authorization': 'Bearer R1ghtT0B34r4RMs'}, json=functions[0])
+    assert response.is_server_error
+    assert response.status_code == 503
+
+
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
 def test_add_function(client, functions):
     response = client.post('/api/v1/add', json=functions[0])
     assert response.status_code == 200
