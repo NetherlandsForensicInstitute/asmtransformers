@@ -7,29 +7,32 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.params import Body
 from fastapi_oidc import IDToken
 
-from citatio.db import PostgreSQLDatabase, SQLiteDatabase
+from citatio.db import Database, PostgreSQLDatabase, SQLiteDatabase
 from citatio.models import ControlFlowGraph
 
 
 DEFAULT_MODEL = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
 
 
+async def connect_database(**connect) -> Database:
+    match connect:
+        case {'sqlite': name}:
+            # explicit sqlite name to connect to, use SQLiteDatabase
+            return await SQLiteDatabase.connect(name)
+        case {} if connect:
+            # database settings *not* mentioning sqlite, use PostgreSQLDatabase
+            return await PostgreSQLDatabase.connect(**connect)
+        case _:
+            raise ValueError('missing database configuration')
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     config = confidence.load_name('citatio')
 
-    match config:
-        case {'database.sqlite': name}:
-            # explicit sqlite name to connect to, use SQLiteDatabase
-            database = await SQLiteDatabase.connect(name)
-        case {'database': connect}:
-            # database settings *not* mentioning sqlite, use PostgreSQLDatabase
-            database = await PostgreSQLDatabase.connect(**connect)
-        case _:
-            raise ValueError(f'missing database configuration, available: {config}')
-
     app.state.model = ASMEmbedder.from_pretrained(config.model or DEFAULT_MODEL)
-    async with database:
+
+    async with await connect_database(**config.database) as database:
         app.state.database = database
         yield
 
