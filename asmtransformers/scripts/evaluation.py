@@ -3,6 +3,7 @@ import csv
 import datetime as dt
 import os.path
 import random
+from collections import defaultdict
 from itertools import groupby
 from operator import itemgetter
 
@@ -189,7 +190,7 @@ def calculate_all(test_pools, output_path, output_file):
     with open(os.path.join(output_path, output_file + '-results.csv'), 'w') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(('iteration', 'MRR', 'P@1'))
-        for i, row in enumerate(test_pools):
+        for i, row in enumerate(tqdm(test_pools)):
             rank = calculate_one_rank(row)
             rr = 1.0 / rank
             sum_rr += rr
@@ -198,7 +199,6 @@ def calculate_all(test_pools, output_path, output_file):
             final_mrr = sum_rr / (i + 1)
             final_acc = sum_acc / (i + 1)
             row_result = (i, final_mrr, final_acc)
-            print(row_result)
             writer.writerow(row_result)
             csvfile.flush()
     return final_mrr, final_acc
@@ -209,6 +209,9 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
         raise ValueError('repeats must be at least 1')
     if repeats > 1 and not static_pool:
         raise ValueError('repeats greater than 1 are only supported with --static-pool')
+    # architecture is a filter; if we want to evaluate all architectures at once, we do not filer the dataset
+    if architecture == 'all':
+        architecture = None
 
     print('\ngenerate test_pools\n')
     test_functions = load_test_functions(data_folder, architecture)
@@ -216,7 +219,7 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
     anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng)
 
     model_name = data_folder.split('/')[-1]
-    output_file = f'{model_name}-{pool_size}-{static_pool}-{timestamp()}'
+    output_file = f'{timestamp()}-{model_name}-{architecture}-{pool_size}-{static_pool}'
     repeat_seeds = [None] * repeats if seed is None else [seed + repeat + 1 for repeat in range(repeats)]
     aggregate_rows = []
 
@@ -230,22 +233,19 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
         final_mrr, final_acc = calculate_all(test_pools, output_path, repeat_output_file)
         aggregate_rows.append((repeat, repeat_seed, final_mrr, final_acc))
 
-    mrrs = np.array([row[2] for row in aggregate_rows])
-    accuracies = np.array([row[3] for row in aggregate_rows])
-    with open(os.path.join(output_path, output_file + '-aggregate.csv'), 'w') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(('repeat', 'seed', 'MRR', 'P@1'))
-        writer.writerows(aggregate_rows)
-        writer.writerow(('mean', '', float(np.mean(mrrs)), float(np.mean(accuracies))))
-        writer.writerow(('std', '', float(np.std(mrrs)), float(np.std(accuracies))))
-        writer.writerow(('min', '', float(np.min(mrrs)), float(np.min(accuracies))))
-        writer.writerow(('max', '', float(np.max(mrrs)), float(np.max(accuracies))))
+    if repeats > 1:
+        mrrs = np.array([row[2] for row in aggregate_rows])
+        accuracies = np.array([row[3] for row in aggregate_rows])
+        with open(os.path.join(output_path, output_file + '-aggregate.csv'), 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(('repeat', 'seed', 'MRR', 'P@1'))
+            writer.writerows(aggregate_rows)
+            writer.writerow(('mean', '', float(np.mean(mrrs)), float(np.mean(accuracies))))
+            writer.writerow(('std', '', float(np.std(mrrs)), float(np.std(accuracies))))
+            writer.writerow(('min', '', float(np.min(mrrs)), float(np.min(accuracies))))
+            writer.writerow(('max', '', float(np.max(mrrs)), float(np.max(accuracies))))
 
-    with open(os.path.join(output_path, output_file + '-parameters.txt'), 'w') as file:
-        file.write(
-            f'{data_folder=},\n {output_path=},\n {pool_size=},\n {static_pool=},\n {architecture=},\n'
-            f' {seed=},\n {repeats=},\n {repeat_seeds=}\n'
-        )
+    return aggregate_rows
 
 
 def get_parser():
@@ -253,7 +253,6 @@ def get_parser():
     parser.add_argument('input_path', type=str, help='the path to the test data')
     parser.add_argument('output_path', type=str, help='the path to write the final scores to')
     parser.add_argument('--pool-size', type=int, help='the poolsize to pick the positive example from')
-    parser.add_argument('--architecture', type=str, help='only use examples from specified architecture')
     parser.add_argument('--seed', type=int, help='seed random evaluation sampling')
     parser.add_argument('--repeats', type=int, default=1, help='number of static-pool evaluation repeats')
     parser.add_argument(
@@ -265,15 +264,46 @@ def get_parser():
 if __name__ == '__main__':
     parser = get_parser()
     args = parser.parse_args()
-    try:
-        run_tests(
-            args.input_path,
-            args.output_path,
-            args.pool_size,
-            args.static_pool,
-            args.architecture,
-            args.seed,
-            args.repeats,
+    model_name = args.input_path.split('/')[-1]
+    output_file = f'{timestamp()}-{model_name}-{args.pool_size}-{args.static_pool}'
+    results_per_architecture = defaultdict(int)
+    architectures = ['arm64', 'amd64', 'riscv64', 'i386', 'all']
+    for architecture in architectures:
+        print(f'evaluating {architecture}')
+        try:
+            aggregate_rows = run_tests(
+                args.input_path,
+                args.output_path,
+                args.pool_size,
+                args.static_pool,
+                architecture,
+                args.seed,
+                args.repeats,
+            )
+            # right now we only report the MRRs and not the accuracies as they are usually zero
+            mrrs = np.array([row[2] for row in aggregate_rows])
+            # if there are multiple repeats, there will be multiple mrrs so we take the mean of those
+            results_per_architecture[architecture] = np.mean(mrrs)
+
+        except ValueError as error:
+            parser.error(str(error))
+
+    with open(os.path.join(args.output_path, output_file + '-mrr_per_architecture.csv'), 'w') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(('model_name', 'arm64', 'amd64', 'riscv64', 'i386', 'all'))
+        writer.writerow(
+            (
+                model_name,
+                results_per_architecture['arm64'],
+                results_per_architecture['amd64'],
+                results_per_architecture['riscv64'],
+                results_per_architecture['i386'],
+                results_per_architecture['all'],
+            )
         )
-    except ValueError as error:
-        parser.error(str(error))
+
+    with open(os.path.join(args.output_path, output_file + '-parameters.txt'), 'w') as file:
+        file.write(
+            f'{args.input_path=},\n {args.output_path=},\n {args.pool_size=},\n {args.static_pool=},\n'
+            f' {args.seed=},\n {args.repeats=},\n'
+        )
