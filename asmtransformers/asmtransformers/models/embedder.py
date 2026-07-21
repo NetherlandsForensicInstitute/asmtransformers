@@ -70,7 +70,7 @@ class ASMEmbedder:
         }
         return features
 
-    def get_embeddings(
+    def embed(
         self,
         token_ids,
         attention_mask,

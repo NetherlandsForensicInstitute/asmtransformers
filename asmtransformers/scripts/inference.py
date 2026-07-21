@@ -13,7 +13,7 @@ def main(data_folder, output_folder, model_path):
     print('Start creating embeddings')
     if eval_functions['input_ids']:
         embedded_functions = Dataset.from_dict(
-            {'embeddings': model.get_embeddings(eval_functions['input_ids'], eval_functions['attention_mask'])}
+            {'embeddings': model.embed(eval_functions['input_ids'], eval_functions['attention_mask'])}
         )
     else:
         embedded_functions = Dataset.from_dict({'embeddings': model.encode(eval_functions['cfg'])})
