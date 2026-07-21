@@ -3,8 +3,9 @@ from typing import Annotated
 
 import confidence
 from asmtransformers.models.embedder import ASMEmbedder
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.params import Body
+from fastapi_oidc import IDToken
 
 from citatio.db import PostgreSQLDatabase, SQLiteDatabase
 from citatio.models import ControlFlowGraph
@@ -32,6 +33,17 @@ async def lifespan(app: FastAPI):
         app.state.database = database
         yield
 
+    # FIXME: resolve and set app.state.authenticate_user (created through fastapi_oidc.get_auth())
+
+
+async def authenticated_user(request: Request) -> IDToken | None:
+    if auth := request.headers.get('Authorization'):
+        # authorization header available, let auth create a token from it
+        return request.app.state.authenticate_user(auth)
+    else:
+        # anonymous request, no token
+        return None
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -42,15 +54,17 @@ async def add_function(
     name: Annotated[str, Body()],
     cfg: Annotated[ControlFlowGraph, Body()],
     architecture: str = 'arm64',
-    binary_name: Annotated[str, Body()] = None,
-    binary_sha256: Annotated[str, Body()] = None,
+    binary_name: Annotated[str | None, Body()] = None,
+    binary_sha256: Annotated[str | None, Body()] = None,
+    id_token: IDToken | None = Depends(authenticated_user),  # noqa: B008 (not a function call, just the FastAPI way™)
 ):
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
     await request.app.state.database.add_function(
         name,
         cfg,
         embedding,
-        user_id=None,  # TODO: use authenticated user id when available
+        # user_id is optional, use subject identifier from token if available
+        user_id=id_token.sub if id_token else None,
         binary_name=binary_name,
         binary_sha256=binary_sha256,
     )
