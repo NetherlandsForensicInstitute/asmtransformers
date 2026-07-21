@@ -230,17 +230,16 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
         final_mrr, final_acc = calculate_all(test_pools, output_path, repeat_output_file)
         aggregate_rows.append((repeat, repeat_seed, final_mrr, final_acc))
 
-    if repeats > 1:
-        mrrs = np.array([row[2] for row in aggregate_rows])
-        accuracies = np.array([row[3] for row in aggregate_rows])
-        with open(os.path.join(output_path, output_file + '-aggregate.csv'), 'w') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(('repeat', 'seed', 'MRR', 'P@1'))
-            writer.writerows(aggregate_rows)
-            writer.writerow(('mean', '', float(np.mean(mrrs)), float(np.mean(accuracies))))
-            writer.writerow(('std', '', float(np.std(mrrs)), float(np.std(accuracies))))
-            writer.writerow(('min', '', float(np.min(mrrs)), float(np.min(accuracies))))
-            writer.writerow(('max', '', float(np.max(mrrs)), float(np.max(accuracies))))
+    mrrs = np.array([row[2] for row in aggregate_rows])
+    accuracies = np.array([row[3] for row in aggregate_rows])
+    with open(os.path.join(output_path, output_file + '-aggregate.csv'), 'w') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(('repeat', 'seed', 'MRR', 'P@1'))
+        writer.writerows(aggregate_rows)
+        writer.writerow(('mean', '', float(np.mean(mrrs)), float(np.mean(accuracies))))
+        writer.writerow(('std', '', float(np.std(mrrs)), float(np.std(accuracies))))
+        writer.writerow(('min', '', float(np.min(mrrs)), float(np.min(accuracies))))
+        writer.writerow(('max', '', float(np.max(mrrs)), float(np.max(accuracies))))
 
     with open(os.path.join(output_path, output_file + '-parameters.txt'), 'w') as file:
         file.write(
