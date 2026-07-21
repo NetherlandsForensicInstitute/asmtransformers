@@ -11,8 +11,8 @@ async def filled_database(database, functions, embeddings):
             function['name'],
             function['cfg'],
             embeddings[function['name']],
-            function['binary_name'],
-            function['binary_sha256'],
+            binary_name=function['binary_name'],
+            binary_sha256=function['binary_sha256'],
         )
 
     yield database
@@ -26,8 +26,8 @@ async def test_add_duplicate(database, functions, embeddings):
         function['name'],
         function['cfg'],
         embedding,
-        function['binary_name'],
-        function['binary_sha256'],
+        binary_name=function['binary_name'],
+        binary_sha256=function['binary_sha256'],
     )
 
     assert (
@@ -35,8 +35,8 @@ async def test_add_duplicate(database, functions, embeddings):
             function['name'],
             function['cfg'],
             embedding,
-            function['binary_name'],
-            function['binary_sha256'],
+            binary_name=function['binary_name'],
+            binary_sha256=function['binary_sha256'],
         )
         == function_id
     )
@@ -73,7 +73,11 @@ async def test_search_duplicate_label(filled_database, functions, embeddings):
     _init = next(function for function in functions if function['name'] == '_init')
     # add the same function with the same label as if it were from a different binary
     await filled_database.add_function(
-        _init['name'], _init['cfg'], embeddings[_init['name']], 'another_binary', '1234abcd' * 16
+        _init['name'],
+        _init['cfg'],
+        embeddings[_init['name']],
+        binary_name='another_binary',
+        binary_sha256='1234abcd' * 16,
     )
 
     results = await filled_database.search_function(embeddings[_init['name']], top_n=2)
