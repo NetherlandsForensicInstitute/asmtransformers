@@ -86,7 +86,7 @@ class ASMEmbedder:
         embeddings = []
         with torch.no_grad():
             for batch in tqdm(batched(inputs, batch_size, strict=False)):
-                inputs = self.turn_into_tensors(batch, self.device)
+                inputs = self.turn_into_tensors(batch)
                 outputs = self.model(**inputs)
                 pooled = self.mean_pool(outputs.last_hidden_state, inputs['attention_mask'])
                 if normalize_embeddings:
