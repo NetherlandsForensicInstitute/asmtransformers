@@ -42,6 +42,21 @@ async def test_add_duplicate(database, functions, embeddings):
     )
 
 
+async def test_add_binary_optional(database, functions, embeddings):
+    function = functions[-1]
+    embedding = embeddings[function['name']]
+
+    await database.add_function(function['name'], function['cfg'], embedding, user_id='nobody@asmembedder.local')
+    assert await database.search_function(embedding) == [
+        {
+            'function': function['name'],
+            'similarity': pytest.approx(1.0),
+            'binary_name': None,
+            'binary_sha256': None,
+        }
+    ]
+
+
 async def test_search_identical(filled_database, embeddings):
     results = await filled_database.search_function(embeddings['init_have_lse_atomics'])
 
