@@ -106,7 +106,7 @@ class SQLiteDatabase(Database):
         ]
 
 
-class PostgreSQLDatabase:
+class PostgreSQLDatabase(Database):
     def __init__(self, connection):
         self.connection = connection
 
