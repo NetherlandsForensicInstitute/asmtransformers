@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS labels (
     id SERIAL PRIMARY KEY,
     function_id INTEGER NOT NULL,
     label TEXT NOT NULL,
+    user_id TEXT DEFAULT NULL,
     -- (binary_name, binary_sha256) to identify the source of this label
     binary_name TEXT DEFAULT NULL,
     binary_sha256 TEXT DEFAULT NULL,
