@@ -13,9 +13,10 @@ class Database:
         name: str,
         cfg: dict[int, list[str]],
         embedding: np.array,
-        binary_name: str,
-        binary_sha256: bytes,
-        model_identifier: str = None,
+        *,
+        user_id: str | None = None,
+        binary_name: str | None = None,
+        binary_sha256: bytes | None = None,
     ):
         pass
 
@@ -65,13 +66,18 @@ class SQLiteDatabase(Database):
 
         return function_id
 
-    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
+    async def add_function(self, name, cfg, embedding, *, user_id=None, binary_name=None, binary_sha256=None):
         with self.connection:
             cursor = self.connection.cursor()
             function_id = await self._insert_or_get_function(cursor, cfg, embedding)
             cursor.execute(
-                """INSERT INTO labels (function_id, label, binary_name, binary_sha256) VALUES (?, ?, ?, ?)""",
-                (function_id, name, binary_name, binary_sha256),
+                """
+                INSERT INTO
+                    labels (function_id, label, user_id, binary_name, binary_sha256)
+                VALUES
+                    (?, ?, ?, ?, ?)
+                """,
+                (function_id, name, user_id, binary_name, binary_sha256),
             )
 
             # return the function id for convenience
@@ -106,7 +112,7 @@ class SQLiteDatabase(Database):
         ]
 
 
-class PostgreSQLDatabase:
+class PostgreSQLDatabase(Database):
     def __init__(self, connection):
         self.connection = connection
 
@@ -124,7 +130,7 @@ class PostgreSQLDatabase:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.connection.close()
 
-    async def add_function(self, name, cfg, embedding, binary_name, binary_sha256, model_identifier=None):
+    async def add_function(self, name, cfg, embedding, *, user_id=None, binary_name=None, binary_sha256=None):
         async with self.connection.transaction():
             function_id = await self.connection.fetchval(
                 # use PostgreSQL's conflict resolution to issue an update-or-get
@@ -137,9 +143,15 @@ class PostgreSQLDatabase:
                 embedding,
             )
             await self.connection.execute(
-                'INSERT INTO labels (function_id, label, binary_name, binary_sha256) VALUES ($1, $2, $3, $4)',
+                """
+                INSERT INTO
+                    labels (function_id, label, user_id, binary_name, binary_sha256)
+                VALUES
+                    ($1, $2, $3, $4, $5)
+                """,
                 function_id,
                 name,
+                user_id,
                 binary_name,
                 binary_sha256,
             )

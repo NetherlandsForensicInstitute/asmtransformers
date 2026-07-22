@@ -46,7 +46,14 @@ async def add_function(
     binary_sha256: Annotated[str, Body()] = None,
 ):
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
-    await request.app.state.database.add_function(name, cfg, embedding, binary_name, binary_sha256)
+    await request.app.state.database.add_function(
+        name,
+        cfg,
+        embedding,
+        user_id=None,  # TODO: use authenticated user id when available
+        binary_name=binary_name,
+        binary_sha256=binary_sha256,
+    )
 
 
 @app.post('/api/v1/search')
