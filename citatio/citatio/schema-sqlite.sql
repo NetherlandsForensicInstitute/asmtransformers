@@ -30,5 +30,9 @@ CREATE TABLE IF NOT EXISTS labels (
     binary_name TEXT DEFAULT NULL,
     binary_sha256 TEXT DEFAULT NULL,
 
-    FOREIGN KEY (function_id) REFERENCES functions(id)
+    FOREIGN KEY (function_id) REFERENCES functions(id),
+    -- enforce unique function labels per user
+    -- NB: user_id allows NULL, which is DISTINCT by default, enabling multiple (function, label) combinations for
+    --     anonymous users
+    UNIQUE (function_id, user_id)
 );
