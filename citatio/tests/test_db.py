@@ -59,6 +59,44 @@ async def test_add_binary_fields_optional(database, functions, embeddings):
     ]
 
 
+async def test_add_label_anonymous(database, functions, embeddings):
+    function = functions[-1]
+    embedding = embeddings[function['name']]
+    await database.add_function(function['name'], function['cfg'], embedding)
+    assert len(await database.search_function(embedding)) == 1
+
+    await database.add_function('new_name', function['cfg'], embedding)
+    results = await database.search_function(embedding)
+    assert len(results) == 2
+    assert {result['function'] for result in results} == {function['name'], 'new_name'}
+    assert all(result['similarity'] == pytest.approx(1.0) for result in results)
+
+
+async def test_add_label_multiple_users(database, functions, embeddings):
+    function = functions[1]
+    embedding = embeddings[function['name']]
+    await database.add_function(function['name'], function['cfg'], embedding, user_id='LuckyLuke')
+    assert len(await database.search_function(embedding)) == 1
+
+    await database.add_function('new_name', function['cfg'], embedding, user_id='NielsHolgerson')
+    results = await database.search_function(embedding)
+    assert len(results) == 2
+    assert {result['function'] for result in results} == {function['name'], 'new_name'}
+    assert all(result['similarity'] == pytest.approx(1.0) for result in results)
+
+
+async def test_add_label_user_overwrite(database, functions, embeddings):
+    function = functions[-2]
+    embedding = embeddings[function['name']]
+    await database.add_function(function['name'], function['cfg'], embedding, user_id='henk@reverse-engineering.nl')
+    assert len(await database.search_function(embedding)) == 1
+
+    await database.add_function('new_name', function['cfg'], embedding, user_id='henk@reverse-engineering.nl')
+    results = await database.search_function(embedding)
+    assert len(results) == 1
+    assert {result['function'] for result in results} == {'new_name'}
+
+
 async def test_add_user_id(filled_database, functions, embeddings):
     function = functions[-1]
     embedding = embeddings[function['name']]
