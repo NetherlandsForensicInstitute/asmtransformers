@@ -3,6 +3,8 @@ from itertools import pairwise
 import numpy
 import pytest
 
+from citatio.db import PostgreSQLDatabase, SQLiteDatabase
+
 
 @pytest.fixture
 async def filled_database(database, functions, embeddings):
@@ -42,11 +44,11 @@ async def test_add_duplicate(database, functions, embeddings):
     )
 
 
-async def test_add_binary_optional(database, functions, embeddings):
+async def test_add_binary_fields_optional(database, functions, embeddings):
     function = functions[-1]
     embedding = embeddings[function['name']]
 
-    await database.add_function(function['name'], function['cfg'], embedding, user_id='nobody@asmembedder.local')
+    await database.add_function(function['name'], function['cfg'], embedding)
     assert await database.search_function(embedding) == [
         {
             'function': function['name'],
@@ -55,6 +57,23 @@ async def test_add_binary_optional(database, functions, embeddings):
             'binary_sha256': None,
         }
     ]
+
+
+async def test_add_user_id(filled_database, functions, embeddings):
+    function = functions[-1]
+    embedding = embeddings[function['name']]
+    await filled_database.add_function(function['name'], function['cfg'], embedding, user_id='nobody@asmembedder.local')
+
+    match filled_database:
+        # Database interface exposes no raw query function, but we know the implementations
+        case SQLiteDatabase():
+            users = {row[0] for row in filled_database.connection.execute("""SELECT user_id FROM labels""")}
+        case PostgreSQLDatabase():
+            users = {row[0] for row in await filled_database.connection.fetch("""SELECT user_id FROM labels""")}
+        case _:
+            pytest.fail('unknown type of database implementation')
+
+    assert users == {'nobody@asmembedder.local', None}
 
 
 async def test_search_identical(filled_database, embeddings):
