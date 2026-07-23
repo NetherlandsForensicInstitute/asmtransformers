@@ -1,11 +1,11 @@
 import argparse
 import csv
 import datetime as dt
-import os.path
 import random
 from collections import defaultdict
 from itertools import groupby
 from operator import itemgetter
+from pathlib import Path
 
 import datasets
 import numpy as np
@@ -187,7 +187,7 @@ def calculate_all(test_pools, output_path, output_file):
     sum_acc = 0
     final_mrr = 0.0
     final_acc = 0.0
-    with open(os.path.join(output_path, output_file + '-results.csv'), 'w') as csvfile:
+    with open(Path(output_path, output_file + '-results.csv'), 'w') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(('iteration', 'MRR', 'P@1'))
         for i, row in enumerate(tqdm(test_pools)):
@@ -236,7 +236,7 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
     if repeats > 1:
         mrrs = np.array([row[2] for row in aggregate_rows])
         accuracies = np.array([row[3] for row in aggregate_rows])
-        with open(os.path.join(output_path, output_file + '-aggregate.csv'), 'w') as csvfile:
+        with open(Path(output_path, output_file + '-aggregate.csv'), 'w') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(('repeat', 'seed', 'MRR', 'P@1'))
             writer.writerows(aggregate_rows)
@@ -289,7 +289,7 @@ if __name__ == '__main__':
         except ValueError as error:
             parser.error(str(error))
 
-    with open(os.path.join(args.output_path, output_file + '-eval_per_architecture.csv'), 'w') as csvfile:
+    with open(Path(args.output_path, output_file + '-eval_per_architecture.csv'), 'w') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(
             (
@@ -322,7 +322,7 @@ if __name__ == '__main__':
             )
         )
 
-    with open(os.path.join(args.output_path, output_file + '-parameters.txt'), 'w') as file:
+    with open(Path(args.output_path, output_file + '-parameters.txt'), 'w') as file:
         file.write(
             f'{args.input_path=},\n {args.output_path=},\n {args.pool_size=},\n {args.static_pool=},\n'
             f' {args.seed=},\n {args.repeats=},\n'
