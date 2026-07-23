@@ -71,7 +71,7 @@ async def add_function(
     request: Request,
     name: Annotated[str, Body()],
     cfg: Annotated[ControlFlowGraph, Body()],
-    architecture: str = 'arm64',
+    architecture: Annotated[str, Body()] = 'arm64',
     binary_name: Annotated[str | None, Body()] = None,
     binary_sha256: Annotated[str | None, Body()] = None,
     id_token: Annotated[IDToken | None, Depends(authenticated_user)] = None,
@@ -92,7 +92,7 @@ async def add_function(
 async def search_function(
     request: Request,
     cfg: Annotated[ControlFlowGraph, Body()],
-    architecture: str = 'arm64',
+    architecture: Annotated[str, Body()] = 'arm64',
     top_n: Annotated[int, Body()] = 25,
 ):
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
