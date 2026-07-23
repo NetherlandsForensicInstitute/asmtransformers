@@ -218,7 +218,7 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
     anchor_rng = random.Random(seed)
     anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng)
 
-    model_name = data_folder.split('/')[-1]
+    model_name = data_folder.name
     output_file = f'{timestamp()}-{model_name}-{architecture}-{pool_size}-{static_pool}'
     repeat_seeds = [None] * repeats if seed is None else [seed + repeat + 1 for repeat in range(repeats)]
     aggregate_rows = []
@@ -264,7 +264,7 @@ def get_parser():
 if __name__ == '__main__':
     parser = get_parser()
     args = parser.parse_args()
-    model_name = args.input_path.split('/')[-1]
+    model_name = args.input_path.name
     output_file = f'{timestamp()}-{model_name}-{args.pool_size}-{args.static_pool}'
     results_per_architecture = defaultdict(int)
     architectures = ['arm64', 'amd64', 'riscv64', 'i386', 'all']
