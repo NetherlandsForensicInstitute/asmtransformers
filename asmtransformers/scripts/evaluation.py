@@ -187,7 +187,7 @@ def calculate_all(test_pools, output_path, output_file):
     sum_acc = 0
     final_mrr = 0.0
     final_acc = 0.0
-    with open(Path(output_path, output_file + '-results.csv'), 'w') as csvfile:
+    with Path(output_path, output_file + '-results.csv').open('w') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(('iteration', 'MRR', 'P@1'))
         for i, row in enumerate(tqdm(test_pools)):
@@ -236,7 +236,7 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
     if repeats > 1:
         mrrs = np.array([row[2] for row in aggregate_rows])
         accuracies = np.array([row[3] for row in aggregate_rows])
-        with open(Path(output_path, output_file + '-aggregate.csv'), 'w') as csvfile:
+        with Path(output_path, output_file + '-aggregate.csv').open('w') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(('repeat', 'seed', 'MRR', 'P@1'))
             writer.writerows(aggregate_rows)
@@ -250,8 +250,8 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
 
 def get_parser():
     parser = argparse.ArgumentParser(description='evaluation')
-    parser.add_argument('input_path', type=str, help='the path to the test data')
-    parser.add_argument('output_path', type=str, help='the path to write the final scores to')
+    parser.add_argument('input_path', type=Path, help='the path to the test data')
+    parser.add_argument('output_path', type=Path, help='the path to write the final scores to')
     parser.add_argument('--pool-size', type=int, help='the poolsize to pick the positive example from')
     parser.add_argument('--seed', type=int, default=4201, help='seed random evaluation sampling')
     parser.add_argument('--repeats', type=int, default=1, help='number of static-pool evaluation repeats')
@@ -289,7 +289,7 @@ if __name__ == '__main__':
         except ValueError as error:
             parser.error(str(error))
 
-    with open(Path(args.output_path, output_file + '-eval_per_architecture.csv'), 'w') as csvfile:
+    with Path(args.output_path, output_file + '-eval_per_architecture.csv').open('w') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(
             (
@@ -322,7 +322,7 @@ if __name__ == '__main__':
             )
         )
 
-    with open(Path(args.output_path, output_file + '-parameters.txt'), 'w') as file:
+    with Path(args.output_path, output_file + '-parameters.txt').open('w') as file:
         file.write(
             f'{args.input_path=},\n {args.output_path=},\n {args.pool_size=},\n {args.static_pool=},\n'
             f' {args.seed=},\n {args.repeats=},\n'
