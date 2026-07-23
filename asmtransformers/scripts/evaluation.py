@@ -323,7 +323,4 @@ if __name__ == '__main__':
         )
 
     with Path(args.output_path, output_file + '-parameters.txt').open('w') as file:
-        file.write(
-            f'{args.input_path=},\n {args.output_path=},\n {args.pool_size=},\n {args.static_pool=},\n'
-            f' {args.seed=},\n {args.repeats=},\n'
-        )
+        file.write('\n'.join(f'{key}={value!s}' for key, value in vars(args).items()))
