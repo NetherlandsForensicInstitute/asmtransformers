@@ -22,9 +22,16 @@ def rank2():
          'pos': {'embeddings': [4, 5, 6]},
          'negs': np.array([[7, 8, 9], [1, 2, 3]])}
 
-def test_calculate_one_rank(rank1, rank2):
+@pytest.fixture
+def rank3():
+    return {'anchor': {'embeddings': [0, 1, 2]},
+            'pos': {'embeddings': [7, 8, 9]},
+            'negs': np.array([[4, 5, 6], [1, 2, 3]])}
+
+def test_calculate_one_rank(rank1, rank2, rank3):
     assert calculate_one_rank(rank1) == 1
     assert calculate_one_rank(rank2) == 2
+    assert calculate_one_rank(rank3) == 3
 
 
 def test_calculate_all(rank1, rank2, tmp_path):

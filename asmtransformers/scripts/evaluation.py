@@ -174,7 +174,7 @@ def calculate_one_rank(row):
     # If we fall through the for loop without hitting the return statement,
     # we are worse than all the negatives. Our rank is therefore
     # equal to the number of negatives.
-    return len(similarities)
+    return len(similarities) + 1
 
 
 def calculate_all(test_pools, output_path, output_file):
