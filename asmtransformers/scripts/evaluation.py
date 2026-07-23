@@ -253,7 +253,7 @@ def get_parser():
     parser.add_argument('input_path', type=str, help='the path to the test data')
     parser.add_argument('output_path', type=str, help='the path to write the final scores to')
     parser.add_argument('--pool-size', type=int, help='the poolsize to pick the positive example from')
-    parser.add_argument('--seed', type=int, help='seed random evaluation sampling')
+    parser.add_argument('--seed', type=int, default=4201, help='seed random evaluation sampling')
     parser.add_argument('--repeats', type=int, default=1, help='number of static-pool evaluation repeats')
     parser.add_argument(
         '--static-pool', action='store_true', help='keep the negatives pool or refresh for every anchor-pos pair'
