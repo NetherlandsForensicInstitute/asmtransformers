@@ -1,3 +1,4 @@
+from collections.abc import Container
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -29,6 +30,21 @@ def resolve_auth(**auth):
             return _auth_unavailable
 
 
+def _resolve_user_id(user_id: str | None, id_token: IDToken | None, allowed: Container[str]):
+    if user_id and 'supplied' not in allowed:
+        raise HTTPException(400, 'field user_id not allowed by identification modes')
+
+    if id_token:
+        # regardless of supplied user_id, token is available, use that
+        user_id = id_token.sub
+
+    if not user_id and 'anonymous' not in allowed:
+        # neither supplied user_id nor a subject in a token, and anonymous access is not allowed
+        raise HTTPException(401, 'anonymous access is not allowed by identification modes')
+
+    return user_id
+
+
 async def connect_database(**connect) -> Database:
     match connect:
         case {'sqlite': name}:
@@ -48,6 +64,8 @@ async def lifespan(app: FastAPI):
     app.state.model = ASMEmbedder.from_pretrained(config.model or DEFAULT_MODEL)
 
     app.state.authenticate_user = resolve_auth(**config.auth)
+    # TODO: determine from config, apply stricter defaults
+    app.state.identification_modes = {'anonymous', 'supplied', 'oidc'}
 
     async with await connect_database(**config.database) as database:
         app.state.database = database
@@ -74,15 +92,19 @@ async def add_function(
     architecture: Annotated[str, Body()] = 'arm64',
     binary_name: Annotated[str | None, Body()] = None,
     binary_sha256: Annotated[str | None, Body()] = None,
+    user_id: Annotated[str | None, Body()] = None,
     id_token: Annotated[IDToken | None, Depends(authenticated_user)] = None,
 ):
+    # turn any methods of identifying who's adding something into a user_id (potentially raising errors for sources of
+    # identity that are not allowed by current configuration)
+    user_id = _resolve_user_id(user_id, id_token, allowed=request.app.state.identification_modes)
+
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
     await request.app.state.database.add_function(
         name,
         cfg,
         embedding,
-        # user_id is optional, use subject identifier from token if available
-        user_id=id_token.sub if id_token else None,
+        user_id=user_id,
         binary_name=binary_name,
         binary_sha256=binary_sha256,
     )
