@@ -75,9 +75,17 @@ class SQLiteDatabase(Database):
                 INSERT INTO
                     labels (function_id, label, user_id, binary_name, binary_sha256)
                 VALUES
-                    (?, ?, ?, ?, ?)
+                    (:function_id, :label, :user_id, :binary_name, :binary_sha256)
+                ON CONFLICT (function_id, user_id) DO UPDATE
+                    SET label = :label, binary_name = :binary_name, binary_sha256 = :binary_sha256
                 """,
-                (function_id, name, user_id, binary_name, binary_sha256),
+                {
+                    'function_id': function_id,
+                    'label': name,
+                    'user_id': user_id,
+                    'binary_name': binary_name,
+                    'binary_sha256': binary_sha256,
+                },
             )
 
             # return the function id for convenience
@@ -148,6 +156,8 @@ class PostgreSQLDatabase(Database):
                     labels (function_id, label, user_id, binary_name, binary_sha256)
                 VALUES
                     ($1, $2, $3, $4, $5)
+                ON CONFLICT (function_id, user_id) DO UPDATE
+                    SET label = $2, binary_name = $4, binary_sha256 = $5
                 """,
                 function_id,
                 name,
