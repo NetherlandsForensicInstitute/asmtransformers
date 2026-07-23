@@ -44,6 +44,21 @@ async def test_add_duplicate(database, functions, embeddings):
     )
 
 
+async def test_add_binary_fields_optional(database, functions, embeddings):
+    function = functions[-1]
+    embedding = embeddings[function['name']]
+
+    await database.add_function(function['name'], function['cfg'], embedding)
+    assert await database.search_function(embedding) == [
+        {
+            'function': function['name'],
+            'similarity': pytest.approx(1.0),
+            'binary_name': None,
+            'binary_sha256': None,
+        }
+    ]
+
+
 async def test_add_label_anonymous(database, functions, embeddings):
     function = functions[-1]
     embedding = embeddings[function['name']]
@@ -80,21 +95,6 @@ async def test_add_label_user_overwrite(database, functions, embeddings):
     results = await database.search_function(embedding)
     assert len(results) == 1
     assert {result['function'] for result in results} == {'new_name'}
-
-
-async def test_add_binary_fields_optional(database, functions, embeddings):
-    function = functions[-1]
-    embedding = embeddings[function['name']]
-
-    await database.add_function(function['name'], function['cfg'], embedding)
-    assert await database.search_function(embedding) == [
-        {
-            'function': function['name'],
-            'similarity': pytest.approx(1.0),
-            'binary_name': None,
-            'binary_sha256': None,
-        }
-    ]
 
 
 async def test_add_user_id(filled_database, functions, embeddings):
