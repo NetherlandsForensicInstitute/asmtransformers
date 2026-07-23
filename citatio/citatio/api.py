@@ -19,6 +19,16 @@ def _auth_unavailable(*args, **kwargs):
     raise HTTPException(503, 'Authentication unavailable')
 
 
+def resolve_auth(**auth):
+    match auth:
+        case {'oidc': oidc}:
+            # create an OIDC Authorization header → IDToken function from the configured authentication settings
+            return get_auth(**oidc)
+        case _:
+            # auth either not set or explicitly turned off, raise exception on presence of Authorization header
+            return _auth_unavailable
+
+
 async def connect_database(**connect) -> Database:
     match connect:
         case {'sqlite': name}:
@@ -37,12 +47,7 @@ async def lifespan(app: FastAPI):
 
     app.state.model = ASMEmbedder.from_pretrained(config.model or DEFAULT_MODEL)
 
-    if config.auth:
-        # create an OIDC Authorization header → IDToken function from the configured authentication settings
-        app.state.authenticate_user = get_auth(**config.auth)
-    else:
-        # config.auth either not set or explicitly turned off, raise exception on presence of Authorization header
-        app.state.authenticate_user = _auth_unavailable
+    app.state.authenticate_user = resolve_auth(**config.auth)
 
     async with await connect_database(**config.database) as database:
         app.state.database = database
