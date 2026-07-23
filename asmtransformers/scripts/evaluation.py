@@ -282,23 +282,43 @@ if __name__ == '__main__':
             )
             # right now we only report the MRRs and not the accuracies as they are usually zero
             mrrs = np.array([row[2] for row in aggregate_rows])
+            accs = np.array([row[3] for row in aggregate_rows])
             # if there are multiple repeats, there will be multiple mrrs so we take the mean of those
-            results_per_architecture[architecture] = np.mean(mrrs)
+            results_per_architecture[architecture] = (np.mean(mrrs), np.mean(accs))
 
         except ValueError as error:
             parser.error(str(error))
 
-    with open(os.path.join(args.output_path, output_file + '-mrr_per_architecture.csv'), 'w') as csvfile:
+    with open(os.path.join(args.output_path, output_file + '-eval_per_architecture.csv'), 'w') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(('model_name', 'arm64', 'amd64', 'riscv64', 'i386', 'all'))
+        writer.writerow(
+            (
+                'model_name',
+                'mrr_arm64',
+                'acc_arm64',
+                'mrr_amd64',
+                'acc_amd64',
+                'mrr_riscv64',
+                'acc_riscv64',
+                'mrr_i386',
+                'acc_i386',
+                'mrr_all',
+                'acc_all',
+            )
+        )
         writer.writerow(
             (
                 model_name,
-                results_per_architecture['arm64'],
-                results_per_architecture['amd64'],
-                results_per_architecture['riscv64'],
-                results_per_architecture['i386'],
-                results_per_architecture['all'],
+                results_per_architecture['arm64'][0],
+                results_per_architecture['arm64'][1],
+                results_per_architecture['amd64'][0],
+                results_per_architecture['amd64'][1],
+                results_per_architecture['riscv64'][0],
+                results_per_architecture['riscv64'][1],
+                results_per_architecture['i386'][0],
+                results_per_architecture['i386'][1],
+                results_per_architecture['all'][0],
+                results_per_architecture['all'][1],
             )
         )
 
