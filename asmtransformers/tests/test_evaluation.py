@@ -111,7 +111,7 @@ def dataset_extended():
                 '[[10, [dword ptr [rbp + -0x8]]]]',
                 '[[11, [xmmword ptr [rax]]]]',
                 # this one will be rejected based on label & cfgs being part of the anchor pos pairs
-                '[[12, [j 0x32]]]',
+                '[[1, [j 0x32]]]',
             ],
             'embeddings': [1, 2, 3, 4, 5, 6],
         }
@@ -126,3 +126,4 @@ def test_generate_neg_pool(pos_anchor_pairs, dataset_extended, rng):
     neg_embeddings = generate_neg_pool(5, dataset_extended, anchor_labels, anchor_cfgs, pos_cfgs, rng)
     # once again we check that neg embeddings are always in the same order
     assert neg_embeddings[0] == 2 and neg_embeddings[1] == 3 and neg_embeddings[-1] == 1
+    assert 6 not in neg_embeddings
