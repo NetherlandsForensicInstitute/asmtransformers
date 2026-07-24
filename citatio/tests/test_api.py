@@ -26,6 +26,21 @@ def test_add_function(client, functions):
 
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
+def test_add_function_supplied_user_id(client, functions):
+    function = {**functions[0], 'user_id': 'GreatDane'}
+    response = client.post('/api/v1/add', json=function)
+    assert response.status_code == 200
+
+
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
+def test_add_function_anonymous_not_allowed(monkeypatch, client, functions):
+    # disallow anonymous addition
+    monkeypatch.setattr(app.state, 'identification_modes', {'supplied'})
+    response = client.post('/api/v1/add', json=functions[0])
+    assert response.status_code == 401
+
+
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
 def test_search_known(client, functions):
     for function in functions:
         client.post('/api/v1/add', json=function)
