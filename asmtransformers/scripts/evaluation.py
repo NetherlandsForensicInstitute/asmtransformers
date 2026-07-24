@@ -64,7 +64,7 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, 
     return np.array(neg_embeddings)
 
 
-def generate_anchor_pos_pairs(dataset, rng):
+def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
     """generates anchor/positive pairs while rejecting identical CFGs."""
     labels = dataset['label']
     labels_with_indices = list(enumerate(labels))
@@ -87,7 +87,7 @@ def generate_anchor_pos_pairs(dataset, rng):
     # We use the entire dataset, but we generate random anchors/positves/negatives drawn from the
     # entire set instead.
 
-    while len(anchors) < 1000:  # Should take about an hour
+    while len(anchors) < num_pairs:  # Should take about an hour
         # Pick a random label
         label = rng.choice(labels)
         indexes = label2index[label]
@@ -104,6 +104,11 @@ def generate_anchor_pos_pairs(dataset, rng):
         # This could be due to difference in compilers/ISA between x86_64 and ARM64.
         if anchor['cfg'] == pos['cfg']:
             # same content, reject
+            rejected += 1
+            continue
+        if anchor['cfg'] in anchor_cfgs:
+            # this cfg has already been used as anchor
+            # it can still be used as positive for another anchor with the same label
             rejected += 1
             continue
 
