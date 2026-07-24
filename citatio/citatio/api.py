@@ -69,7 +69,7 @@ async def add_function(
     architecture: str = 'arm64',
     binary_name: Annotated[str | None, Body()] = None,
     binary_sha256: Annotated[str | None, Body()] = None,
-    id_token: IDToken | None = Depends(authenticated_user),  # noqa: B008 (not a function call, just the FastAPI way™)
+    id_token: Annotated[IDToken | None, Depends(authenticated_user)] = None,
 ):
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
     await request.app.state.database.add_function(
