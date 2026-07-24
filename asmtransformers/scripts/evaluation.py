@@ -79,6 +79,7 @@ def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
     anchor_labels = set()
     anchor_cfgs = set()
     pos_cfgs = set()
+    pair_cfgs = set()
     rejected = 0
 
     # If you are not evaluating on the entire data set (which we are not, because it's so big),
@@ -87,7 +88,11 @@ def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
     # We use the entire dataset, but we generate random anchors/positves/negatives drawn from the
     # entire set instead.
 
-    while len(anchors) < num_pairs:  # Should take about an hour
+    counter = 0
+    while len(anchors) < num_pairs: # Should take about an hour
+        counter += 1
+        if counter == 100 * num_pairs:
+            print(f'{len(anchors)} pos-anchor pairs collected; {rejected} rejected; {counter} tried; possibly not enough suitable pos-anchor pairs in dataset')
         # Pick a random label
         label = rng.choice(labels)
         indexes = label2index[label]
@@ -106,9 +111,9 @@ def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
             # same content, reject
             rejected += 1
             continue
-        if anchor['cfg'] in anchor_cfgs:
-            # this cfg has already been used as anchor
-            # it can still be used as positive for another anchor with the same label
+        if (anchor['cfg'], pos['cfg']) in pair_cfgs:
+            # we have already selected a pair that consists of these exact cfgs
+            # either by selecting these exact pairs or because the cfgs occur more often in the dataset
             rejected += 1
             continue
 
@@ -117,6 +122,7 @@ def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
         anchor_labels.add(anchor['label'])
         anchor_cfgs.add(anchor['cfg'])
         pos_cfgs.add(pos['cfg'])
+        pair_cfgs.add((anchor['cfg'], pos['cfg']))
 
     return anchors, positives, anchor_labels, anchor_cfgs, pos_cfgs
 
@@ -221,7 +227,7 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
     print('\ngenerate test_pools\n')
     test_functions = load_test_functions(data_folder, architecture)
     anchor_rng = random.Random(seed)
-    anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng)
+    anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng, num_pairs=1000)
 
     model_name = data_folder.name
     output_file = f'{timestamp()}-{model_name}-{architecture}-{pool_size}-{static_pool}'
