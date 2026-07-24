@@ -89,10 +89,13 @@ def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
     # entire set instead.
 
     counter = 0
-    while len(anchors) < num_pairs: # Should take about an hour
+    while len(anchors) < num_pairs:  # Should take about an hour
         counter += 1
         if counter == 100 * num_pairs:
-            print(f'{len(anchors)} pos-anchor pairs collected; {rejected} rejected; {counter} tried; possibly not enough suitable pos-anchor pairs in dataset')
+            print(
+                f'{len(anchors)} pos-anchor pairs collected; {rejected} rejected; {counter} tried; '
+                f'possibly not enough suitable pos-anchor pairs in dataset'
+            )
         # Pick a random label
         label = rng.choice(labels)
         indexes = label2index[label]
