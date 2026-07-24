@@ -88,4 +88,4 @@ lint.ignore = [
     "UP015",
 ]
 lint.isort.lines-after-imports = 2
-lint.select = ["A", "B", "COM", "C4", "DTZ", "E", "F", "FAST", "I", "N", "Q", "SIM", "UP"]
+lint.select = ["A", "B", "COM", "C4", "DTZ", "E", "F", "FAST", "I", "N", "Q", "SIM", "RUF100", "UP"]
