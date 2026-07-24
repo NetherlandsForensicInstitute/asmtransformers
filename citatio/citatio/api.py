@@ -14,11 +14,6 @@ from citatio.models import ControlFlowGraph
 DEFAULT_MODEL = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
 
 
-def _auth_unavailable(*args, **kwargs):
-    # utility callback that *always* raises a 503 error stating that authentication is not supported
-    raise HTTPException(503, 'Authentication unavailable')
-
-
 def resolve_auth(**auth):
     match auth:
         case {'oidc': oidc}:
@@ -26,7 +21,10 @@ def resolve_auth(**auth):
             return get_auth(**oidc)
         case _:
             # auth either not set or explicitly turned off, raise exception on presence of Authorization header
-            return _auth_unavailable
+            def _oidc_unavailable(*args, **kwargs):
+                raise HTTPException(503, 'Authentication unavailable')
+
+            return _oidc_unavailable
 
 
 async def connect_database(**connect) -> Database:
