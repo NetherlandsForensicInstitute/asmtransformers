@@ -1,6 +1,8 @@
 import json
 
-from citatio.models import Block, ControlFlowGraph
+import numpy as np
+
+from citatio.models import Block, ControlFlowGraph, FakeEmbedder
 
 
 def test_empty():
@@ -41,3 +43,13 @@ def test_back_and_forth():
     )
 
     assert cfg == ControlFlowGraph.from_str(json.dumps(list(cfg)))
+
+
+def test_fake_embedder():
+    data = '[[0, ["add x1,x1", "ret"]], [12, ["ret"]], [34, ["b 0"]]]'
+    embedder = FakeEmbedder()
+
+    assert len(embedder.encode(data)) == 768
+    assert np.allclose(embedder.encode(data), embedder.encode(data, architecture='mips'))
+    assert np.allclose(FakeEmbedder().encode(data), embedder.encode(data))
+    assert not np.allclose(embedder.encode('other data'), embedder.encode(data))
