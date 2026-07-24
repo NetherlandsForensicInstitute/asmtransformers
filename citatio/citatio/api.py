@@ -3,34 +3,59 @@ from typing import Annotated
 
 import confidence
 from asmtransformers.models.embedder import ASMEmbedder
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.params import Body
+from fastapi_oidc import IDToken, get_auth
 
-from citatio.db import PostgreSQLDatabase, SQLiteDatabase
+from citatio.db import Database, PostgreSQLDatabase, SQLiteDatabase
 from citatio.models import ControlFlowGraph
 
 
 DEFAULT_MODEL = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
 
 
+def _auth_unavailable(*args, **kwargs):
+    # utility callback that *always* raises a 503 error stating that authentication is not supported
+    raise HTTPException(503, 'Authentication unavailable')
+
+
+async def connect_database(**connect) -> Database:
+    match connect:
+        case {'sqlite': name}:
+            # explicit sqlite name to connect to, use SQLiteDatabase
+            return await SQLiteDatabase.connect(name)
+        case {} if connect:
+            # database settings *not* mentioning sqlite, use PostgreSQLDatabase
+            return await PostgreSQLDatabase.connect(**connect)
+        case _:
+            raise ValueError('missing database configuration')
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     config = confidence.load_name('citatio')
 
-    match config:
-        case {'database.sqlite': name}:
-            # explicit sqlite name to connect to, use SQLiteDatabase
-            database = await SQLiteDatabase.connect(name)
-        case {'database': connect}:
-            # database settings *not* mentioning sqlite, use PostgreSQLDatabase
-            database = await PostgreSQLDatabase.connect(**connect)
-        case _:
-            raise ValueError(f'missing database configuration, available: {config}')
-
     app.state.model = ASMEmbedder.from_pretrained(config.model or DEFAULT_MODEL)
-    async with database:
+
+    if config.auth:
+        # create an OIDC Authorization header → IDToken function from the configured authentication settings
+        app.state.authenticate_user = get_auth(**config.auth)
+    else:
+        # config.auth either not set or explicitly turned off, raise exception on presence of Authorization header
+        app.state.authenticate_user = _auth_unavailable
+
+    async with await connect_database(**config.database) as database:
         app.state.database = database
         yield
+
+
+async def authenticated_user(request: Request) -> IDToken | None:
+    if auth := request.headers.get('Authorization'):
+        # authorization header available, let auth create a token from it
+        return request.app.state.authenticate_user(auth)
+    else:
+        # anonymous request, no token
+        return None
 
 
 app = FastAPI(lifespan=lifespan)
@@ -42,15 +67,17 @@ async def add_function(
     name: Annotated[str, Body()],
     cfg: Annotated[ControlFlowGraph, Body()],
     architecture: str = 'arm64',
-    binary_name: Annotated[str, Body()] = None,
-    binary_sha256: Annotated[str, Body()] = None,
+    binary_name: Annotated[str | None, Body()] = None,
+    binary_sha256: Annotated[str | None, Body()] = None,
+    id_token: Annotated[IDToken | None, Depends(authenticated_user)] = None,
 ):
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
     await request.app.state.database.add_function(
         name,
         cfg,
         embedding,
-        user_id=None,  # TODO: use authenticated user id when available
+        # user_id is optional, use subject identifier from token if available
+        user_id=id_token.sub if id_token else None,
         binary_name=binary_name,
         binary_sha256=binary_sha256,
     )
