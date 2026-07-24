@@ -64,7 +64,7 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, 
     return np.array(neg_embeddings)
 
 
-def generate_anchor_pos_pairs(dataset, rng):
+def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
     """generates anchor/positive pairs while rejecting identical CFGs."""
     labels = dataset['label']
     labels_with_indices = list(enumerate(labels))
@@ -79,6 +79,7 @@ def generate_anchor_pos_pairs(dataset, rng):
     anchor_labels = set()
     anchor_cfgs = set()
     pos_cfgs = set()
+    pair_cfgs = set()
     rejected = 0
 
     # If you are not evaluating on the entire data set (which we are not, because it's so big),
@@ -87,7 +88,14 @@ def generate_anchor_pos_pairs(dataset, rng):
     # We use the entire dataset, but we generate random anchors/positves/negatives drawn from the
     # entire set instead.
 
-    while len(anchors) < 1000:  # Should take about an hour
+    counter = 0
+    while len(anchors) < num_pairs:  # Should take about an hour
+        counter += 1
+        if counter == 100 * num_pairs:
+            print(
+                f'{len(anchors)} pos-anchor pairs collected; {rejected} rejected; {counter} tried; '
+                f'possibly not enough suitable pos-anchor pairs in dataset; possibly stuck in loop'
+            )
         # Pick a random label
         label = rng.choice(labels)
         indexes = label2index[label]
@@ -106,12 +114,18 @@ def generate_anchor_pos_pairs(dataset, rng):
             # same content, reject
             rejected += 1
             continue
+        if (anchor['cfg'], pos['cfg']) in pair_cfgs:
+            # we have already selected a pair that consists of these exact cfgs
+            # either by selecting these exact pairs or because the cfgs occur more often in the dataset
+            rejected += 1
+            continue
 
         anchors.append(anchor)
         positives.append(pos)
         anchor_labels.add(anchor['label'])
         anchor_cfgs.add(anchor['cfg'])
         pos_cfgs.add(pos['cfg'])
+        pair_cfgs.add((anchor['cfg'], pos['cfg']))
 
     return anchors, positives, anchor_labels, anchor_cfgs, pos_cfgs
 
@@ -171,10 +185,10 @@ def calculate_one_rank(row):
             # Our rank is equal to the number of items that are better than us, plus one.
             return i + 1
 
-    # If we fall through the for loop without hitting the return statement,
-    # we are worse than all the negatives. Our rank is therefore
-    # equal to the number of negatives.
-    return len(similarities)
+    # If we reach the bottom of the loop without hitting the return statement,
+    # the positive example has a lower cosine similarity to the anchor than all the negatives.
+    # Our rank is therefore equal to the number of negatives plus 1.
+    return len(negs) + 1
 
 
 def calculate_all(test_pools, output_path, output_file):
@@ -216,7 +230,7 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
     print('\ngenerate test_pools\n')
     test_functions = load_test_functions(data_folder, architecture)
     anchor_rng = random.Random(seed)
-    anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng)
+    anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng, num_pairs=1000)
 
     model_name = data_folder.name
     output_file = f'{timestamp()}-{model_name}-{architecture}-{pool_size}-{static_pool}'
