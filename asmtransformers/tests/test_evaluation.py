@@ -1,11 +1,13 @@
+import random
+
 import numpy as np
 import pytest
+from datasets import Dataset
 
 from scripts import evaluation
 from scripts.evaluation import (
     calculate_all,
     calculate_one_rank,
-    generate_triplets,
     generate_anchor_pos_pairs,
     generate_neg_pool
 )
@@ -44,3 +46,34 @@ def test_calculate_all(rank1, rank2, tmp_path):
     # both ranked second place
     test_pools = [rank2, rank2]
     assert calculate_all(test_pools, tmp_path, 'test_calculate_all.csv') == (0.5, 0)
+
+
+@pytest.fixture
+def dataset():
+    # same label means potential pair
+    return Dataset.from_dict({'label' : ['return', 'return', 'jump', 'jump', 'move', 'move', 'add', 'add'],
+            'cfg': ['ret',
+                    'ret',
+                    'j 0x32',
+                    'c.j 0x02',
+                    'c.mv a3,a5',
+                    'c.mv s8,a5',
+                    'c.addi4spn s0,sp,0x30',
+                    'addi a5,s0,-0xb0'
+                    ]})
+
+@pytest.fixture
+def rng():
+    return random.Random(10)
+
+
+def test_generate_anchor_pos_pairs(dataset, rng):
+    anchors, positives, anchor_labels, anchor_cfgs, pos_cfgs = generate_anchor_pos_pairs(dataset, rng, num_pairs=3)
+    print(anchors)
+    print(positives)
+    assert len(anchors) == 3
+    assert anchors[0] == {'label': 'add', 'cfg': 'addi a5,s0,-0xb0'}
+    # make sure the anchors and positives of the same pair have the same index
+    assert anchors[0]['label'] == 'add' and positives[0]['label'] == 'add'
+    # assert pairs are always in the same order (this is more for continuity than for passing the test right now)
+    assert anchors[0]['label'] == 'add' and anchors[1]['label'] == 'move' and anchors[2]['label'] == 'jump'
