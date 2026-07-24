@@ -1,4 +1,3 @@
-from collections.abc import Container
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -28,21 +27,6 @@ def resolve_auth(**auth):
         case _:
             # auth either not set or explicitly turned off, raise exception on presence of Authorization header
             return _auth_unavailable
-
-
-def _resolve_user_id(user_id: str | None, id_token: IDToken | None, allowed: Container[str]):
-    if user_id and 'supplied' not in allowed:
-        raise HTTPException(400, 'field user_id not allowed by identification modes')
-
-    if id_token:
-        # regardless of supplied user_id, token is available, use that
-        user_id = id_token.sub
-
-    if not user_id and 'anonymous' not in allowed:
-        # neither supplied user_id nor a subject in a token, and anonymous access is not allowed
-        raise HTTPException(401, 'anonymous access is not allowed by identification modes')
-
-    return user_id
 
 
 async def connect_database(**connect) -> Database:
@@ -81,6 +65,24 @@ async def authenticated_user(request: Request) -> IDToken | None:
         return None
 
 
+def identify_user(
+    request: Request,
+    user_id: Annotated[str | None, Body()] = None,
+    id_token: Annotated[IDToken | None, Depends(authenticated_user)] = None,
+):
+    allowed = request.app.state.identification_modes
+
+    match user_id, id_token:
+        case str(), None if 'supplied' in allowed:
+            return user_id
+        case None, IDToken() if 'oidc' in allowed:
+            return id_token.sub
+        case None, None if 'anonymous' in allowed:
+            return None
+
+    raise HTTPException(401, {'error': 'no single identifiable user in allowed modes', 'allowed': sorted(allowed)})
+
+
 app = FastAPI(lifespan=lifespan)
 
 
@@ -92,13 +94,8 @@ async def add_function(
     architecture: Annotated[str, Body()] = 'arm64',
     binary_name: Annotated[str | None, Body()] = None,
     binary_sha256: Annotated[str | None, Body()] = None,
-    user_id: Annotated[str | None, Body()] = None,
-    id_token: Annotated[IDToken | None, Depends(authenticated_user)] = None,
+    user_id: Annotated[str | None, Depends(identify_user)] = None,
 ):
-    # turn any methods of identifying who's adding something into a user_id (potentially raising errors for sources of
-    # identity that are not allowed by current configuration)
-    user_id = _resolve_user_id(user_id, id_token, allowed=request.app.state.identification_modes)
-
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
     await request.app.state.database.add_function(
         name,
