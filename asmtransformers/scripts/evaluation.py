@@ -94,7 +94,7 @@ def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
         if counter == 100 * num_pairs:
             print(
                 f'{len(anchors)} pos-anchor pairs collected; {rejected} rejected; {counter} tried; '
-                f'possibly not enough suitable pos-anchor pairs in dataset'
+                f'possibly not enough suitable pos-anchor pairs in dataset; possibly stuck in loop'
             )
         # Pick a random label
         label = rng.choice(labels)
@@ -185,9 +185,9 @@ def calculate_one_rank(row):
             # Our rank is equal to the number of items that are better than us, plus one.
             return i + 1
 
-    # If we fall through the for loop without hitting the return statement,
-    # we are worse than all the negatives. Our rank is therefore
-    # equal to the number of negatives.
+    # If we reach the bottom of the loop without hitting the return statement,
+    # the positive example has a lower cosine similarity to to the anchor than all the negatives.
+    # Our rank is therefore equal to the number of negatives plus 1.
     return len(similarities) + 1
 
 
