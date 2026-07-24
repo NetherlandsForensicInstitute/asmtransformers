@@ -188,7 +188,7 @@ def calculate_one_rank(row):
     # If we reach the bottom of the loop without hitting the return statement,
     # the positive example has a lower cosine similarity to the anchor than all the negatives.
     # Our rank is therefore equal to the number of negatives plus 1.
-    return len(similarities) + 1
+    return len(negs) + 1
 
 
 def calculate_all(test_pools, output_path, output_file):

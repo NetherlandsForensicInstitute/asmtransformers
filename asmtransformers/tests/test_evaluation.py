@@ -29,7 +29,7 @@ def rank2():
 
 
 @pytest.fixture
-    # pos [7, 8, 9] is further away from anchor [0, 1, 2] than both negs, and is therefore ranked 3rd/last
+# pos [7, 8, 9] is further away from anchor [0, 1, 2] than both negs, and is therefore ranked 3rd/last
 def rank3():
     return {
         'anchor': {'embeddings': [0, 1, 2]},
@@ -47,13 +47,13 @@ def test_calculate_one_rank(rank1, rank2, rank3):
 def test_calculate_all(rank1, rank2, tmp_path):
     # both ranked first
     test_pools = [rank1, rank1]
-    assert calculate_all(test_pools, tmp_path, 'test_calculate_all.csv') == (1, 1)
+    assert calculate_all(test_pools, tmp_path, 'test_calculate_all_1.csv') == (1, 1)
     # one ranked first, one ranked second
     test_pools = [rank1, rank2]
-    assert calculate_all(test_pools, tmp_path, 'test_calculate_all.csv') == (0.75, 1 / 2)
+    assert calculate_all(test_pools, tmp_path, 'test_calculate_all_0_75.csv') == (0.75, 1 / 2)
     # both ranked second place
     test_pools = [rank2, rank2]
-    assert calculate_all(test_pools, tmp_path, 'test_calculate_all.csv') == (0.5, 0)
+    assert calculate_all(test_pools, tmp_path, 'test_calculate_all_0_5.csv') == (0.5, 0)
 
 
 @pytest.fixture
@@ -62,15 +62,16 @@ def dataset():
     return Dataset.from_dict(
         {
             'label': ['return', 'return', 'jump', 'jump', 'move', 'move', 'add', 'add'],
+            # these are not full cfgs, but single instructions. this is a simplification for testing's sake
             'cfg': [
-                'ret',
-                'ret',
-                'j 0x32',
-                'c.j 0x02',
-                'c.mv a3,a5',
-                'c.mv s8,a5',
-                'c.addi4spn s0,sp,0x30',
-                'addi a5,s0,-0xb0',
+                '[[0, [ret]]]',
+                '[[0, [ret]]]',
+                '[[1, [j 0x32]]]',
+                '[[2, [c.j 0x02]]]',
+                '[[3, [c.mv a3,a5]]]',
+                '[[4, [c.mv s8,a5]]]',
+                '[[5, [c.addi4spn s0,sp,0x30]]]',
+                '[[6, [addi a5,s0,-0xb0]]]',
             ],
         }
     )
@@ -90,7 +91,7 @@ def pos_anchor_pairs(dataset, rng):
 def test_generate_anchor_pos_pairs(pos_anchor_pairs):
     anchors, positives, _, _, _ = pos_anchor_pairs
     assert len(anchors) == 3
-    assert anchors[0] == {'label': 'add', 'cfg': 'addi a5,s0,-0xb0'}
+    assert anchors[0] == {'label': 'add', 'cfg': '[[6, [addi a5,s0,-0xb0]]]'}
     # make sure the anchors and positives of the same pair have the same index
     assert anchors[0]['label'] == 'add' and positives[0]['label'] == 'add'
     # assert pairs are always in the same order (this is more for continuity than for passing the test right now)
@@ -102,13 +103,15 @@ def dataset_extended():
     return Dataset.from_dict(
         {
             'label': ['a', 'b', 'c', 'd', 'e', 'jump'],
+            # these are not full cfgs, but single instructions. this is a simplification for testing's sake
             'cfg': [
-                'rax, rbx',
-                'rsp,-0x10',
-                '[rbp+-0x8]',
-                'dword ptr [rbp + -0x8]',
-                'xmmword   ptr [rax]',
-                'j 0x32',  # this one will be rejected based on label & cfgs being part of the anchor pos pairs
+                '[[7, [rax, rbx]]]',
+                '[[8, [rsp,-0x10]]]',
+                '[[9, [rbp+-0x8]]]',
+                '[[10, [dword ptr [rbp + -0x8]]]]',
+                '[[11, [xmmword ptr [rax]]]]',
+                # this one will be rejected based on label & cfgs being part of the anchor pos pairs
+                '[[12, [j 0x32]]]',
             ],
             'embeddings': [1, 2, 3, 4, 5, 6],
         }
