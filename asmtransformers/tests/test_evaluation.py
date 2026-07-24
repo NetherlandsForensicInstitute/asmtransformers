@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from datasets import Dataset
 
-from scripts.evaluation import calculate_all, calculate_one_rank, generate_anchor_pos_pairs
+from scripts.evaluation import calculate_all, calculate_one_rank, generate_anchor_pos_pairs, generate_neg_pool
 
 
 @pytest.fixture
@@ -77,13 +77,45 @@ def rng():
     return random.Random(10)
 
 
-def test_generate_anchor_pos_pairs(dataset, rng):
+@pytest.fixture
+def pos_anchor_pairs(dataset, rng):
     anchors, positives, anchor_labels, anchor_cfgs, pos_cfgs = generate_anchor_pos_pairs(dataset, rng, num_pairs=3)
-    print(anchors)
-    print(positives)
+    return anchors, positives, anchor_labels, anchor_cfgs, pos_cfgs
+
+
+def test_generate_anchor_pos_pairs(pos_anchor_pairs):
+    anchors, positives, _, _, _ = pos_anchor_pairs
     assert len(anchors) == 3
     assert anchors[0] == {'label': 'add', 'cfg': 'addi a5,s0,-0xb0'}
     # make sure the anchors and positives of the same pair have the same index
     assert anchors[0]['label'] == 'add' and positives[0]['label'] == 'add'
     # assert pairs are always in the same order (this is more for continuity than for passing the test right now)
     assert anchors[0]['label'] == 'add' and anchors[1]['label'] == 'move' and anchors[2]['label'] == 'jump'
+
+
+@pytest.fixture
+def dataset_extended():
+    return Dataset.from_dict(
+        {
+            'label': ['a', 'b', 'c', 'd', 'e', 'jump'],
+            'cfg': [
+                'rax, rbx',
+                'rsp,-0x10',
+                '[rbp+-0x8]',
+                'dword ptr [rbp + -0x8]',
+                'xmmword   ptr [rax]',
+                'j 0x32',  # this one will be rejected based on label & cfgs being part of the anchor pos pairs
+            ],
+            'embeddings': [1, 2, 3, 4, 5, 6],
+        }
+    )
+
+
+def test_generate_neg_pool(pos_anchor_pairs, dataset_extended, rng):
+    _, _, anchor_labels, anchor_cfgs, pos_cfgs = pos_anchor_pairs
+    # we can't request for a pool size 6, because there are only 5 valid negatives in dataset_extended
+    with pytest.raises(ValueError):
+        generate_neg_pool(6, dataset_extended, anchor_labels, anchor_cfgs, pos_cfgs, rng)
+    neg_embeddings = generate_neg_pool(5, dataset_extended, anchor_labels, anchor_cfgs, pos_cfgs, rng)
+    # once again we check that neg embeddings are always in the same order
+    assert neg_embeddings[0] == 2 and neg_embeddings[1] == 3 and neg_embeddings[-1] == 1
