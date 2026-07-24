@@ -9,6 +9,7 @@ from scripts.evaluation import calculate_all, calculate_one_rank, generate_ancho
 
 @pytest.fixture
 def rank1():
+    # pos [1, 2, 3] is closer to anchor [0, 1, 2] than negs, therefore it is ranked 1
     return {
         'anchor': {'embeddings': [0, 1, 2]},
         'pos': {'embeddings': [1, 2, 3]},
@@ -18,6 +19,8 @@ def rank1():
 
 @pytest.fixture
 def rank2():
+    # pos [4, 5, 6] is closer to anchor [0, 1, 2] than [7, 8, 9], but further than [1, 2, 3]
+    # therefore the positive is ranked 2nd
     return {
         'anchor': {'embeddings': [0, 1, 2]},
         'pos': {'embeddings': [4, 5, 6]},
@@ -26,6 +29,7 @@ def rank2():
 
 
 @pytest.fixture
+    # pos [7, 8, 9] is further away from anchor [0, 1, 2] than both negs, and is therefore ranked 3rd/last
 def rank3():
     return {
         'anchor': {'embeddings': [0, 1, 2]},
