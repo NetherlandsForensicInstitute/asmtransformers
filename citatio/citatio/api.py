@@ -52,9 +52,10 @@ async def lifespan(app: FastAPI):
 async def authenticated_user(request: Request) -> IDToken | None:
     if auth := request.headers.get('Authorization'):
         # authorization header available, let auth create a token from it
+        # NB: this requires the token to be valid if it's supplied
         return request.app.state.authenticate_user(auth)
     else:
-        # anonymous request, no token
+        # anonymous request, no token (this is explicitly allowed)
         return None
 
 
