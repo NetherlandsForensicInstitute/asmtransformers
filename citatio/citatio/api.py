@@ -113,6 +113,7 @@ async def add_function(
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
     await request.app.state.database.add_function(
         name,
+        architecture,
         cfg,
         embedding,
         user_id=user_id,
@@ -128,5 +129,5 @@ async def search_function(
     architecture: Annotated[str, Body()] = 'arm64',
     top_n: Annotated[int, Body()] = 25,
 ):
-    embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
+    embedding = request.app.state.model.encode(ControlFlowGraph.to_str(cfg), architecture=architecture)
     return await request.app.state.database.search_function(embedding, top_n)

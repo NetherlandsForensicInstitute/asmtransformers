@@ -6,6 +6,11 @@ import numpy as np
 import sqlite_vec
 from pgvector.asyncpg import register_vector
 
+from citatio.models import ControlFlowGraph
+
+
+SUPPORTED_ARCHITECTURES = frozenset({'amd64', 'arm64', 'i386', 'riscv64'})
+
 
 class Database:
     async def __aenter__(self): ...
@@ -15,8 +20,9 @@ class Database:
     async def add_function(
         self,
         name: str,
+        architecture: str,
         cfg: dict[int, list[str]],
-        embedding: np.array,
+        embedding: np.ndarray,
         *,
         user_id: str | None = None,
         binary_name: str | None = None,
@@ -51,11 +57,14 @@ class SQLiteDatabase(Database):
         self.connection.close()
         self.connection = None
 
-    async def _insert_or_get_function(self, cursor, cfg, embedding):
+    async def _insert_or_get_function(self, cursor, architecture, cfg, embedding):
         # coerce cfg to str for database storage (keep the cfg type responsible for that (de)serialization)
-        parameters = (str(cfg),)
+        cfg = ControlFlowGraph.to_str(cfg)
         try:
-            cursor.execute("""INSERT INTO functions (cfg) VALUES (?) RETURNING id""", parameters)
+            cursor.execute(
+                """INSERT INTO functions (architecture, cfg) VALUES (?, ?) RETURNING id""",
+                (architecture, cfg),
+            )
             function_id = cursor.fetchone()[0]
             cursor.execute(
                 """INSERT INTO embeddings (function_id, embedding) VALUES (?, ?)""",
@@ -63,15 +72,28 @@ class SQLiteDatabase(Database):
             )
         except sqlite3.IntegrityError:
             # cfg already present, select its id
-            cursor.execute("""SELECT id FROM functions WHERE cfg = ?""", parameters)
+            cursor.execute("""SELECT id FROM functions WHERE cfg = ?""", (cfg,))
             function_id = cursor.fetchone()[0]
 
         return function_id
 
-    async def add_function(self, name, cfg, embedding, *, user_id=None, binary_name=None, binary_sha256=None):
+    async def add_function(
+        self,
+        name,
+        architecture,
+        cfg,
+        embedding,
+        *,
+        user_id=None,
+        binary_name=None,
+        binary_sha256=None,
+    ):
+        if architecture not in SUPPORTED_ARCHITECTURES:
+            raise ValueError(f'unsupported architecture: {architecture}')
+
         with self.connection:
             cursor = self.connection.cursor()
-            function_id = await self._insert_or_get_function(cursor, cfg, embedding)
+            function_id = await self._insert_or_get_function(cursor, architecture, cfg, embedding)
             cursor.execute(
                 """
                 INSERT INTO
@@ -140,16 +162,30 @@ class PostgreSQLDatabase(Database):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.connection.close()
 
-    async def add_function(self, name, cfg, embedding, *, user_id=None, binary_name=None, binary_sha256=None):
+    async def add_function(
+        self,
+        name,
+        architecture,
+        cfg,
+        embedding,
+        *,
+        user_id=None,
+        binary_name=None,
+        binary_sha256=None,
+    ):
+        if architecture not in SUPPORTED_ARCHITECTURES:
+            raise ValueError(f'unsupported architecture: {architecture}')
+
         async with self.connection.transaction():
             function_id = await self.connection.fetchval(
                 # use PostgreSQL's conflict resolution to issue an update-or-get
                 # NB: the conflict resolution update is idempotent, but needed to make sure RETURNING id works
                 """
-                INSERT INTO functions (cfg, embedding) VALUES ($1, $2)
+                INSERT INTO functions (architecture, cfg, embedding) VALUES ($1, $2, $3)
                 ON CONFLICT (cfg) DO UPDATE SET cfg = EXCLUDED.cfg RETURNING id
                 """,
-                str(cfg),
+                architecture,
+                ControlFlowGraph.to_str(cfg),
                 embedding,
             )
             await self.connection.execute(

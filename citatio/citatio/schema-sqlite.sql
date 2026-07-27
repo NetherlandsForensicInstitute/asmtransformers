@@ -8,6 +8,7 @@
 
 CREATE TABLE IF NOT EXISTS functions (
     id INTEGER PRIMARY KEY,
+    architecture TEXT NOT NULL CHECK (architecture IN ('amd64', 'arm64', 'i386', 'riscv64')),
     -- UNIQUE constraint allows using an error trigger as a 'cfg is already known' signal
     cfg TEXT NOT NULL UNIQUE
 );
