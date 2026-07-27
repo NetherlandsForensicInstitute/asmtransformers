@@ -8,7 +8,7 @@ from fastapi.params import Body
 from fastapi_oidc import IDToken, get_auth
 
 from citatio.db import Database, PostgreSQLDatabase, SQLiteDatabase
-from citatio.models import ControlFlowGraph
+from citatio.models import ControlFlowGraph, TestEmbedder
 
 
 SUPPORTED_AUTH_MODES = frozenset({'anonymous', 'client_supplied', 'oidc'})
@@ -35,6 +35,15 @@ def resolve_auth(**auth):
             return allowed, _oidc_unavailable
 
 
+def load_model(model):
+    match model:
+        # TODO: this is effectively test code, can we patch that at test time?
+        case ':test:':
+            return TestEmbedder()
+        case _:
+            return ASMEmbedder.from_pretrained(model)
+
+
 async def connect_database(**connect) -> Database:
     match connect:
         case {'sqlite': name}:
@@ -51,7 +60,7 @@ async def connect_database(**connect) -> Database:
 async def lifespan(app: FastAPI):
     config = confidence.load_name('citatio')
 
-    app.state.model = ASMEmbedder.from_pretrained(config.model or DEFAULT_MODEL)
+    app.state.model = load_model(config.model or DEFAULT_MODEL)
 
     app.state.identification_modes, app.state.authenticate_user = resolve_auth(**config.auth)
 
