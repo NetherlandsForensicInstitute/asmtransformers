@@ -11,20 +11,28 @@ from citatio.db import Database, PostgreSQLDatabase, SQLiteDatabase
 from citatio.models import ControlFlowGraph
 
 
+SUPPORTED_AUTH_MODES = frozenset({'anonymous', 'client_supplied', 'oidc'})
 DEFAULT_MODEL = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
 
 
 def resolve_auth(**auth):
+    # collect enabled auth modes from keywords; a truthy value enables the mode
+    allowed = {mode for mode, enabled in auth.items() if enabled}
+    if not allowed:
+        raise ValueError('no enabled auth modes')
+    if unsupported := (allowed - SUPPORTED_AUTH_MODES):
+        raise ValueError(f'unsupported auth mode: {", ".join(unsupported)}')
+
     match auth:
         case {'oidc': oidc}:
             # create an OIDC Authorization header → IDToken function from the configured authentication settings
-            return get_auth(**oidc)
+            return allowed, get_auth(**oidc)
         case _:
             # auth either not set or explicitly turned off, raise exception on presence of Authorization header
             def _oidc_unavailable(*args, **kwargs):
                 raise HTTPException(503, 'Authentication unavailable')
 
-            return _oidc_unavailable
+            return allowed, _oidc_unavailable
 
 
 async def connect_database(**connect) -> Database:
@@ -45,9 +53,7 @@ async def lifespan(app: FastAPI):
 
     app.state.model = ASMEmbedder.from_pretrained(config.model or DEFAULT_MODEL)
 
-    app.state.authenticate_user = resolve_auth(**config.auth)
-    # TODO: determine from config, apply stricter defaults
-    app.state.identification_modes = {'anonymous', 'supplied', 'oidc'}
+    app.state.identification_modes, app.state.authenticate_user = resolve_auth(**config.auth)
 
     async with await connect_database(**config.database) as database:
         app.state.database = database
@@ -72,7 +78,7 @@ def identify_user(
     allowed = request.app.state.identification_modes
 
     match user_id, id_token:
-        case str(), None if 'supplied' in allowed:
+        case str(), None if 'client_supplied' in allowed:
             return user_id
         case None, IDToken() if 'oidc' in allowed:
             return id_token.sub
