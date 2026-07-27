@@ -10,19 +10,30 @@ and search for possible function names / labels based on vector similarity.
 Configuration and runtime
 -------------------------
 
-The citatio REST API takes 2 configuration options:
+The citatio REST API takes 3 configuration options:
 
 - The model to be used for embedding (currently, only `NetherlandsForensicInstitute/ARM64BERT-embedding` is supported);
-- The database to store both assembly and embeddings in, either SQLite+sqlitevec or PostgreSQL+pgvector.
+- The authentication modes to support, any of `anonymous`, `client_supplied` and `oidc`;
+- The database to store both assembly and embeddings in, either SQLite+sqlitevec or PostgreSQL+pgvector;
 
-These can be configured through environment variables:
+Citatio uses [confidence](https://github.com/NetherlandsForensicInstitute/confidence/) to read configuration, so both strategically placed files and environment variables are supported:
 
-- `CITATIO_MODEL`: a local path or huggingface model name (though again, currently on the `ARM64BERT-embedding` model is supported);
+- `CITATIO_MODEL`: a local path or huggingface model name (though again, currently only the `ARM64BERT-embedding` model is supported);
+- `CITATIO_AUTH_ANONYMOUS` (allowing operation without identifying a user) and 
+  `CITATIO_AUTH_CLIENT__SUPPLIED` (enabling a client to supply a user identity in a request body) can be set to `true` to enable them, 
+  OIDC configuration requires at least four values, see below.
 - when using SQLite: `CITATIO_DATABASE_SQLITE`: either `:memory:` or a local path to a SQLite database (will be created if it doesn't currently exist).
 - when using PostgreSQL: either `CITATIO_DATABASE_HOST`, `..._PORT`, `..._USER`, `..._PASSWORD`, `..._DATABASE` to connect to the database in question,
   or `CITATIO_DATABASE_DSN` with the full connection url to connect to that same database.
 
-The database configuration is required, the default model to be loaded is `NetherlandsForensicInstitute/ARM64BERT-embedding`.
+The authentication and database configuration is required, the default model to be loaded is `NetherlandsForensicInstitute/ARM64BERT-embedding`.
+
+OIDC configuration is delegated to [FastAPI-OIDC](https://github.com/HarryMWinters/fastapi-oidc#configuration), which takes at least the following:
+
+- `client_id`: the client id for this service, as configured in the OIDC provider;
+- `base_authorization_server_uri`: the OIDC provider's base uri (the part before `.well-known/oidc-configuration/`);
+- `issuer`: a single or multiple token issuer identifier(s);
+- `signature_cache_ttl`: internal cache timeout, in seconds.
 
 > [!NOTE]  
 > After observing concurrency issues with SQLite and `sqlite-vec`, the REST API is currently served fully serialized when using SQLite and is consequently fairly slow.
@@ -44,7 +55,7 @@ though end users are encouraged to use the [ready-made Ghidra plugin (sententia)
 Prerequisites
 -------------
 
-Python 3.13 or newer with SQLite version 3.35.0 or newer.
+Python 3.13 or newer with either SQLite version 3.35.0 or newer, or PostgreSQL with the pgvector extension available.
 
 Requirements
 ------------

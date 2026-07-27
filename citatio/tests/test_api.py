@@ -7,7 +7,11 @@ from citatio.api import app
 
 
 @pytest.fixture
-async def client(database_env):
+async def client(monkeypatch, database_env):
+    # add anonymous and client_supplied authentication modes during test
+    monkeypatch.setenv('CITATIO_AUTH_ANONYMOUS', 'true')
+    monkeypatch.setenv('CITATIO_AUTH_CLIENT__SUPPLIED', 'true')
+
     with TestClient(app) as client:
         yield client
 
@@ -23,6 +27,21 @@ def test_no_auth(client, functions):
 def test_add_function(client, functions):
     response = client.post('/api/v1/add', json=functions[0])
     assert response.status_code == 200
+
+
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
+def test_add_function_supplied_user_id(client, functions):
+    function = {**functions[0], 'user_id': 'GreatDane'}
+    response = client.post('/api/v1/add', json=function)
+    assert response.status_code == 200
+
+
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
+def test_add_function_anonymous_not_allowed(monkeypatch, client, functions):
+    # disallow anonymous addition
+    monkeypatch.setattr(app.state, 'identification_modes', {'client_supplied'})
+    response = client.post('/api/v1/add', json=functions[0])
+    assert response.status_code == 401
 
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")

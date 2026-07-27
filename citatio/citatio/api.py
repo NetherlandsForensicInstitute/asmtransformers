@@ -11,12 +11,28 @@ from citatio.db import Database, PostgreSQLDatabase, SQLiteDatabase
 from citatio.models import ControlFlowGraph
 
 
+SUPPORTED_AUTH_MODES = frozenset({'anonymous', 'client_supplied', 'oidc'})
 DEFAULT_MODEL = 'NetherlandsForensicInstitute/ARM64BERT-embedding'
 
 
-def _auth_unavailable(*args, **kwargs):
-    # utility callback that *always* raises a 503 error stating that authentication is not supported
-    raise HTTPException(503, 'Authentication unavailable')
+def resolve_auth(**auth):
+    # collect enabled auth modes from keywords; a truthy value enables the mode
+    allowed = {mode for mode, enabled in auth.items() if enabled}
+    if not allowed:
+        raise ValueError('no enabled auth modes')
+    if unsupported := (allowed - SUPPORTED_AUTH_MODES):
+        raise ValueError(f'unsupported auth mode: {", ".join(unsupported)}')
+
+    match auth:
+        case {'oidc': oidc}:
+            # create an OIDC Authorization header → IDToken function from the configured authentication settings
+            return allowed, get_auth(**oidc)
+        case _:
+            # auth either not set or explicitly turned off, raise exception on presence of Authorization header
+            def _oidc_unavailable(*args, **kwargs):
+                raise HTTPException(503, 'Authentication unavailable')
+
+            return allowed, _oidc_unavailable
 
 
 async def connect_database(**connect) -> Database:
@@ -37,12 +53,7 @@ async def lifespan(app: FastAPI):
 
     app.state.model = ASMEmbedder.from_pretrained(config.model or DEFAULT_MODEL)
 
-    if config.auth:
-        # create an OIDC Authorization header → IDToken function from the configured authentication settings
-        app.state.authenticate_user = get_auth(**config.auth)
-    else:
-        # config.auth either not set or explicitly turned off, raise exception on presence of Authorization header
-        app.state.authenticate_user = _auth_unavailable
+    app.state.identification_modes, app.state.authenticate_user = resolve_auth(**config.auth)
 
     async with await connect_database(**config.database) as database:
         app.state.database = database
@@ -59,6 +70,24 @@ async def authenticated_user(request: Request) -> IDToken | None:
         return None
 
 
+def identify_user(
+    request: Request,
+    user_id: Annotated[str | None, Body()] = None,
+    id_token: Annotated[IDToken | None, Depends(authenticated_user)] = None,
+):
+    allowed = request.app.state.identification_modes
+
+    match user_id, id_token:
+        case str(), None if 'client_supplied' in allowed:
+            return user_id
+        case None, IDToken() if 'oidc' in allowed:
+            return id_token.sub
+        case None, None if 'anonymous' in allowed:
+            return None
+
+    raise HTTPException(401, {'error': 'no single identifiable user in allowed modes', 'allowed': sorted(allowed)})
+
+
 app = FastAPI(lifespan=lifespan)
 
 
@@ -67,18 +96,17 @@ async def add_function(
     request: Request,
     name: Annotated[str, Body()],
     cfg: Annotated[ControlFlowGraph, Body()],
-    architecture: str = 'arm64',
+    architecture: Annotated[str, Body()] = 'arm64',
     binary_name: Annotated[str | None, Body()] = None,
     binary_sha256: Annotated[str | None, Body()] = None,
-    id_token: Annotated[IDToken | None, Depends(authenticated_user)] = None,
+    user_id: Annotated[str | None, Depends(identify_user)] = None,
 ):
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
     await request.app.state.database.add_function(
         name,
         cfg,
         embedding,
-        # user_id is optional, use subject identifier from token if available
-        user_id=id_token.sub if id_token else None,
+        user_id=user_id,
         binary_name=binary_name,
         binary_sha256=binary_sha256,
     )
@@ -88,7 +116,7 @@ async def add_function(
 async def search_function(
     request: Request,
     cfg: Annotated[ControlFlowGraph, Body()],
-    architecture: str = 'arm64',
+    architecture: Annotated[str, Body()] = 'arm64',
     top_n: Annotated[int, Body()] = 25,
 ):
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
