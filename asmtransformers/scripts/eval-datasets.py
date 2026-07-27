@@ -31,14 +31,7 @@ def main(data_folder, output_folder, pool_size, seed):
         Path.mkdir(Path(output_folder, architecture), parents=True, exist_ok=True)
         with Path(output_folder, architecture, 'eval_data.pkl').open('wb') as f:
             # we save only cfgs for anchors and positives; from neg_pools we are already holding only cfgs
-            pickle.dump(
-                (
-                    [i['cfg'] for i in anchors],
-                    [i['cfg'] for i in positives],
-                    neg_pools
-                ),
-                f
-            )
+            pickle.dump(([i['cfg'] for i in anchors], [i['cfg'] for i in positives], neg_pools), f)
 
 
 if __name__ == '__main__':
