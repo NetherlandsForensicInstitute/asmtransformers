@@ -21,7 +21,7 @@ class Block(NamedTuple):
 
 class ControlFlowGraph(RootModel[list[Block]]):
     @classmethod
-    def from_str(cls, value):
+    def from_str(cls, value: str):
         return cls(json.loads(value))
 
     @staticmethod
@@ -29,7 +29,7 @@ class ControlFlowGraph(RootModel[list[Block]]):
         match value:
             case str():
                 return value
-            case [*blocks]:
+            case [*blocks]:  # noqa: F841 (named "blocks" for clarity)
                 return json.dumps(value)
             case ControlFlowGraph():
                 return str(value)
