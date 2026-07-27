@@ -11,6 +11,7 @@ async def filled_database(database, functions, embeddings):
     for function in functions:
         await database.add_function(
             function['name'],
+            function['architecture'],
             function['cfg'],
             embeddings[function['name']],
             binary_name=function['binary_name'],
@@ -26,6 +27,7 @@ async def test_add_duplicate(database, functions, embeddings):
 
     function_id = await database.add_function(
         function['name'],
+        function['architecture'],
         function['cfg'],
         embedding,
         binary_name=function['binary_name'],
@@ -35,6 +37,7 @@ async def test_add_duplicate(database, functions, embeddings):
     assert (
         await database.add_function(
             function['name'],
+            function['architecture'],
             function['cfg'],
             embedding,
             binary_name=function['binary_name'],
@@ -48,7 +51,7 @@ async def test_add_binary_fields_optional(database, functions, embeddings):
     function = functions[-1]
     embedding = embeddings[function['name']]
 
-    await database.add_function(function['name'], function['cfg'], embedding)
+    await database.add_function(function['name'], function['architecture'], function['cfg'], embedding)
     assert await database.search_function(embedding) == [
         {
             'function': function['name'],
@@ -62,10 +65,10 @@ async def test_add_binary_fields_optional(database, functions, embeddings):
 async def test_add_label_anonymous(database, functions, embeddings):
     function = functions[-1]
     embedding = embeddings[function['name']]
-    await database.add_function(function['name'], function['cfg'], embedding)
+    await database.add_function(function['name'], function['architecture'], function['cfg'], embedding)
     assert len(await database.search_function(embedding)) == 1
 
-    await database.add_function('new_name', function['cfg'], embedding)
+    await database.add_function('new_name', function['architecture'], function['cfg'], embedding)
     results = await database.search_function(embedding)
     assert len(results) == 2
     assert {result['function'] for result in results} == {function['name'], 'new_name'}
@@ -75,10 +78,14 @@ async def test_add_label_anonymous(database, functions, embeddings):
 async def test_add_label_multiple_users(database, functions, embeddings):
     function = functions[1]
     embedding = embeddings[function['name']]
-    await database.add_function(function['name'], function['cfg'], embedding, user_id='LuckyLuke')
+    await database.add_function(
+        function['name'], function['architecture'], function['cfg'], embedding, user_id='LuckyLuke'
+    )
     assert len(await database.search_function(embedding)) == 1
 
-    await database.add_function('new_name', function['cfg'], embedding, user_id='NielsHolgerson')
+    await database.add_function(
+        'new_name', function['architecture'], function['cfg'], embedding, user_id='NielsHolgerson'
+    )
     results = await database.search_function(embedding)
     assert len(results) == 2
     assert {result['function'] for result in results} == {function['name'], 'new_name'}
@@ -88,10 +95,14 @@ async def test_add_label_multiple_users(database, functions, embeddings):
 async def test_add_label_user_overwrite(database, functions, embeddings):
     function = functions[-2]
     embedding = embeddings[function['name']]
-    await database.add_function(function['name'], function['cfg'], embedding, user_id='henk@reverse-engineering.nl')
+    await database.add_function(
+        function['name'], function['architecture'], function['cfg'], embedding, user_id='henk@reverse-engineering.nl'
+    )
     assert len(await database.search_function(embedding)) == 1
 
-    await database.add_function('new_name', function['cfg'], embedding, user_id='henk@reverse-engineering.nl')
+    await database.add_function(
+        'new_name', function['architecture'], function['cfg'], embedding, user_id='henk@reverse-engineering.nl'
+    )
     results = await database.search_function(embedding)
     assert len(results) == 1
     assert {result['function'] for result in results} == {'new_name'}
@@ -100,7 +111,9 @@ async def test_add_label_user_overwrite(database, functions, embeddings):
 async def test_add_user_id(filled_database, functions, embeddings):
     function = functions[-1]
     embedding = embeddings[function['name']]
-    await filled_database.add_function(function['name'], function['cfg'], embedding, user_id='nobody@asmembedder.local')
+    await filled_database.add_function(
+        function['name'], function['architecture'], function['cfg'], embedding, user_id='nobody@asmembedder.local'
+    )
 
     match filled_database:
         # Database interface exposes no raw query function, but we know the implementations
@@ -146,6 +159,7 @@ async def test_search_duplicate_label(filled_database, functions, embeddings):
     # add the same function with the same label as if it were from a different binary
     await filled_database.add_function(
         _init['name'],
+        _init['architecture'],
         _init['cfg'],
         embeddings[_init['name']],
         binary_name='another_binary',
