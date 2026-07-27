@@ -28,11 +28,11 @@ def get_parser():
     parser.add_argument(
         'input_path',
         type=Path,
-        help='either the path to the test functions; or to folder containing anchor/pos/neg datasets '
-        '(one subfolder for each architecture and one generic called "all"; requires --dataset-ready flag)',
+        help='the path to folder containing anchor/pos/neg datasets '
+        '(one subfolder for each architecture and one generic called "all")',
     )
-    parser.add_argument('output_path', type=Path, help='the path to write the final scores to')
-    parser.add_argument('model_path', type=str, help='path to model')
+    parser.add_argument('output_path', type=Path, help='the path to folder where evaluation results are saved')
+    parser.add_argument('model_path', type=Path, help='path to model to be evaluated')
     return parser
 
 
