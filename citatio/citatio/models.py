@@ -42,7 +42,8 @@ class ControlFlowGraph(RootModel[list[Block]]):
         return json.dumps(self.blocks)
 
 
-class FakeEmbedder:
+class TestEmbedder:
+    # TODO: express the embedder model as a Depends, so this code can be moved into tests using dependency_overrides
     def encode(self, cfg, **kwargs):
         v = np.frombuffer(
             # string together enough sha256 hashes to gather a deterministic uint8 array of length 768

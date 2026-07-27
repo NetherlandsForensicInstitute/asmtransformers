@@ -8,7 +8,7 @@ from fastapi.params import Body
 from fastapi_oidc import IDToken, get_auth
 
 from citatio.db import Database, PostgreSQLDatabase, SQLiteDatabase
-from citatio.models import ControlFlowGraph, FakeEmbedder
+from citatio.models import ControlFlowGraph, TestEmbedder
 
 
 SUPPORTED_AUTH_MODES = frozenset({'anonymous', 'client_supplied', 'oidc'})
@@ -38,8 +38,8 @@ def resolve_auth(**auth):
 def load_model(model):
     match model:
         # TODO: this is effectively test code, can we patch that at test time?
-        case ':fake:':
-            return FakeEmbedder()
+        case ':test:':
+            return TestEmbedder()
         case _:
             return ASMEmbedder.from_pretrained(model)
 

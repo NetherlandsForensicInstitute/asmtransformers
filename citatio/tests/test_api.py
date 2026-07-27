@@ -6,8 +6,8 @@ from citatio.api import app
 
 @pytest.fixture
 async def client(monkeypatch, database_env):
-    # configure a fake model to be loaded, avoid calling ASMEmbedder.from_pretrained
-    monkeypatch.setenv('CITATIO_MODEL', '":fake:"')
+    # configure a test model to be loaded, avoid calling ASMEmbedder.from_pretrained
+    monkeypatch.setenv('CITATIO_MODEL', '":test:"')
     # add anonymous and client_supplied authentication modes during test
     monkeypatch.setenv('CITATIO_AUTH_ANONYMOUS', 'true')
     monkeypatch.setenv('CITATIO_AUTH_CLIENT__SUPPLIED', 'true')
