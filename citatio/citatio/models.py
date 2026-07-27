@@ -24,6 +24,18 @@ class ControlFlowGraph(RootModel[list[Block]]):
     def from_str(cls, value):
         return cls(json.loads(value))
 
+    @staticmethod
+    def to_str(value):
+        match value:
+            case str():
+                return value
+            case [*blocks]:
+                return json.dumps(value)
+            case ControlFlowGraph():
+                return str(value)
+            case _:
+                raise TypeError
+
     @property
     def blocks(self):
         # RootModel requires the use of the "root" attribute, proxy it to "blocks" for clarity

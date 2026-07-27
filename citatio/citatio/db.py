@@ -6,8 +6,10 @@ import numpy as np
 import sqlite_vec
 from pgvector.asyncpg import register_vector
 
+from citatio.models import ControlFlowGraph
 
-ALLOWED_ARCHITECTURES = frozenset({'amd64', 'arm64', 'i386', 'riscv64'})
+
+SUPPORTED_ARCHITECTURES = frozenset({'amd64', 'arm64', 'i386', 'riscv64'})
 
 
 class Database:
@@ -57,7 +59,7 @@ class SQLiteDatabase(Database):
 
     async def _insert_or_get_function(self, cursor, architecture, cfg, embedding):
         # coerce cfg to str for database storage (keep the cfg type responsible for that (de)serialization)
-        cfg = str(cfg)
+        cfg = ControlFlowGraph.to_str(cfg)
         try:
             cursor.execute(
                 """INSERT INTO functions (architecture, cfg) VALUES (?, ?) RETURNING id""",
@@ -86,7 +88,7 @@ class SQLiteDatabase(Database):
         binary_name=None,
         binary_sha256=None,
     ):
-        if architecture not in ALLOWED_ARCHITECTURES:
+        if architecture not in SUPPORTED_ARCHITECTURES:
             raise ValueError(f'unsupported architecture: {architecture}')
 
         with self.connection:
@@ -171,7 +173,7 @@ class PostgreSQLDatabase(Database):
         binary_name=None,
         binary_sha256=None,
     ):
-        if architecture not in ALLOWED_ARCHITECTURES:
+        if architecture not in SUPPORTED_ARCHITECTURES:
             raise ValueError(f'unsupported architecture: {architecture}')
 
         async with self.connection.transaction():
@@ -183,7 +185,7 @@ class PostgreSQLDatabase(Database):
                 ON CONFLICT (cfg) DO UPDATE SET cfg = EXCLUDED.cfg RETURNING id
                 """,
                 architecture,
-                str(cfg),
+                ControlFlowGraph.to_str(cfg),
                 embedding,
             )
             await self.connection.execute(

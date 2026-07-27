@@ -21,6 +21,15 @@ async def filled_database(database, functions, embeddings):
     yield database
 
 
+async def test_add_architecture(database, functions, embeddings):
+    for architecture, function in zip(('amd64', 'arm64', 'i386', 'riscv64'), functions, strict=True):
+        await database.add_function(function['name'], architecture, function['cfg'], embeddings[function['name']])
+
+    with pytest.raises(ValueError, match='unsupported architecture'):
+        # reuse an unrelated embedding from the last iteration above
+        await database.add_function('conquer_world', 'mips', [0, ['ret']], embeddings[function['name']])
+
+
 async def test_add_duplicate(database, functions, embeddings):
     function = functions[0]
     embedding = embeddings[function['name']]
