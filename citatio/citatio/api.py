@@ -113,6 +113,7 @@ async def add_function(
     embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
     await request.app.state.database.add_function(
         name,
+        architecture,
         cfg,
         embedding,
         user_id=user_id,
