@@ -56,7 +56,7 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, 
         if neg['cfg'] in pos_cfgs:
             # same content, reject
             continue
-        neg_embeddings.append(neg['embeddings'])
+        neg_embeddings.append(neg['cfg'])
         if len(neg_embeddings) == pool_size:
             break
     if len(neg_embeddings) < pool_size:
