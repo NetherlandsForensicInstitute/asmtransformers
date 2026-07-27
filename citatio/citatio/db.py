@@ -7,6 +7,9 @@ import sqlite_vec
 from pgvector.asyncpg import register_vector
 
 
+ALLOWED_ARCHITECTURES = frozenset({'amd64', 'arm64', 'i386', 'riscv64'})
+
+
 class Database:
     async def __aenter__(self): ...
 
@@ -83,6 +86,9 @@ class SQLiteDatabase(Database):
         binary_name=None,
         binary_sha256=None,
     ):
+        if architecture not in ALLOWED_ARCHITECTURES:
+            raise ValueError(f'unsupported architecture: {architecture}')
+
         with self.connection:
             cursor = self.connection.cursor()
             function_id = await self._insert_or_get_function(cursor, architecture, cfg, embedding)
@@ -165,6 +171,9 @@ class PostgreSQLDatabase(Database):
         binary_name=None,
         binary_sha256=None,
     ):
+        if architecture not in ALLOWED_ARCHITECTURES:
+            raise ValueError(f'unsupported architecture: {architecture}')
+
         async with self.connection.transaction():
             function_id = await self.connection.fetchval(
                 # use PostgreSQL's conflict resolution to issue an update-or-get
