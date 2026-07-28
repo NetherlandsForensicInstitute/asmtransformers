@@ -17,12 +17,15 @@ hf = "NetherlandsForensicInstitute/ARM64BERT-embedding"
 
 [database]
 # default configuration uses an ephemeral in-memory database
+engine = "sqlite"                        # the database engine to use, either "sqlite" or "postgresql"
 sqlite = ":memory:"                      # path to a sqlite database file, or :memory: to use a temporary / ephemeral
                                          # in-memory database
 # alternatively, a connection to a PostgreSQL database with pgvector extensions enabled can be configured either as a
 # single field dsn or a combination of fields like host, port, user, password, database, ... (see documentation for
 # asyncpg.connect), e.g.:
 #
+# engine = "postgresql"
+# [database.postgresql]
 # dsn = "postgresql://postgres@localhost/citatio"
 
 [auth]

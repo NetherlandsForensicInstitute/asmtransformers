@@ -46,14 +46,14 @@ def load_model(**model):
             raise ValueError('missing model configuration')
 
 
-async def connect_database(**connect) -> Database:
-    match connect:
-        case {'sqlite': name}:
+async def connect_database(**database) -> Database:
+    match database:
+        case {'engine': 'postgresql', 'postgresql': {} as connect}:
+            # database settings for postgresql, use PostgreSQLDatabase
+            return await PostgreSQLDatabase.connect(**connect)
+        case {'engine': 'sqlite', 'sqlite': name}:
             # explicit sqlite name to connect to, use SQLiteDatabase
             return await SQLiteDatabase.connect(name)
-        case {} if connect:
-            # database settings *not* mentioning sqlite, use PostgreSQLDatabase
-            return await PostgreSQLDatabase.connect(**connect)
         case _:
             raise ValueError('missing database configuration')
 
