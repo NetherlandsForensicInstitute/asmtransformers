@@ -15,11 +15,11 @@ def load_triplets(data_path):
     positives = model.encode(positives)
     neg_pools = model.encode(neg_pools)
 
-    for i in range(len(anchors)):
+    for _, (anchor, positive) in enumerate(zip(anchors, positives, strict=True)):
         yield {
-            'anchor': {'embeddings': anchors[i]},
-            'pos': {'embeddings': positives[i]},
-            'negs': neg_pools,
+            'anchor': {'embeddings': anchor},
+            'pos': {'embeddings': positive},
+            'negs': [{'embeddings': neg} for neg in neg_pools],
         }
 
 
@@ -58,7 +58,8 @@ if __name__ == '__main__':
 
         # calculate mrr & accuracy
         final_mrr, final_acc = calculate_all(test_pools, output_path, output_file + f'-{architecture}')
-        results_per_architecture[architecture] = (final_mrr, final_acc)
+        results_per_architecture[f'mrr_{architecture}'] = final_mrr
+        results_per_architecture[f'acc_{architecture}'] = final_acc
 
     with Path(output_path, output_file + '-eval_per_architecture.csv').open('w') as csvfile:
         writer = csv.writer(csvfile)
@@ -80,16 +81,16 @@ if __name__ == '__main__':
         writer.writerow(
             (
                 model_name,
-                results_per_architecture['arm64'][0],
-                results_per_architecture['arm64'][1],
-                results_per_architecture['amd64'][0],
-                results_per_architecture['amd64'][1],
-                results_per_architecture['riscv64'][0],
-                results_per_architecture['riscv64'][1],
-                results_per_architecture['i386'][0],
-                results_per_architecture['i386'][1],
-                results_per_architecture['all'][0],
-                results_per_architecture['all'][1],
+                results_per_architecture['mrr_arm64'],
+                results_per_architecture['acc_arm64'],
+                results_per_architecture['mrr_amd64'],
+                results_per_architecture['acc_amd64'],
+                results_per_architecture['mrr_riscv64'],
+                results_per_architecture['acc_riscv64'],
+                results_per_architecture['mrr_i386'],
+                results_per_architecture['acc_i386'],
+                results_per_architecture['mrr_all'],
+                results_per_architecture['acc_all'],
             )
         )
 

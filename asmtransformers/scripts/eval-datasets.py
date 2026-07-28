@@ -18,6 +18,7 @@ def get_parser() -> argparse.ArgumentParser:
 
 def main(data_folder, output_folder, pool_size, seed):
     anchor_rng = random.Random(seed)
+    neg_rng = random.Random(seed + 1)
     architectures = ['arm64', 'amd64', 'riscv64', 'i386', 'all']
     for architecture in architectures:
         print(f'creating eval data for {architecture}')
@@ -25,9 +26,7 @@ def main(data_folder, output_folder, pool_size, seed):
         anchors, positives, anchor_labels, anchor_cfgs, pos_cfgs = generate_anchor_pos_pairs(
             test_functions, anchor_rng, num_pairs=1000
         )
-        neg_pools = generate_neg_pool(
-            pool_size, test_functions, anchor_labels, anchor_cfgs, pos_cfgs, random.Random(seed + 1)
-        )
+        neg_pools = generate_neg_pool(pool_size, test_functions, anchor_labels, anchor_cfgs, pos_cfgs, neg_rng)
         Path.mkdir(Path(output_folder, architecture), parents=True, exist_ok=True)
         with Path(output_folder, architecture, 'eval_data.pkl').open('wb') as f:
             # we save only cfgs for anchors and positives; from neg_pools we are already holding only cfgs

@@ -61,7 +61,7 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, 
             break
     if len(negs) < pool_size:
         raise ValueError(f'only {len(negs)} eligible negative examples available for pool_size={pool_size}')
-    return negs  # np.array(negs)
+    return negs
 
 
 def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
@@ -175,7 +175,7 @@ def calculate_one_rank(row):
     anchor, pos, negs = (
         row['anchor']['embeddings'],
         row['pos']['embeddings'],
-        np.array([i['embeddings'] for i in row['negs']]),
+        np.array([neg['embeddings'] for neg in row['negs']]),
     )
 
     # calculate the cosine distance between the anchor and pos
