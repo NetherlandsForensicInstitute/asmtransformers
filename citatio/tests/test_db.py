@@ -10,10 +10,10 @@ from citatio.db import PostgreSQLDatabase, SQLiteDatabase
 async def filled_database(database, functions, embeddings):
     for function in functions:
         await database.add_function(
-            function['name'],
+            function['label'],
             function['architecture'],
             function['cfg'],
-            embeddings[function['name']],
+            embeddings[function['label']],
             binary_name=function['binary_name'],
             binary_sha256=function['binary_sha256'],
         )
@@ -23,19 +23,19 @@ async def filled_database(database, functions, embeddings):
 
 async def test_add_architecture(database, functions, embeddings):
     for architecture, function in zip(('amd64', 'arm64', 'i386', 'riscv64'), functions, strict=True):
-        await database.add_function(function['name'], architecture, function['cfg'], embeddings[function['name']])
+        await database.add_function(function['label'], architecture, function['cfg'], embeddings[function['label']])
 
     with pytest.raises(ValueError, match='unsupported architecture'):
         # reuse an unrelated embedding from the last iteration above
-        await database.add_function('conquer_world', 'mips', [0, ['ret']], embeddings[function['name']])
+        await database.add_function('conquer_world', 'mips', [0, ['ret']], embeddings[function['label']])
 
 
 async def test_add_duplicate(database, functions, embeddings):
     function = functions[0]
-    embedding = embeddings[function['name']]
+    embedding = embeddings[function['label']]
 
     function_id = await database.add_function(
-        function['name'],
+        function['label'],
         function['architecture'],
         function['cfg'],
         embedding,
@@ -45,7 +45,7 @@ async def test_add_duplicate(database, functions, embeddings):
 
     assert (
         await database.add_function(
-            function['name'],
+            function['label'],
             function['architecture'],
             function['cfg'],
             embedding,
@@ -58,12 +58,12 @@ async def test_add_duplicate(database, functions, embeddings):
 
 async def test_add_binary_fields_optional(database, functions, embeddings):
     function = functions[-1]
-    embedding = embeddings[function['name']]
+    embedding = embeddings[function['label']]
 
-    await database.add_function(function['name'], function['architecture'], function['cfg'], embedding)
-    assert await database.search_function(embedding) == [
+    await database.add_function(function['label'], function['architecture'], function['cfg'], embedding)
+    assert await database.search_functions(embedding) == [
         {
-            'function': function['name'],
+            'label': function['label'],
             'similarity': pytest.approx(1.0),
             'binary_name': None,
             'binary_sha256': None,
@@ -73,55 +73,55 @@ async def test_add_binary_fields_optional(database, functions, embeddings):
 
 async def test_add_label_anonymous(database, functions, embeddings):
     function = functions[-1]
-    embedding = embeddings[function['name']]
-    await database.add_function(function['name'], function['architecture'], function['cfg'], embedding)
-    assert len(await database.search_function(embedding)) == 1
+    embedding = embeddings[function['label']]
+    await database.add_function(function['label'], function['architecture'], function['cfg'], embedding)
+    assert len(await database.search_functions(embedding)) == 1
 
     await database.add_function('new_name', function['architecture'], function['cfg'], embedding)
-    results = await database.search_function(embedding)
+    results = await database.search_functions(embedding)
     assert len(results) == 2
-    assert {result['function'] for result in results} == {function['name'], 'new_name'}
+    assert {result['label'] for result in results} == {function['label'], 'new_name'}
     assert all(result['similarity'] == pytest.approx(1.0) for result in results)
 
 
 async def test_add_label_multiple_users(database, functions, embeddings):
     function = functions[1]
-    embedding = embeddings[function['name']]
+    embedding = embeddings[function['label']]
     await database.add_function(
-        function['name'], function['architecture'], function['cfg'], embedding, user_id='LuckyLuke'
+        function['label'], function['architecture'], function['cfg'], embedding, user_id='LuckyLuke'
     )
-    assert len(await database.search_function(embedding)) == 1
+    assert len(await database.search_functions(embedding)) == 1
 
     await database.add_function(
         'new_name', function['architecture'], function['cfg'], embedding, user_id='NielsHolgerson'
     )
-    results = await database.search_function(embedding)
+    results = await database.search_functions(embedding)
     assert len(results) == 2
-    assert {result['function'] for result in results} == {function['name'], 'new_name'}
+    assert {result['label'] for result in results} == {function['label'], 'new_name'}
     assert all(result['similarity'] == pytest.approx(1.0) for result in results)
 
 
 async def test_add_label_user_overwrite(database, functions, embeddings):
     function = functions[-2]
-    embedding = embeddings[function['name']]
+    embedding = embeddings[function['label']]
     await database.add_function(
-        function['name'], function['architecture'], function['cfg'], embedding, user_id='henk@reverse-engineering.nl'
+        function['label'], function['architecture'], function['cfg'], embedding, user_id='henk@reverse-engineering.nl'
     )
-    assert len(await database.search_function(embedding)) == 1
+    assert len(await database.search_functions(embedding)) == 1
 
     await database.add_function(
         'new_name', function['architecture'], function['cfg'], embedding, user_id='henk@reverse-engineering.nl'
     )
-    results = await database.search_function(embedding)
+    results = await database.search_functions(embedding)
     assert len(results) == 1
-    assert {result['function'] for result in results} == {'new_name'}
+    assert {result['label'] for result in results} == {'new_name'}
 
 
 async def test_add_user_id(filled_database, functions, embeddings):
     function = functions[-1]
-    embedding = embeddings[function['name']]
+    embedding = embeddings[function['label']]
     await filled_database.add_function(
-        function['name'], function['architecture'], function['cfg'], embedding, user_id='nobody@asmembedder.local'
+        function['label'], function['architecture'], function['cfg'], embedding, user_id='nobody@asmembedder.local'
     )
 
     match filled_database:
@@ -137,9 +137,9 @@ async def test_add_user_id(filled_database, functions, embeddings):
 
 
 async def test_search_identical(filled_database, embeddings):
-    results = await filled_database.search_function(embeddings['init_have_lse_atomics'])
+    results = await filled_database.search_functions(embeddings['init_have_lse_atomics'])
 
-    assert results[0]['function'] == 'init_have_lse_atomics'
+    assert results[0]['label'] == 'init_have_lse_atomics'
     # similarity for that function should be 1.0
     assert results[0]['similarity'] == pytest.approx(1.0)
     # similarities should be declining throughout the results
@@ -151,32 +151,32 @@ async def test_search_similar(filled_database, embeddings):
     query_embedding = embeddings['thunk_1234'] + jitter
     # normally, embeddings should have been normalized by the model, make sure to manually normalize the query here
     query_embedding = query_embedding / numpy.linalg.norm(query_embedding)
-    results = await filled_database.search_function(query_embedding)
+    results = await filled_database.search_functions(query_embedding)
 
-    assert results[0]['function'] == 'thunk_1234'
+    assert results[0]['label'] == 'thunk_1234'
     assert 0.9 < results[0]['similarity'] < 1.0
 
 
 async def test_search_top_1(filled_database, embeddings):
-    results = await filled_database.search_function(embeddings['init_have_lse_atomics'], top_n=1)
+    results = await filled_database.search_functions(embeddings['init_have_lse_atomics'], top_n=1)
 
     assert len(results) == 1
 
 
 async def test_search_duplicate_label(filled_database, functions, embeddings):
-    _init = next(function for function in functions if function['name'] == '_init')
+    _init = next(function for function in functions if function['label'] == '_init')
     # add the same function with the same label as if it were from a different binary
     await filled_database.add_function(
-        _init['name'],
+        _init['label'],
         _init['architecture'],
         _init['cfg'],
-        embeddings[_init['name']],
+        embeddings[_init['label']],
         binary_name='another_binary',
         binary_sha256='1234abcd' * 16,
     )
 
-    results = await filled_database.search_function(embeddings[_init['name']], top_n=2)
+    results = await filled_database.search_functions(embeddings[_init['label']], top_n=2)
 
     assert len(results) == 2
-    assert '_init' == results[0]['function'] == results[1]['function']
+    assert '_init' == results[0]['label'] == results[1]['label']
     assert results[0]['binary_name'] != results[1]['binary_name']

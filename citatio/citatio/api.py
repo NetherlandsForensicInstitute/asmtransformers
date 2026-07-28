@@ -103,16 +103,16 @@ app = FastAPI(lifespan=lifespan)
 @app.post('/api/v1/functions')
 async def add_function(
     request: Request,
-    name: Annotated[str, Body()],
+    label: Annotated[str, Body()],
     cfg: Annotated[ControlFlowGraph, Body()],
     architecture: Annotated[str, Body()] = 'arm64',
     binary_name: Annotated[str | None, Body()] = None,
     binary_sha256: Annotated[str | None, Body()] = None,
     user_id: Annotated[str | None, Depends(identify_user)] = None,
 ):
-    embedding = request.app.state.model.encode(str(cfg), architecture=architecture)
+    embedding = request.app.state.model.encode(ControlFlowGraph.to_str(cfg), architecture=architecture)
     await request.app.state.database.add_function(
-        name,
+        label,
         architecture,
         cfg,
         embedding,
@@ -130,4 +130,4 @@ async def search_function(
     top_n: Annotated[int, Body()] = 25,
 ):
     embedding = request.app.state.model.encode(ControlFlowGraph.to_str(cfg), architecture=architecture)
-    return await request.app.state.database.search_function(embedding, top_n)
+    return await request.app.state.database.search_functions(embedding, top_n)

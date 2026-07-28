@@ -2,7 +2,7 @@
   {
     "binary_name": "explorer.exe",
     "binary_sha256": "a7e0656adae4de7a5290a6ecb9644d42b509229ee47a58110d7dc88ab163ff49",
-    "name": "FUN_00105bf0",
+    "label": "FUN_00105bf0",
     "architecture": "arm64",
     "cfg": [
       [
@@ -21,7 +21,7 @@
   {
     "binary_name": "explorer.exe",
     "binary_sha256": "a7e0656adae4de7a5290a6ecb9644d42b509229ee47a58110d7dc88ab163ff49",
-    "name": "init_have_lse_atomics",
+    "label": "init_have_lse_atomics",
     "architecture": "arm64",
     "cfg": [
       [
@@ -46,7 +46,7 @@
   {
     "binary_name": "ghidra",
     "binary_sha256": "26adef5c32d0879bfaa8497db71250906d412a2fa5910f36ea104efd300eafc9",
-    "name": "_init",
+    "label": "_init",
     "architecture": "arm64",
     "cfg": [
       [
@@ -66,7 +66,7 @@
   {
     "binary_name": "meinkraft.dmg",
     "binary_sha256": "19ce5d879f99ba6ba2e2989f36a786b92a2df8cf378a8f1ce566a6f0d2ed710d",
-    "name": "thunk_1234",
+    "label": "thunk_1234",
     "architecture": "arm64",
     "cfg": [
       [
