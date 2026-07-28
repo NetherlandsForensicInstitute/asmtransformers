@@ -58,7 +58,7 @@ async def connect_database(**connect) -> Database:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.config = config = confidence.load_name('citatio')
+    app.state.config = config = confidence.load_name('citatio', format=confidence.TOML)
 
     app.state.model = load_model(config.model or DEFAULT_MODEL)
 

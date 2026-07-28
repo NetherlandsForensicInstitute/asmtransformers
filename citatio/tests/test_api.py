@@ -28,9 +28,9 @@ def test_get_auth_config_oidc(monkeypatch, database_env):
     monkeypatch.setenv('CITATIO_AUTH_ANONYMOUS', 'false')
     monkeypatch.setenv('CITATIO_AUTH_CLIENT__SUPPLIED', 'false')
     # configure an OIDC provider at example.com
-    monkeypatch.setenv('CITATIO_AUTH_OIDC_CLIENT__ID', 'Cl1eNt-1D')
-    monkeypatch.setenv('CITATIO_AUTH_OIDC_BASE__AUTHORIZATION__SERVER__URI', 'https://example.com/auth')
-    monkeypatch.setenv('CITATIO_AUTH_OIDC_ISSUER', 'example.com')
+    monkeypatch.setenv('CITATIO_AUTH_OIDC_CLIENT__ID', '"Cl1eNt-1D"')
+    monkeypatch.setenv('CITATIO_AUTH_OIDC_BASE__AUTHORIZATION__SERVER__URI', '"https://example.com/auth"')
+    monkeypatch.setenv('CITATIO_AUTH_OIDC_ISSUER', '"example.com"')
     # cache ttl is required, but omitted from the response content
     monkeypatch.setenv('CITATIO_AUTH_OIDC_SIGNATURE__CACHE__TTL', '3600')
 
