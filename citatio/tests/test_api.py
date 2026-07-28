@@ -1,3 +1,6 @@
+from hashlib import sha256
+
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
@@ -93,3 +96,25 @@ def test_search_unknown(client, functions):
     for result in results:
         # nothing matches exactly, nothing should come back < 0.0
         assert 0.0 < result['similarity'] < 1.0
+
+
+def test_test_embedder():
+    data = '[[0, ["add x1,x1", "ret"]], [12, ["ret"]], [34, ["b 0"]]]'
+    embedder = TestEmbedder()
+
+    assert len(embedder.encode(data)) == 768
+    assert np.allclose(embedder.encode(data), embedder.encode(data, architecture='mips'))
+    assert np.allclose(TestEmbedder().encode(data), embedder.encode(data))
+    assert not np.allclose(embedder.encode('other data'), embedder.encode(data))
+
+
+class TestEmbedder:
+    def encode(self, cfg, **kwargs):
+        v = np.frombuffer(
+            # string together enough sha256 hashes to gather a deterministic uint8 array of length 768
+            b''.join(sha256(bytes(f'{n}: {cfg}', encoding='utf-8')).digest() for n in range(768 // 32)),
+            dtype=np.uint8,
+        )
+        # normalize the array like a real model would
+        # NB: make sure to explicitly use float32, sqlite assumes 4-byte values
+        return np.divide(v, np.linalg.norm(v), dtype=np.float32)

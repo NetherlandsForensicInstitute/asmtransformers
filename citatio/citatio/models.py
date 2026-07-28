@@ -1,9 +1,7 @@
 import json
 from collections.abc import Sequence
-from hashlib import sha256
 from typing import NamedTuple
 
-import numpy as np
 from pydantic import RootModel
 
 
@@ -52,16 +50,3 @@ class ControlFlowGraph(RootModel[list[Block]]):
     def __str__(self):
         # __str__ is invoked on str-coercion, str(cfg) would result in a JSON-encoded list of blocks
         return json.dumps(self.blocks)
-
-
-class TestEmbedder:
-    # TODO: express the embedder model as a Depends, so this code can be moved into tests using dependency_overrides
-    def encode(self, cfg, **kwargs):
-        v = np.frombuffer(
-            # string together enough sha256 hashes to gather a deterministic uint8 array of length 768
-            b''.join(sha256(bytes(f'{n}: {cfg}', encoding='utf-8')).digest() for n in range(768 // 32)),
-            dtype=np.uint8,
-        )
-        # normalize the array like a real model would
-        # NB: make sure to explicitly use float32, sqlite assumes 4-byte values
-        return np.divide(v, np.linalg.norm(v), dtype=np.float32)
