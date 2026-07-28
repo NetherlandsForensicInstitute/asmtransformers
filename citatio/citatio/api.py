@@ -58,7 +58,7 @@ async def connect_database(**connect) -> Database:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    config = confidence.load_name('citatio')
+    app.state.config = config = confidence.load_name('citatio')
 
     app.state.model = load_model(config.model or DEFAULT_MODEL)
 
@@ -98,6 +98,22 @@ def identify_user(
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.get('/api/v1/auth')
+async def auth_config(request: Request):
+    # collect enabled authentication modes as booleans
+    auth = {mode: mode in request.app.state.identification_modes for mode in SUPPORTED_AUTH_MODES}
+    if auth['oidc']:
+        # replace true with actionable config for oidc
+        oidc = request.app.state.config.auth.oidc
+        auth['oidc'] = {
+            'client_id': oidc.client_id,
+            'provider_uri': oidc.base_authorization_server_uri,
+            'issuer': oidc.issuer,
+        }
+
+    return auth
 
 
 @app.post('/api/v1/functions')
