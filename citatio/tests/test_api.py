@@ -17,32 +17,32 @@ async def client(monkeypatch, database_env):
 
 
 def test_no_auth(client, functions):
-    response = client.post('/api/v1/add', headers={'Authorization': 'Bearer R1ghtT0B34r4RMs'}, json=functions[0])
+    response = client.post('/api/v1/functions', headers={'Authorization': 'Bearer R1ghtT0B34r4RMs'}, json=functions[0])
     assert response.is_server_error
     assert response.status_code == 503
 
 
 def test_add_function(client, functions):
-    response = client.post('/api/v1/add', json=functions[0])
+    response = client.post('/api/v1/functions', json=functions[0])
     assert response.status_code == 200
 
 
 def test_add_function_supplied_user_id(client, functions):
     function = {**functions[0], 'user_id': 'GreatDane'}
-    response = client.post('/api/v1/add', json=function)
+    response = client.post('/api/v1/functions', json=function)
     assert response.status_code == 200
 
 
 def test_add_function_anonymous_not_allowed(monkeypatch, client, functions):
     # disallow anonymous addition
     monkeypatch.setattr(app.state, 'identification_modes', {'client_supplied'})
-    response = client.post('/api/v1/add', json=functions[0])
+    response = client.post('/api/v1/functions', json=functions[0])
     assert response.status_code == 401
 
 
 def test_search_known(client, functions):
     for function in functions:
-        client.post('/api/v1/add', json=function)
+        client.post('/api/v1/functions', json=function)
 
     for function in functions:
         results = client.post('/api/v1/search', json={'cfg': function['cfg'], 'top_n': 2}).json()
@@ -52,7 +52,7 @@ def test_search_known(client, functions):
 
 def test_search_unknown(client, functions):
     for function in functions[1:]:
-        client.post('/api/v1/add', json=function)
+        client.post('/api/v1/functions', json=function)
 
     results = client.post('/api/v1/search', json={'cfg': functions[0]['cfg']}).json()
     assert len(results) == 3

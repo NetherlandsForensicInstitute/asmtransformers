@@ -100,7 +100,7 @@ def identify_user(
 app = FastAPI(lifespan=lifespan)
 
 
-@app.post('/api/v1/add')
+@app.post('/api/v1/functions')
 async def add_function(
     request: Request,
     name: Annotated[str, Body()],
