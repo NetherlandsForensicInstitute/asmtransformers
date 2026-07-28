@@ -42,7 +42,7 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, 
     :param rng: random number generator
     :return: a numpy array containing the embeddings of the items in the pool
     """
-    neg_embeddings = []
+    negs = []
     candidate_indices = list(range(len(dataset)))
     rng.shuffle(candidate_indices)
     for index in candidate_indices:
@@ -56,12 +56,12 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, 
         if neg['cfg'] in pos_cfgs:
             # same content, reject
             continue
-        neg_embeddings.append(neg['cfg'])
-        if len(neg_embeddings) == pool_size:
+        negs.append(neg)
+        if len(negs) == pool_size:
             break
-    if len(neg_embeddings) < pool_size:
-        raise ValueError(f'only {len(neg_embeddings)} eligible negative examples available for pool_size={pool_size}')
-    return np.array(neg_embeddings)
+    if len(negs) < pool_size:
+        raise ValueError(f'only {len(negs)} eligible negative examples available for pool_size={pool_size}')
+    return negs  # np.array(negs)
 
 
 def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
@@ -172,7 +172,11 @@ def calculate_one_rank(row):
     :param row: anchor, pos, and list of negs
     :return The rank of the positive example (pos) in the pool.
     """
-    anchor, pos, negs = row['anchor']['embeddings'], row['pos']['embeddings'], row['negs']
+    anchor, pos, negs = (
+        row['anchor']['embeddings'],
+        row['pos']['embeddings'],
+        np.array([i['embeddings'] for i in row['negs']]),
+    )
 
     # calculate the cosine distance between the anchor and pos
     cosine_sim_pos = 1 - spatial.distance.cosine(anchor, pos)
@@ -228,7 +232,7 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
     print('\ngenerate test_pools\n')
     test_functions = load_test_functions(data_folder, architecture)
     anchor_rng = random.Random(seed)
-    anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng, num_pairs=300)
+    anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng, num_pairs=30)
 
     model_name = data_folder.name
     output_file = f'{timestamp()}-{model_name}-{architecture}-{pool_size}-{static_pool}'
