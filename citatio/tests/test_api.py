@@ -4,13 +4,19 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+from citatio import api
 from citatio.api import app
 
 
 @pytest.fixture
-async def client(monkeypatch, database_env):
-    # configure a test model to be loaded, avoid calling ASMEmbedder.from_pretrained
-    monkeypatch.setenv('CITATIO_MODEL', '":test:"')
+def mocked_model(monkeypatch):
+    model = TestEmbedder()
+    monkeypatch.setattr(api, 'load_model', lambda **kwargs: model)
+    yield model
+
+
+@pytest.fixture
+async def client(monkeypatch, database_env, mocked_model):
     # add anonymous and client_supplied authentication modes during test
     monkeypatch.setenv('CITATIO_AUTH_ANONYMOUS', 'true')
     monkeypatch.setenv('CITATIO_AUTH_CLIENT__SUPPLIED', 'true')
@@ -25,8 +31,7 @@ def test_get_auth_config(client):
     assert response.json() == {'anonymous': True, 'client_supplied': True, 'oidc': False}
 
 
-def test_get_auth_config_oidc(monkeypatch, database_env):
-    monkeypatch.setenv('CITATIO_MODEL', '":test:"')
+def test_get_auth_config_oidc(monkeypatch, database_env, mocked_model):
     # disable the silly auth
     monkeypatch.setenv('CITATIO_AUTH_ANONYMOUS', 'false')
     monkeypatch.setenv('CITATIO_AUTH_CLIENT__SUPPLIED', 'false')

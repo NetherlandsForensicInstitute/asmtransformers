@@ -8,7 +8,12 @@
 #         files or environment variables (see confidence' documentation)
 # ----
 
-model = "NetherlandsForensicInstitute/ARM64BERT-embedding"
+[model]
+# default model configuration uses the published ARM64BERT-embedding model from HuggingFace
+hf = "NetherlandsForensicInstitute/ARM64BERT-embedding"
+# alternatively, a model to be loaded from path can be configured as that path (see ASMEmbedder.from_pretrained):
+#
+# path = "/path/to/model/"
 
 [database]
 # default configuration uses an ephemeral in-memory database

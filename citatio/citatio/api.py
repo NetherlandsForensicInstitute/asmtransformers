@@ -9,7 +9,7 @@ from fastapi.params import Body
 from fastapi_oidc import IDToken, get_auth
 
 from citatio.db import Database, PostgreSQLDatabase, SQLiteDatabase
-from citatio.models import ControlFlowGraph, TestEmbedder
+from citatio.models import ControlFlowGraph
 
 
 SUPPORTED_AUTH_MODES = frozenset({'anonymous', 'client_supplied', 'oidc'})
@@ -36,13 +36,14 @@ def resolve_auth(**auth):
             return allowed, _oidc_unavailable
 
 
-def load_model(model):
+def load_model(**model):
     match model:
-        # TODO: this is effectively test code, can we patch that at test time?
-        case ':test:':
-            return TestEmbedder()
+        case {'hf': name_or_path} | {'path': name_or_path} if name_or_path:
+            # from_pretrained takes either a name or a path, allow it to be specified either way, even though we can't
+            # supply it explicitly as a name or a path
+            return ASMEmbedder.from_pretrained(name_or_path)
         case _:
-            return ASMEmbedder.from_pretrained(model)
+            raise ValueError('missing model configuration')
 
 
 async def connect_database(**connect) -> Database:
@@ -59,12 +60,12 @@ async def connect_database(**connect) -> Database:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # load defaults from citatio model
+    # load defaults from citatio module
     defaults = confidence.loads(resources.read_text('citatio', 'defaults.toml'), format=confidence.TOML)
     # combine defaults with user-supplied configuration
     app.state.config = config = defaults | confidence.load_name('citatio', format=confidence.TOML)
 
-    app.state.model = load_model(config.model or DEFAULT_MODEL)
+    app.state.model = load_model(**config.model)
 
     app.state.identification_modes, app.state.authenticate_user = resolve_auth(**config.auth)
 
