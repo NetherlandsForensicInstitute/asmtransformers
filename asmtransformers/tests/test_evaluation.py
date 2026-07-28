@@ -13,7 +13,7 @@ def rank1():
     return {
         'anchor': {'embeddings': [0, 1, 2]},
         'pos': {'embeddings': [1, 2, 3]},
-        'negs': np.array([[4, 5, 6], [7, 8, 9]]),
+        'negs': [{'embeddings': np.array([4, 5, 6])}, {'embeddings': np.array([7, 8, 9])}],
     }
 
 
@@ -24,7 +24,7 @@ def rank2():
     return {
         'anchor': {'embeddings': [0, 1, 2]},
         'pos': {'embeddings': [4, 5, 6]},
-        'negs': np.array([[7, 8, 9], [1, 2, 3]]),
+        'negs': [{'embeddings': np.array([7, 8, 9])}, {'embeddings': np.array([1, 2, 3])}],
     }
 
 
@@ -34,7 +34,7 @@ def rank3():
     return {
         'anchor': {'embeddings': [0, 1, 2]},
         'pos': {'embeddings': [7, 8, 9]},
-        'negs': np.array([[4, 5, 6], [1, 2, 3]]),
+        'negs': [{'embeddings': np.array([4, 5, 6])}, {'embeddings': np.array([1, 2, 3])}],
     }
 
 
@@ -125,5 +125,9 @@ def test_generate_neg_pool(pos_anchor_pairs, dataset_extended, rng):
         generate_neg_pool(6, dataset_extended, anchor_labels, anchor_cfgs, pos_cfgs, rng)
     neg_embeddings = generate_neg_pool(5, dataset_extended, anchor_labels, anchor_cfgs, pos_cfgs, rng)
     # once again we check that neg embeddings are always in the same order
-    assert neg_embeddings[0] == 2 and neg_embeddings[1] == 3 and neg_embeddings[-1] == 1
+    assert (
+        neg_embeddings[0]['embeddings'] == 2
+        and neg_embeddings[1]['embeddings'] == 3
+        and neg_embeddings[-1]['embeddings'] == 1
+    )
     assert 6 not in neg_embeddings

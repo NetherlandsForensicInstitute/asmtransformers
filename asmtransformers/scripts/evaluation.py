@@ -42,7 +42,7 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, 
     :param rng: random number generator
     :return: a numpy array containing the embeddings of the items in the pool
     """
-    neg_embeddings = []
+    negs = []
     candidate_indices = list(range(len(dataset)))
     rng.shuffle(candidate_indices)
     for index in candidate_indices:
@@ -56,12 +56,12 @@ def generate_neg_pool(pool_size, dataset, anchor_labels, anchor_cfgs, pos_cfgs, 
         if neg['cfg'] in pos_cfgs:
             # same content, reject
             continue
-        neg_embeddings.append(neg['embeddings'])
-        if len(neg_embeddings) == pool_size:
+        negs.append(neg)
+        if len(negs) == pool_size:
             break
-    if len(neg_embeddings) < pool_size:
-        raise ValueError(f'only {len(neg_embeddings)} eligible negative examples available for pool_size={pool_size}')
-    return np.array(neg_embeddings)
+    if len(negs) < pool_size:
+        raise ValueError(f'only {len(negs)} eligible negative examples available for pool_size={pool_size}')
+    return negs
 
 
 def generate_anchor_pos_pairs(dataset, rng, num_pairs=1000):
@@ -155,7 +155,8 @@ def generate_triplets(dataset, anchor_pairs, pool_size, static_pool, rng):
 
 def load_test_functions(data_folder, architecture=None):
     dataset = datasets.load_from_disk(data_folder)  # .select(range(11000, 45000))
-    if architecture:
+    # if we want to evaluate all architectures, we do not need to filter the data
+    if architecture != 'all':
         print(f'Selecting examples with architecture=={architecture}')
         dataset = dataset.filter(lambda x: x['architecture'] == architecture)
 
@@ -171,7 +172,11 @@ def calculate_one_rank(row):
     :param row: anchor, pos, and list of negs
     :return The rank of the positive example (pos) in the pool.
     """
-    anchor, pos, negs = row['anchor']['embeddings'], row['pos']['embeddings'], row['negs']
+    anchor, pos, negs = (
+        row['anchor']['embeddings'],
+        row['pos']['embeddings'],
+        np.array([neg['embeddings'] for neg in row['negs']]),
+    )
 
     # calculate the cosine distance between the anchor and pos
     cosine_sim_pos = 1 - spatial.distance.cosine(anchor, pos)
@@ -223,14 +228,11 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
         raise ValueError('repeats must be at least 1')
     if repeats > 1 and not static_pool:
         raise ValueError('repeats greater than 1 are only supported with --static-pool')
-    # architecture is a filter; if we want to evaluate all architectures at once, we do not filer the dataset
-    if architecture == 'all':
-        architecture = None
 
     print('\ngenerate test_pools\n')
     test_functions = load_test_functions(data_folder, architecture)
     anchor_rng = random.Random(seed)
-    anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng, num_pairs=1000)
+    anchor_pairs = generate_anchor_pos_pairs(test_functions, anchor_rng, num_pairs=30)
 
     model_name = data_folder.name
     output_file = f'{timestamp()}-{model_name}-{architecture}-{pool_size}-{static_pool}'
@@ -264,7 +266,7 @@ def run_tests(data_folder, output_path, pool_size, static_pool, architecture, se
 
 def get_parser():
     parser = argparse.ArgumentParser(description='evaluation')
-    parser.add_argument('input_path', type=Path, help='the path to the test data')
+    parser.add_argument('input_path', type=Path, help='the path to the anchors/positives/negative pools')
     parser.add_argument('output_path', type=Path, help='the path to write the final scores to')
     parser.add_argument('--pool-size', type=int, help='the poolsize to pick the positive example from')
     parser.add_argument('--seed', type=int, default=4201, help='seed random evaluation sampling')
