@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from importlib import resources
 from typing import Annotated
 
 import confidence
@@ -24,7 +25,7 @@ def resolve_auth(**auth):
         raise ValueError(f'unsupported auth mode: {", ".join(unsupported)}')
 
     match auth:
-        case {'oidc': oidc}:
+        case {'oidc': oidc} if oidc:
             # create an OIDC Authorization header → IDToken function from the configured authentication settings
             return allowed, get_auth(**oidc)
         case _:
@@ -58,7 +59,10 @@ async def connect_database(**connect) -> Database:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.config = config = confidence.load_name('citatio', format=confidence.TOML)
+    # load defaults from citatio model
+    defaults = confidence.loads(resources.read_text('citatio', 'defaults.toml'), format=confidence.TOML)
+    # combine defaults with user-supplied configuration
+    app.state.config = config = defaults | confidence.load_name('citatio', format=confidence.TOML)
 
     app.state.model = load_model(config.model or DEFAULT_MODEL)
 

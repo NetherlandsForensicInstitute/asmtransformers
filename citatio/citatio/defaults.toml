@@ -11,6 +11,7 @@
 model = "NetherlandsForensicInstitute/ARM64BERT-embedding"
 
 [database]
+# default configuration uses an ephemeral in-memory database
 sqlite = ":memory:"                      # path to a sqlite database file, or :memory: to use a temporary / ephemeral
                                          # in-memory database
 # alternatively, a connection to a PostgreSQL database with pgvector extensions enabled can be configured either as a
