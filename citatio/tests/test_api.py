@@ -45,7 +45,7 @@ def test_search_known(client, functions):
         client.post('/api/v1/functions', json=function)
 
     for function in functions:
-        results = client.post('/api/v1/search', json={'cfg': function['cfg'], 'top_n': 2}).json()
+        results = client.post('/api/v1/functions/search', json={'cfg': function['cfg'], 'top_n': 2}).json()
         assert len(results) == 2
         assert results[0]['similarity'] == pytest.approx(1.0)
 
@@ -54,7 +54,7 @@ def test_search_unknown(client, functions):
     for function in functions[1:]:
         client.post('/api/v1/functions', json=function)
 
-    results = client.post('/api/v1/search', json={'cfg': functions[0]['cfg']}).json()
+    results = client.post('/api/v1/functions/search', json={'cfg': functions[0]['cfg']}).json()
     assert len(results) == 3
     for result in results:
         # nothing matches exactly, nothing should come back < 0.0

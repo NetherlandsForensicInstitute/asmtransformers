@@ -122,7 +122,7 @@ async def add_function(
     )
 
 
-@app.post('/api/v1/search')
+@app.post('/api/v1/functions/search')
 async def search_function(
     request: Request,
     cfg: Annotated[ControlFlowGraph, Body()],
