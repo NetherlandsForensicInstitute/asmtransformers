@@ -13,7 +13,7 @@ def rank1():
     return {
         'anchor': {'embeddings': [0, 1, 2]},
         'pos': {'embeddings': [1, 2, 3]},
-        'negs': np.array([[4, 5, 6], [7, 8, 9]]),
+        'negs': [{'embeddings': np.array([4, 5, 6])}, {'embeddings': np.array([7, 8, 9])}],
     }
 
 
@@ -24,7 +24,7 @@ def rank2():
     return {
         'anchor': {'embeddings': [0, 1, 2]},
         'pos': {'embeddings': [4, 5, 6]},
-        'negs': np.array([[7, 8, 9], [1, 2, 3]]),
+        'negs': [{'embeddings': np.array([7, 8, 9])}, {'embeddings': np.array([1, 2, 3])}],
     }
 
 
@@ -34,7 +34,7 @@ def rank3():
     return {
         'anchor': {'embeddings': [0, 1, 2]},
         'pos': {'embeddings': [7, 8, 9]},
-        'negs': np.array([[4, 5, 6], [1, 2, 3]]),
+        'negs': [{'embeddings': np.array([4, 5, 6])}, {'embeddings': np.array([1, 2, 3])}],
     }
 
 
