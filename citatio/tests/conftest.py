@@ -6,7 +6,7 @@ import asyncpg
 import numpy as np
 import pytest
 from confidence import Configuration
-from testcontainers.postgres import PostgresContainer
+from testcontainers.community.postgres import PostgresContainer
 
 from citatio.db import PostgreSQLDatabase, SQLiteDatabase
 
