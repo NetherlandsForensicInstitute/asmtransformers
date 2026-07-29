@@ -29,7 +29,7 @@ class Database:
         binary_sha256: bytes | None = None,
     ): ...
 
-    async def search_function(self, embedding: np.array, top_n: int = 25): ...
+    async def search_functions(self, embedding: np.array, top_n: int = 25): ...
 
 
 class SQLiteDatabase(Database):
@@ -115,7 +115,7 @@ class SQLiteDatabase(Database):
             # return the function id for convenience
             return function_id
 
-    async def search_function(self, embedding, top_n=25):
+    async def search_functions(self, embedding, top_n=25):
         cursor = self.connection.cursor()
         cursor.execute(
             """
@@ -135,7 +135,7 @@ class SQLiteDatabase(Database):
         return [
             dict(
                 zip(
-                    ['function', 'similarity', 'binary_name', 'binary_sha256'],
+                    ['label', 'similarity', 'binary_name', 'binary_sha256'],
                     result,
                     strict=True,
                 )
@@ -206,7 +206,7 @@ class PostgreSQLDatabase(Database):
 
         return function_id
 
-    async def search_function(self, embedding, top_n=25):
+    async def search_functions(self, embedding, top_n=25):
         results = await self.connection.fetch(
             """
             SELECT label, (2 - (embedding <=> $1)) / 2 AS similarity, binary_name, binary_sha256
@@ -222,7 +222,7 @@ class PostgreSQLDatabase(Database):
         return [
             dict(
                 zip(
-                    ['function', 'similarity', 'binary_name', 'binary_sha256'],
+                    ['label', 'similarity', 'binary_name', 'binary_sha256'],
                     result,
                     strict=True,
                 )
