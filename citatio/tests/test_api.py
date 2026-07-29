@@ -70,6 +70,8 @@ def test_add_function_anonymous_not_allowed(monkeypatch, client, functions):
     monkeypatch.setattr(app.state, 'identification_modes', {'client_supplied'})
     response = client.post('/api/v1/functions', json=functions[0])
     assert response.status_code == 401
+    response = client.post('/api/v1/functions', json={**functions[1], 'user_id': 'MiniDane'})
+    assert response.status_code == 200
 
 
 def test_search_known(client, functions):
