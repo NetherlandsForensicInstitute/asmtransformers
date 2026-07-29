@@ -100,7 +100,7 @@ def identify_user(
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get('/api/v1/auth')
+@app.get('/api/v1/auth/configuration')
 async def auth_config(request: Request):
     # collect enabled authentication modes as booleans
     auth = {mode: mode in request.app.state.identification_modes for mode in SUPPORTED_AUTH_MODES}

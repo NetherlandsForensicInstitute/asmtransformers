@@ -17,7 +17,7 @@ async def client(monkeypatch, database_env):
 
 
 def test_get_auth_config(client):
-    response = client.get('/api/v1/auth')
+    response = client.get('/api/v1/auth/configuration')
     assert response.status_code == 200
     assert response.json() == {'anonymous': True, 'client_supplied': True, 'oidc': False}
 
@@ -35,7 +35,7 @@ def test_get_auth_config_oidc(monkeypatch, database_env):
     monkeypatch.setenv('CITATIO_AUTH_OIDC_SIGNATURE__CACHE__TTL', '3600')
 
     with TestClient(app) as client:
-        response = client.get('/api/v1/auth')
+        response = client.get('/api/v1/auth/configuration')
         assert response.status_code == 200
         assert response.json() == {
             'anonymous': False,
