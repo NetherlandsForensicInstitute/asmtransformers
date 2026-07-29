@@ -16,6 +16,38 @@ async def client(monkeypatch, database_env):
         yield client
 
 
+def test_get_auth_config(client):
+    response = client.get('/api/v1/auth/configuration')
+    assert response.status_code == 200
+    assert response.json() == {'anonymous': True, 'client_supplied': True, 'oidc': False}
+
+
+def test_get_auth_config_oidc(monkeypatch, database_env):
+    monkeypatch.setenv('CITATIO_MODEL', '":test:"')
+    # disable the silly auth
+    monkeypatch.setenv('CITATIO_AUTH_ANONYMOUS', 'false')
+    monkeypatch.setenv('CITATIO_AUTH_CLIENT__SUPPLIED', 'false')
+    # configure an OIDC provider at example.com
+    monkeypatch.setenv('CITATIO_AUTH_OIDC_CLIENT__ID', 'Cl1eNt-1D')
+    monkeypatch.setenv('CITATIO_AUTH_OIDC_BASE__AUTHORIZATION__SERVER__URI', 'https://example.com/auth')
+    monkeypatch.setenv('CITATIO_AUTH_OIDC_ISSUER', 'example.com')
+    # cache ttl is required, but omitted from the response content
+    monkeypatch.setenv('CITATIO_AUTH_OIDC_SIGNATURE__CACHE__TTL', '3600')
+
+    with TestClient(app) as client:
+        response = client.get('/api/v1/auth/configuration')
+        assert response.status_code == 200
+        assert response.json() == {
+            'anonymous': False,
+            'client_supplied': False,
+            'oidc': {
+                'client_id': 'Cl1eNt-1D',
+                'provider_uri': 'https://example.com/auth',
+                'issuer': 'example.com',
+            },
+        }
+
+
 def test_no_auth(client, functions):
     response = client.post('/api/v1/functions', headers={'Authorization': 'Bearer R1ghtT0B34r4RMs'}, json=functions[0])
     assert response.is_server_error
@@ -38,6 +70,8 @@ def test_add_function_anonymous_not_allowed(monkeypatch, client, functions):
     monkeypatch.setattr(app.state, 'identification_modes', {'client_supplied'})
     response = client.post('/api/v1/functions', json=functions[0])
     assert response.status_code == 401
+    response = client.post('/api/v1/functions', json={**functions[1], 'user_id': 'MiniDane'})
+    assert response.status_code == 200
 
 
 def test_search_known(client, functions):
