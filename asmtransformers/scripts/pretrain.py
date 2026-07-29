@@ -321,7 +321,7 @@ def build_arg_parser():
     parser.add_argument('--logging-steps', type=int, default=100, help='number of update steps between two logs')
     parser.add_argument('--mlm-prob', type=float, default=0.15, help='probability of a token/word to be masked')
     parser.add_argument('--learning-rate', type=float, default=1e-4, help='learning rate')
-    parser.add_argument('--warmup_steps', type=float, default=0.06, help='warmup steps for the learning-rate scheduler')
+    parser.add_argument('--warmup-steps', type=float, default=0.06, help='warmup steps for the learning-rate scheduler')
     parser.add_argument('--bf16', action='store_true', help='enable CUDA bfloat16 mixed precision training')
     parser.add_argument('--tf32', action='store_true', help='enable TF32 matmul/cudnn on supported CUDA GPUs')
     parser.add_argument(
