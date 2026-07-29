@@ -103,6 +103,8 @@ async def database_env(monkeypatch, database_config):
         case {'engine': 'postgresql', 'postgresql': connect}:
             monkeypatch.setenv('CITATIO_DATABASE_ENGINE', '"postgresql"')
             for var, value in connect.items():
+                if isinstance(value, str):
+                    value = f'"{value}"'
                 monkeypatch.setenv(f'CITATIO_DATABASE_POSTGRESQL_{var}'.upper(), str(value))
             yield
         case _:

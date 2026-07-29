@@ -48,7 +48,7 @@ def load_model(**model):
 
 async def connect_database(**database) -> Database:
     match database:
-        case {'engine': 'postgresql', 'postgresql': {} as connect}:
+        case {'engine': 'postgresql', 'postgresql': connect}:
             # database settings for postgresql, use PostgreSQLDatabase
             return await PostgreSQLDatabase.connect(**connect)
         case {'engine': 'sqlite', 'sqlite': name}:

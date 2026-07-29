@@ -150,7 +150,10 @@ class PostgreSQLDatabase(Database):
 
     @classmethod
     async def connect(cls, **kwargs):
-        connection = await asyncpg.connect(**kwargs)
+        # FIXME: passing **kwargs directly to asyncpg.connect() would be ideal, but this breaks when the applicable
+        #        strings were read from a TOML file, which are not str enough for asyncpg :(
+        dsn = 'postgresql://{user}:{password}@{host}:{port}/{database}'.format(**kwargs)
+        connection = await asyncpg.connect(dsn)
         await connection.execute('CREATE EXTENSION IF NOT EXISTS vector')
         await register_vector(connection)
         await connection.execute(resources.read_text('citatio', 'schema-postgresql.sql'))
