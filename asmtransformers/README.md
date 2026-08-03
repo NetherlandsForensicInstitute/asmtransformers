@@ -52,25 +52,29 @@ their similarity to the unknown function, hopefully giving an indication of what
 
 Pretraining
 -----------
-TO DO: check if pretrain -h is still the same
 For cluster-oriented multi-architecture pretraining with CUDA bf16 mixed precision, see
 [docs/pretraining.md](docs/pretraining.md). Run `scripts/pretrain.py --help` for the full current CLI.
 
-    usage: scripts/pretrain.py [-h] [--model-path MODEL_PATH] [--data DATA] [--tokenizer TOKENIZER] [--epoch EPOCH] [--batch-size BATCH_SIZE] [--gradient-accumulation-steps GRADIENT_ACCUMULATION_STEPS] [--save-steps SAVE_STEPS] [--logging-steps LOGGING_STEPS] [--mlm-prob MLM_PROB] output_dir
+    usage: scripts/pretrain.py [-h] [--model-path MODEL_PATH] [--data DATA] [--tokenizer TOKENIZER] [--config CONFIG] [--epoch EPOCH] [--max-steps MAX_STEPS] [--batch-size BATCH_SIZE] [--gradient-accumulation-steps GRADIENT_ACCUMULATION_STEPS] [--save-steps SAVE_STEPS] [--logging-steps LOGGING_STEPS] [--mlm-prob MLM_PROB]
+                   [--learning-rate LEARNING_RATE] [--warmup-steps WARMUP_STEPS] [--bf16] [--tf32] [--dataloader-num-workers DATALOADER_NUM_WORKERS] [--save-total-limit SAVE_TOTAL_LIMIT] [--eval-samples EVAL_SAMPLES] [--seed SEED] [--resume-from-checkpoint RESUME_FROM_CHECKPOINT] [--run-id RUN_ID]
+                   output_dir
 
     ASM-Pretrain
-
+    
     positional arguments:
       output_dir            the directory where the pretrained model will be saved
-
+    
     options:
       -h, --help            show this help message and exit
       --model-path MODEL_PATH
                             the path of the model to pretrain, can be empty if you want to initialise a new model
       --data DATA           training dataset
       --tokenizer TOKENIZER
-                            the path of tokenizer
+                            the path of tokenizer; defaults to the packaged multilingual_asmbert tokenizer
+      --config CONFIG       the path of the model config used when initializing a new model. Defaults to packaged multilingual_asmbert
       --epoch EPOCH         number of training epochs
+      --max-steps MAX_STEPS
+                            maximum number of training steps; -1 uses epochs
       --batch-size BATCH_SIZE
                             training batch size
       --gradient-accumulation-steps GRADIENT_ACCUMULATION_STEPS
@@ -80,6 +84,22 @@ For cluster-oriented multi-architecture pretraining with CUDA bf16 mixed precisi
       --logging-steps LOGGING_STEPS
                             number of update steps between two logs
       --mlm-prob MLM_PROB   probability of a token/word to be masked
+      --learning-rate LEARNING_RATE
+                            learning rate
+      --warmup-steps WARMUP_STEPS
+                            warmup steps for the learning-rate scheduler
+      --bf16                enable CUDA bfloat16 mixed precision training
+      --tf32                enable TF32 matmul/cudnn on supported CUDA GPUs
+      --dataloader-num-workers DATALOADER_NUM_WORKERS
+                            number of worker processes used by each training dataloader
+      --save-total-limit SAVE_TOTAL_LIMIT
+                            maximum number of checkpoints to keep
+      --eval-samples EVAL_SAMPLES
+                            maximum number of test samples used for intermediate evaluation; use -1 to disable the limit
+      --seed SEED           training seed
+      --resume-from-checkpoint RESUME_FROM_CHECKPOINT
+                            path to a Trainer checkpoint to resume from
+      --run-id RUN_ID       stable run id used under output_dir; overrides ASMTRANSFORMERS_RUN_ID, SLURM_JOB_ID, and timestamp
 
 We take the tokenized binaries (preferably in the shape of arrow files, but anything that can be called with the huggingface
 datasets load_from_disk function works). If no model path is given, we initialise a model from scratch. Otherwise, this
@@ -97,17 +117,16 @@ is available on Huggingface Hub.
 
 Finetuning
 ----------
-TO DO: this -h definitely changed so we need to replace it
 
-    usage: scripts/finetune.py [-h] -d DATA_FOLDER -m MODEL [-b BATCH_SIZE]
+    usage: scripts/finetune.py [-h] [-b BATCH_SIZE] data_folder model
 
+    positional arguments:
+      data_folder           folder with input data
+      model                 The name of the model used for finetuning
+    
     options:
       -h, --help            show this help message and exit
-      -d DATA_FOLDER, --data-folder DATA_FOLDER
-                            folder with data
-      -m MODEL, --model MODEL
-                            The name of the model used for finetuning
-      -b BATCH_SIZE, --batch-size BATCH_SIZE
+      -b, --batch-size BATCH_SIZE
                             Feed the data to the model in batches for a potential speed-up
 
 The finetune code will take the data and turn it into "triplets": it takes one function that has been compiled in two
@@ -130,24 +149,20 @@ Evaluation
 TO DO: evaluation certainly changed. Explain that we've found drastic differences in evaluation if the eval pairs and neg
 pools were different, and that we therefore saved an eval setup and ran a different evaluation script?
 
-    usage: scripts/evaluation.py [-h] [--input-path INPUT_PATH] [--output-path OUTPUT_PATH] [--pool-size POOL_SIZE]
-                                 [--architecture ARCHITECTURE] [--seed SEED] [--repeats REPEATS] [--static-pool]
+    usage: scripts/evaluation.py [-h] [--pool-size POOL_SIZE] [--seed SEED] [--repeats REPEATS] [--static-pool] input_path output_path
 
     evaluation
-
+    
+    positional arguments:
+      input_path            the path to the anchors/positives/negative pools
+      output_path           the path to write the final scores to
+    
     options:
       -h, --help            show this help message and exit
-      --input-path INPUT_PATH
-                        the path to the test data
-      --output-path OUTPUT_PATH
-                        the path to write the final scores to
       --pool-size POOL_SIZE
-                        the poolsize to pick the positive example from
-      --architecture ARCHITECTURE
-                        only use examples from specified architecture
-      --seed SEED       seed random evaluation sampling
-      --repeats REPEATS
-                        number of static-pool evaluation repeats
+                            the poolsize to pick the positive example from
+      --seed SEED           seed random evaluation sampling
+      --repeats REPEATS     number of static-pool evaluation repeats
       --static-pool         keep the negatives pool or refresh for every anchor-pos pair
 
 Keep in mind that the pool-size-parameter does not include the positive example. For example if we want to conduct the
@@ -180,18 +195,22 @@ is actually the same as the positive example as this would result in a false neg
 
 Inference
 ---------
-TO DO: check/update -h
 
-    scripts/inference.py -d DATA_FOLDER -o OUTPUT_FOLDER -m MODEL_PATH
+    usage: scripts/evaluation.py [-h] [--pool-size POOL_SIZE] [--seed SEED] [--repeats REPEATS] [--static-pool] input_path output_path
 
+    evaluation
+    
+    positional arguments:
+      input_path            the path to the anchors/positives/negative pools
+      output_path           the path to write the final scores to
+    
     options:
       -h, --help            show this help message and exit
-      -d DATA_FOLDER, --data-folder DATA_FOLDER
-                        folder containing to be inferenced data
-      -o OUTPUT_FOLDER, --output-folder OUTPUT_FOLDER
-                        folder to save embeddings
-      -m MODEL_PATH, --model-path MODEL_PATH
-                        (path to) model that should be used for inference
+      --pool-size POOL_SIZE
+                            the poolsize to pick the positive example from
+      --seed SEED           seed random evaluation sampling
+      --repeats REPEATS     number of static-pool evaluation repeats
+      --static-pool         keep the negatives pool or refresh for every anchor-pos pair
 
 inference.py adds a column to the given dataset, called 'embeddings', containing the embeddings
 corresponding to each function, and writes it to the output folder.
@@ -202,8 +221,7 @@ The plugin to use this model in Ghidra, [Sententia](../sententia), is available 
 
 Prerequisites
 -------------
-TO DO: check python version, I thought we were 3.13 now
-Python 3.12 or newer.
+Python 3.13
 
 Requirements
 ------------
