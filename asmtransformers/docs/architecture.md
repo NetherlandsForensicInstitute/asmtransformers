@@ -4,6 +4,7 @@
 
 `asmtransformers` is the training and inference core of the monorepo. It turns control-flow-graph representations of assembly functions into token sequences, feeds those sequences into transformer models, and exposes a script-oriented workflow for preprocessing, pretraining, finetuning, evaluation, and embedding generation.
 
+TO DO: change description for multilingual
 The current released model assets are optimized for ARM64 assembly, but not every subsystem is ARM64-specific. The main architectural distinction is:
 
 - ISA-specific logic lives in preprocessing and tokenization.
@@ -12,6 +13,8 @@ The current released model assets are optimized for ARM64 assembly, but not ever
 ## Main Subsystems
 
 ### ISA preprocessing
+
+TO DO: i386 is processed by which preprocessor?
 
 The ISA-specific preprocessing path is implemented in [asmtransformers.preprocessors](../asmtransformers/preprocessors/__init__.py), with current implementations for ARM64, x86/amd64, and RISC-V.
 
@@ -34,6 +37,8 @@ Operand normalization helpers live in [asmtransformers.operands](../asmtransform
 
 These helpers reduce token explosion caused by raw numeric values. The current tokenizer setup uses:
 
+TO DO: is this still true? I'm not sure we call both anymore
+
 - `format_immediate_log()` for immediates such as `#0x1234`
 - `format_offset_log()` for offsets such as `0x400`
 
@@ -44,6 +49,8 @@ These helpers reduce token explosion caused by raw numeric values. The current t
 Model integration lives in [asmtransformers.models.asmbert](../asmtransformers/models/asmbert.py) and [asmtransformers.models.asmsentencebert](../asmtransformers/models/asmsentencebert.py).
 
 The main layers are:
+
+TO DO: I believe the below is up to date but let's check
 
 - `ASMBertForMaskedLM` and `ASMBertModel` adapt Hugging Face BERT classes to the jTrans-style setup, including shared word/position embeddings and jump-target prediction support during pretraining.
 - `build_finetuning_model()` adapts the pretrained transformer into a plain `SentenceTransformer` model for triplet-loss finetuning.
@@ -99,10 +106,14 @@ The following parts are still ARM64-specific or ARM64-defaulted:
 - packaged model assets in `models/arm64bert/`
 - scripts and runtime paths that default to `arm64` when no architecture is supplied
 
+TO DO: is the second line still correct?
+
 Preprocessing itself is no longer ARM64-only: `ASMTokenizer` also dispatches to x86/amd64 and RISC-V preprocessors.
 There is currently no packaged vocabulary or trained model for non-ARM64 ISAs.
 
 ## What Is Reusable For Other ISAs Today
+
+TO DO: is this section still relevant?
 
 The following patterns are reusable across instruction sets:
 
@@ -118,6 +129,8 @@ The following patterns are reusable across instruction sets:
 In practice, reuse currently requires intentional adapter work because model assets and default runtime paths still assume ARM64.
 
 ## Testing And Regression Coverage
+
+TO DO: this needs updating
 
 The current architecture is anchored by tests in:
 

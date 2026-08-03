@@ -9,6 +9,7 @@ Inspired by [jTrans](https://github.com/vul337/jTrans), which implements a _jump
 similarity.
 For details on jTrans see Wang, Hao, et al. "Jtrans: Jump-aware transformer for binary code similarity detection." _Proceedings of the 31st ACM SIGSOFT International Symposium on Software Testing and Analysis_. 2022.
 
+TO DO: change following paragraph!
 For now, we focus on implementing the concepts from jTrans for ARM-assembly code in a clean and concise way.
 For future work we hope to train a model on an intermediate representation, in order to create a cross-architecture model.
 
@@ -22,6 +23,7 @@ The unknown function's assembly code can be embedded using a binary code similar
 
 Dataset
 -----
+TO DO: add stats about the amount of data per architecture; check if the info about dataset construction still applies.
 The dataset is created in the same way as Wang et al. create Binary Corp. A large set of binary code comes from the
 [ArchLinux official repositories](https://aur.archlinux.org/) and the [ArchLinux user repositories](https://archlinux.org/packages/).
 All this code is split into functions that are compiled with different optimisation
@@ -38,7 +40,7 @@ either the train or the test set, not both. We have not performed any deduplicat
 Pipeline
 --------
 With a dataset as described above, we train a BERT model using Masked Language Modelling (Devlin et al., 2019) and Jump
-Target Prediction (Wang et al., 2022). The result is a BERT model that "speaks" ARM64 assembly. The next step is to teach
+Target Prediction (Wang et al., 2022). The result is a BERT model that "speaks" different varieties of assembly. The next step is to teach
 the model which pieces of code are similar, and which ones are not. This is a key step in any [semantic search](https://sbert.net/index.html)
 model. The model sees triplets: two functions that have been compiled in different ways (i.e. code that works the same, but looks
 different) and one completely different function. We teach the model that the anchor and positive example look alike,
@@ -50,7 +52,7 @@ their similarity to the unknown function, hopefully giving an indication of what
 
 Pretraining
 -----------
-
+TO DO: check if pretrain -h is still the same
 For cluster-oriented multi-architecture pretraining with CUDA bf16 mixed precision, see
 [docs/pretraining.md](docs/pretraining.md). Run `scripts/pretrain.py --help` for the full current CLI.
 
@@ -87,12 +89,15 @@ by Wang et al. in the jTrans paper (referred to above), is implicitly included i
 JUMP-token, the correct token to predict is the correct jump address. This is the token index of the place the code was
 supposed to jump to, materialised in the vocabulary as JUMP_ADDR_n `(n = 1, len(max_token_lenght))`.
 
+TO DO: remove if we don't publish our current zero model, otherwise replace link
+TO DO: also post link to ARM64Bert models?
 The resulting model,
 <a href='https://huggingface.co/NetherlandsForensicInstitute/ARM64Bert'>NetherlandsForensicInstitute/ARM64Bert</a>
 is available on Huggingface Hub.
 
 Finetuning
 ----------
+TO DO: this -h definitely changed so we need to replace it
 
     usage: scripts/finetune.py [-h] -d DATA_FOLDER -m MODEL [-b BATCH_SIZE]
 
@@ -112,12 +117,18 @@ trained such that the anchor and the positive example are closer to each other i
 Cosine distance) than the anchor and the negative examples. We use [BatchSemiHardTripletLoss](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#batchsemihardtripletloss)
 to train the model.
 
+
+TO DO: remove if we don't publish our current zero model, otherwise replace link
+TO DO: also post link to ARM64Bert models?
+
 The resulting model,
 <a href='https://huggingface.co/NetherlandsForensicInstitute/ARM64bert-embedding'>NetherlandsForensicInstitute/ARM64bert-embedding</a>
 is available on Huggingface Hub.
 
 Evaluation
 ----------
+TO DO: evaluation certainly changed. Explain that we've found drastic differences in evaluation if the eval pairs and neg
+pools were different, and that we therefore saved an eval setup and ran a different evaluation script?
 
     usage: scripts/evaluation.py [-h] [--input-path INPUT_PATH] [--output-path OUTPUT_PATH] [--pool-size POOL_SIZE]
                                  [--architecture ARCHITECTURE] [--seed SEED] [--repeats REPEATS] [--static-pool]
@@ -169,6 +180,7 @@ is actually the same as the positive example as this would result in a false neg
 
 Inference
 ---------
+TO DO: check/update -h
 
     scripts/inference.py -d DATA_FOLDER -o OUTPUT_FOLDER -m MODEL_PATH
 
@@ -190,6 +202,7 @@ The plugin to use this model in Ghidra, [Sententia](../sententia), is available 
 
 Prerequisites
 -------------
+TO DO: check python version, I thought we were 3.13 now
 Python 3.12 or newer.
 
 Requirements
