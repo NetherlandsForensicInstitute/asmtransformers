@@ -16,7 +16,8 @@ The current released model assets are optimized for ARM64 assembly, but not ever
 
 TO DO: i386 is processed by which preprocessor?
 
-The ISA-specific preprocessing path is implemented in [asmtransformers.preprocessors](../asmtransformers/preprocessors/__init__.py), with current implementations for ARM64, x86/amd64, and RISC-V.
+The ISA-specific preprocessing path is implemented in [asmtransformers.preprocessors](../asmtransformers/preprocessors/__init__.py), with current implementations 
+for ARM64, x86/amd64, and RISC-V. I386 is also supported, but gets preprocessed using the x86 preprocessor.
 
 Its responsibilities are:
 
@@ -36,8 +37,6 @@ The output is a flat token list suitable for a tokenizer or vocabulary builder.
 Operand normalization helpers live in [asmtransformers.operands](../asmtransformers/operands.py).
 
 These helpers reduce token explosion caused by raw numeric values. The current tokenizer setup uses:
-
-TO DO: is this still true? I'm not sure we call both anymore
 
 - `format_immediate_log()` for immediates such as `#0x1234`
 - `format_offset_log()` for offsets such as `0x400`
@@ -109,7 +108,7 @@ The following parts are still ARM64-specific or ARM64-defaulted:
 TO DO: is the second line still correct?
 
 Preprocessing itself is no longer ARM64-only: `ASMTokenizer` also dispatches to x86/amd64 and RISC-V preprocessors.
-There is currently no packaged vocabulary or trained model for non-ARM64 ISAs.
+The multilingual model can be found on [Huggingface](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
 
 ## What Is Reusable For Other ISAs Today
 
