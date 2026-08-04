@@ -155,8 +155,6 @@ You can also find our monolingual, ARM64BERT semantic search model on Huggingfac
 
 Evaluation
 ----------
-TO DO: evaluation certainly changed. Explain that we've found drastic differences in evaluation if the eval pairs and neg
-pools were different, and that we therefore saved an eval setup and ran a different evaluation script?
 
     usage: scripts/evaluation.py [-h] [--pool-size POOL_SIZE] [--seed SEED] [--repeats REPEATS] [--static-pool] input_path output_path
 
@@ -196,11 +194,17 @@ Recall@1 for the positive example.
 There are a few minor things that we do differently than jTrans. Firstly, they do not check if the input of the
 positive example is equal to the input of the anchor. Especially for ARM64, there seem to be a significant number of
 cases where different optimisation levels return the same output. This seems like it would unfairly inflate the scores,
-so we make sure that the input of the positive example is never the same as the input of the anchor.
+so we make sure that the input of the positive example is never the same as the input of the anchor. We also
+check for duplicate anchor-positive pairs.
 
 Additionally, we make sure that none of the negative examples have the same input as the anchor. As there are possibly
 duplicate functions in our dataset, we want to avoid the possibility that a function in the list of negative examples
 is actually the same as the positive example as this would result in a false negative.
+
+Finally, we found that evaluation metrics of the same model differed hugely when evaluation was run at different seeds.
+Therefore, we created one evaluation dataset (i.e. anchor-positives-negatives) that was used for the evaluation of all
+models we trained. This dataset was created using eval-datasets.py. A separate evaluation file, namely 
+evaluation-static-dataset.py, was used to evaluate this dataset, in order to not overcomplicate evaluation.py.
 
 Inference
 ---------
