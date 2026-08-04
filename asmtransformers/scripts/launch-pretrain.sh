@@ -8,7 +8,7 @@ TORCHRUN_ARGS=(
 # All arguments below are hardcoded here, they should be an ENV variable so that they can be set from outside the container.
 # This is recommended for anyone who aims to run pretrain.py from a container.
 TRAINIG_ARGS=(
-    --data "/data/dataset"
+    --data "/data/dataset" # When executing this script from a container, map the dataset and tokenizer volume to /data/dataset and /data/tokenizer
     --tokenizer "/data/tokenizer"
     --config "/app/asmtransformers/models/multilingual_asmbert/config_large.json"
     --epoch 19
@@ -19,7 +19,7 @@ TRAINIG_ARGS=(
     --dataloader-num-workers 4
     --bf16
     --tf32
-    "/data/output/" 
+    "/data/output/" # This also needs to be mapped to a volume when spinning up the container
 )
 
 pdm run torchrun \
