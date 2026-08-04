@@ -24,24 +24,26 @@ The unknown function's assembly code can be embedded using a binary code similar
 
 Dataset
 -----
-TO DO: check if the info about dataset construction still applies.
 
-The dataset is created in the same way as Wang et al. create Binary Corp. A large set of binary code comes from the
-[ArchLinux official repositories](https://aur.archlinux.org/) and the [ArchLinux user repositories](https://archlinux.org/packages/).
-All this code is split into functions that are compiled with different optimisation
-(O0, O1, O2, O3 and O3) and security settings (fortify or no-fortify). This results
-in a maximum of 10 (5*2) different functions which are semantically similar i.e. they represent the same functionality but are written differently.
-The dataset is split into a train and a test set. This in done on project level, so all binaries and functions belonging to one project are part of
-either the train or the test set, not both. We have not performed any deduplication on the dataset for training.
+The dataset is built on the official [Debian Repository](https://wiki.debian.org/DebianRepository). To obtain multiple families of
+assembly, we used `apt` to cross-build the same source package to multiple architectures. The idea is that this gives us 
+the same functions for all four architectures. For all four architectures, these functions are compiled with different optimisation
+(O0, O1, O2, O3, Os and manually selected set with advanced instructions further referenced here as Oc for Optimised-Custom).
+This results in a maximum of 24 (6 optimisation * 4 architectures) different functions 
+which are semantically similar. (i.e. they represent the same functionality but are written differently)
+In practise, it was much easier to obtain amd64 functions than riscv64 functions. Thus, not all functions have 24 semantically similar functions.
+
+The dataset is split into a train, test and an evaluation set. This in done on source package, so all binaries and functions belonging to one source package are part of
+either the train or the test set, not both.
 
 #### Total amount of functions per architecture
 
 | Architecture | # functions|
 |--------------|------------|
-| AMD64        |8 202 164|
+| amd64        |8 202 164|
 | i386	        |4 868 531|
-| ARM64	       |4 421 768|
-| RISCV64	     |3 791 434 |
+| arm64	       |4 421 768|
+| riscv64	     |3 791 434 |
 -------------------------
 
 
