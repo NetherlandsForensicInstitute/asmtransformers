@@ -43,8 +43,6 @@ Model integration lives in [asmtransformers.models.asmbert](../asmtransformers/m
 
 The main layers are:
 
-TO DO: I believe the below is up to date but let's check
-
 - `ASMBertForMaskedLM` and `ASMBertModel` adapt Hugging Face BERT classes to the jTrans-style setup, including shared word/position embeddings and jump-target prediction support during pretraining.
 - `build_finetuning_model` in `asmsentencebert.py` adapts the pretrained transformer into a plain `SentenceTransformer` model for triplet-loss finetuning.
 - `ASMEmbedder` provides native inference without requiring sentence-transformers at deployment time.
