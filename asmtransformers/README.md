@@ -2,7 +2,7 @@ ASM Transformers
 ================
 
 Binary code similarity models using Transformers. Pronounced: _awesome transformers_.
-The actual model can be found [here](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
+The actual model can be found [on Hugging Face](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
 
 Background
 ----------
