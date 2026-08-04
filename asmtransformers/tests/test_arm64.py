@@ -3,6 +3,7 @@ import json
 
 import pytest
 
+from asmtransformers import Architecture
 from asmtransformers.models.asmbert import ASMTokenizer
 from asmtransformers.operands import is_offset
 from asmtransformers.preprocessors import arm64
@@ -134,7 +135,7 @@ def test_arm64_tokenizer_masks_padding_tokens():
     tokenizer_path = importlib.resources.files('asmtransformers.models').joinpath('arm64bert')
     tokenizer = ASMTokenizer.from_pretrained(tokenizer_path)
 
-    encoded = tokenizer([json.dumps([[0, ['ret']]])])
+    encoded = tokenizer([json.dumps([[0, ['ret']]])], architecture=Architecture.AMD64)
     input_ids = encoded['input_ids'][0]
     attention_mask = encoded['attention_mask'][0]
 

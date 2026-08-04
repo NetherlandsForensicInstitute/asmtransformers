@@ -5,7 +5,8 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.sentence_transformer.model_card import SentenceTransformerModelCardData
 from sentence_transformers.sentence_transformer.modules import Module, Pooling
 
-from .asmbert import ASMBertModel, ASMTokenizer
+from asmtransformers import Architecture
+from asmtransformers.models.asmbert import ASMBertModel, ASMTokenizer
 
 
 class ASMTransformerModule(Module):
@@ -47,7 +48,7 @@ class ASMTransformerModule(Module):
         features['token_embeddings'] = outputs.last_hidden_state
         return features
 
-    def preprocess(self, inputs, prompt=None, architecture='arm64', **kwargs):
+    def preprocess(self, inputs, *, architecture: Architecture, prompt=None, **kwargs):
         if prompt:
             inputs = [prompt + text for text in inputs]
         return self.tokenizer(inputs, architecture=architecture, **kwargs)

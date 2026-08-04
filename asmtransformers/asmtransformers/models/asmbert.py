@@ -202,7 +202,7 @@ class ASMTokenizer(BertTokenizer):
             **kwargs,
         )
 
-    def tokenize(self, texts, architecture='arm64', split_special_tokens=False, **kwargs):
+    def tokenize(self, texts, architecture: Architecture, split_special_tokens=False, **kwargs):
         encoded_inputs = []
         texts = [texts] if isinstance(texts, str) else texts
         preprocessor = self.preprocessors[architecture]
