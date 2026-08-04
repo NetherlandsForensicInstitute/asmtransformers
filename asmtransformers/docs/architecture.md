@@ -2,13 +2,9 @@
 
 ## Purpose
 
-`asmtransformers` is the training and inference core of the monorepo. It turns control-flow-graph representations of assembly functions into token sequences, feeds those sequences into transformer models, and exposes a script-oriented workflow for preprocessing, pretraining, finetuning, evaluation, and embedding generation.
-
-TO DO: change description for multilingual
-The current released model assets are optimized for ARM64 assembly, but not every subsystem is ARM64-specific. The main architectural distinction is:
-
-- ISA-specific logic lives in preprocessing and tokenization.
-- Model composition, training flow, and most dataset handling are reusable patterns.
+`asmtransformers` is the training and inference core of the monorepo. It turns control-flow-graph representations of 
+assembly functions into token sequences, feeds those sequences into transformer models, and exposes a script-oriented 
+workflow for preprocessing, pretraining, finetuning, evaluation, and embedding generation.
 
 ## Main Subsystems
 
@@ -50,7 +46,7 @@ The main layers are:
 TO DO: I believe the below is up to date but let's check
 
 - `ASMBertForMaskedLM` and `ASMBertModel` adapt Hugging Face BERT classes to the jTrans-style setup, including shared word/position embeddings and jump-target prediction support during pretraining.
-- `build_finetuning_model()` adapts the pretrained transformer into a plain `SentenceTransformer` model for triplet-loss finetuning.
+- `ASMTransformerModule` adapts the pretrained transformer into a plain `SentenceTransformer` model for triplet-loss finetuning.
 - `ASMEmbedder` provides native inference without requiring sentence-transformers at deployment time.
 
 Tokenizer integration is handled by `ASMTokenizer`:
@@ -93,7 +89,7 @@ The current end-to-end flow is:
 3. Operand formatters normalize large numeric values to reduce vocabulary growth.
 4. A tokenizer converts the token stream into model inputs with the expected context length.
 5. Pretraining uses those inputs for masked language modeling plus jump target prediction.
-6. Finetuning wraps the transformer in a sentence-transformers pipeline and optimizes embedding similarity.
+6. Finetuning wraps the transformer in a sentence-transformers pipeline (TODO is this still accurate?) and optimizes embedding similarity.
 7. Inference uses the native embedder to encode previously unseen functions for downstream similarity search.
 
 ## What Is Still ARM64-Specific Today
@@ -110,20 +106,16 @@ The multilingual model can be found on [Huggingface](https://huggingface.co/Neth
 
 ## What Is Reusable For Other ISAs Today
 
-TO DO: is this section still relevant?
+TO DO: is this correct? did I miss anything?
 
-The following patterns are reusable across instruction sets:
+If you want to create your own model for a different assembly architecture using this repo, we recommend you take the
+following steps:
 
-- the general CFG-to-token-to-transformer pipeline
-- the `ASMPreprocessor` hook model for custom operand formatting
-- `ASMTokenizer` architecture dispatch
-- Hugging Face BERT wrapping in `ASMBertModel` and `ASMBertForMaskedLM`
-- sentence-transformers finetuning integration via `build_finetuning_model()`
-- native embedding inference in `ASMEmbedder`
-- label-grouped dataset sampling in `LazySentenceLabelDataset`
-- the script-level workflow stages: preprocess, vocab build, pretrain, finetune, evaluate, infer
+- create an architecture-specific preprocessor in `models/preprocessors`
+- ensure the architecture name is specified in `models/__init__.py`
+- ensure it is specified in `ASMTokenizer` in `models/multilingual_asmbert/asmbert.py`
 
-In practice, reuse currently requires intentional adapter work because model assets and default runtime paths still assume ARM64.
+The multilingual code should work equally well when only data from one architecture is inserted.
 
 ## Testing And Regression Coverage
 
@@ -131,11 +123,19 @@ TO DO: this needs updating
 
 The current architecture is anchored by tests in:
 
-- [tests/test_arm64.py](../tests/test_arm64.py) for parsing, tokenization, jump handling, and prefix-token behavior
-- [tests/test_x86.py](../tests/test_x86.py) and [tests/test_riscv.py](../tests/test_riscv.py) for additional ISA preprocessing behavior
-- [tests/test_operand_formatters.py](../tests/test_operand_formatters.py) for numeric normalization behavior
+- [tests/test_arm64.py](../tests/test_arm64.py) for ARM64-specific parsing, tokenization, jump handling, and prefix-token behavior
 - [tests/test_asmbert.py](../tests/test_asmbert.py) for model integration and embedding stability checks
 - [tests/test_asmsentencebert_freeze.py](../tests/test_asmsentencebert_freeze.py) for finetuning freeze policy
 - [tests/test_embedder.py](../tests/test_embedder.py) for native embedding inference
+- [tests/test_evaluation.py](../tests/test_evaluation.py) for evaluation metrics and evaluation anchor/positive/negatives generation
+- [tests/test_mktokenizer.py](../tests/test_mktokenizer.py) for extracting tokens
+- [tests/test_operand_formatters.py](../tests/test_operand_formatters.py) for numeric normalization behavior
+- [tests/test_pretrain.py](../tests/test_pretrain.py) for machine learning processes, training environment requirements (TODO: is that an accurate description?)
+- [tests/test_riscv.py](../tests/test_riscv.py) for RISC-V specific parsing
+- [tests/test_sentencelabel.py](../tests/test_sentencelabel.py) for Transformers-Sentence Transformers compatibility
+- [tests/test_x86.py](../tests/test_x86.py) and x68-specific parsing
+- 
+- 
+
 
 Contributor changes that affect preprocessing, tokenization, or model composition should preserve the invariants covered there or extend the suite accordingly.
