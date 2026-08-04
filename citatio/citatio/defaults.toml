@@ -1,0 +1,43 @@
+# ----
+# default configuration for citatio REST API
+#
+# note 1: these defaults will run, but might not be suitable for a real-world deployment as authentication will be
+#         turned off and data is saved in an ephemeral in-memory database.
+#
+# note 2: this file serves as the default, all of which can be overriden either by strategically placed configuration
+#         files or environment variables (see confidence' documentation)
+# ----
+
+[model]
+# default model configuration uses the published ARM64BERT-embedding model from HuggingFace
+hf = "NetherlandsForensicInstitute/ARM64BERT-embedding"
+# alternatively, a model to be loaded from path can be configured as that path (see ASMEmbedder.from_pretrained):
+#
+# path = "/path/to/model/"
+
+[database]
+# default configuration uses an ephemeral in-memory database
+engine = "sqlite"                        # the database engine to use, either "sqlite" or "postgresql"
+sqlite = ":memory:"                      # path to a sqlite database file, or :memory: to use a temporary / ephemeral
+                                         # in-memory database
+# alternatively, a connection to a PostgreSQL database with pgvector extensions enabled can be configured either as a
+# single field dsn or a combination of fields like host, port, user, password, database, ... (see documentation for
+# asyncpg.connect), e.g.:
+#
+# engine = "postgresql"
+# [database.postgresql]
+# dsn = "postgresql://postgres@localhost/citatio"
+
+[auth]
+# default configuration allows only anonymous operation
+anonymous = true                         # allow anonymous access, user ids will be null
+client_supplied = false                  # trust an explicit user id supplied in a request
+
+# off by default, but if applicable, oidc should provide 4 keys:
+#
+# [auth.oidc]
+# client_id = "..."                      # the provider-known client identifier for citatio
+# base_authorization_server_uri = "..."  # the authentication provider endpoint (before the .well-known/ path)
+# issuer = "..." or ["...", "..."]       # accepted issuers
+# signature_cache_ttl = 3600             # cache time for the provider's public keys
+oidc = false

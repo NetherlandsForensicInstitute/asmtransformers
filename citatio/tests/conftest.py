@@ -78,11 +78,11 @@ async def database_config(request):
     match request.param:
         case 'sqlite':
             # use a in-memory sqlite database
-            yield Configuration({'database.sqlite': ':memory:'})
+            yield Configuration({'database': {'engine': 'sqlite', 'sqlite': ':memory:'}})
         case 'postgresql':
             # run a session-scope ephemeral database
             connect = request.getfixturevalue('connect_pgvector')
-            yield Configuration({'database': connect})
+            yield Configuration({'database': {'engine': 'postgresql', 'postgresql': connect}})
             # empty the database after use
             connection = await asyncpg.connect(**connect)
             await connection.execute("""
@@ -94,14 +94,18 @@ async def database_config(request):
 
 @pytest.fixture
 async def database_env(monkeypatch, database_config):
-    match database_config:
-        case {'database.sqlite': fname}:
+    match database_config.database:
+        case {'engine': 'sqlite', 'sqlite': fname}:
             # NB: add quotes to avoid the configuration's format misparsing :memory:
+            monkeypatch.setenv('CITATIO_DATABASE_ENGINE', '"sqlite"')
             monkeypatch.setenv('CITATIO_DATABASE_SQLITE', f'"{fname}"')
             yield
-        case {'database': connect}:
+        case {'engine': 'postgresql', 'postgresql': connect}:
+            monkeypatch.setenv('CITATIO_DATABASE_ENGINE', '"postgresql"')
             for var, value in connect.items():
-                monkeypatch.setenv(f'CITATIO_DATABASE_{var}'.upper(), str(value))
+                if isinstance(value, str):
+                    value = f'"{value}"'
+                monkeypatch.setenv(f'CITATIO_DATABASE_POSTGRESQL_{var}'.upper(), str(value))
             yield
         case _:
             raise ValueError
@@ -110,11 +114,11 @@ async def database_env(monkeypatch, database_config):
 @pytest.fixture
 async def database(database_config):
     match database_config:
-        case {'database.sqlite': name}:
+        case {'database': {'engine': 'sqlite', 'sqlite': name}}:
             # create an in-memory database that will be empty after use by design
             async with await SQLiteDatabase.connect(name) as db:
                 yield db
-        case {'database': connect}:
+        case {'database': {'engine': 'postgresql', 'postgresql': connect}}:
             async with await PostgreSQLDatabase.connect(**connect) as db:
                 yield db
         case _:

@@ -150,7 +150,13 @@ class PostgreSQLDatabase(Database):
 
     @classmethod
     async def connect(cls, **kwargs):
-        connection = await asyncpg.connect(**kwargs)
+        connect = {
+            # str-type values that were read from a TOML file using tomlkit are str, but cause type errors inside
+            # asyncpg, coercing them to str here alleviates this (see https://github.com/MagicStack/asyncpg/issues/1340)
+            key: str(value) if isinstance(value, str) else value
+            for key, value in kwargs.items()
+        }
+        connection = await asyncpg.connect(**connect)
         await connection.execute('CREATE EXTENSION IF NOT EXISTS vector')
         await register_vector(connection)
         await connection.execute(resources.read_text('citatio', 'schema-postgresql.sql'))

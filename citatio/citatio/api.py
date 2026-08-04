@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from importlib import resources
 from typing import Annotated
 
 import confidence
@@ -8,7 +9,7 @@ from fastapi.params import Body
 from fastapi_oidc import IDToken, get_auth
 
 from citatio.db import Database, PostgreSQLDatabase, SQLiteDatabase
-from citatio.models import ControlFlowGraph, TestEmbedder
+from citatio.models import ControlFlowGraph
 
 
 SUPPORTED_AUTH_MODES = frozenset({'anonymous', 'client_supplied', 'oidc'})
@@ -24,7 +25,7 @@ def resolve_auth(**auth):
         raise ValueError(f'unsupported auth mode: {", ".join(unsupported)}')
 
     match auth:
-        case {'oidc': oidc}:
+        case {'oidc': oidc} if oidc:
             # create an OIDC Authorization header → IDToken function from the configured authentication settings
             return allowed, get_auth(**oidc)
         case _:
@@ -35,32 +36,36 @@ def resolve_auth(**auth):
             return allowed, _oidc_unavailable
 
 
-def load_model(model):
+def load_model(**model):
     match model:
-        # TODO: this is effectively test code, can we patch that at test time?
-        case ':test:':
-            return TestEmbedder()
+        case {'hf': name_or_path} | {'path': name_or_path} if name_or_path:
+            # from_pretrained takes either a name or a path, allow it to be specified either way, even though we can't
+            # supply it explicitly as a name or a path
+            return ASMEmbedder.from_pretrained(name_or_path)
         case _:
-            return ASMEmbedder.from_pretrained(model)
+            raise ValueError('missing model configuration')
 
 
-async def connect_database(**connect) -> Database:
-    match connect:
-        case {'sqlite': name}:
+async def connect_database(**database) -> Database:
+    match database:
+        case {'engine': 'postgresql', 'postgresql': connect}:
+            # database settings for postgresql, use PostgreSQLDatabase
+            return await PostgreSQLDatabase.connect(**connect)
+        case {'engine': 'sqlite', 'sqlite': name}:
             # explicit sqlite name to connect to, use SQLiteDatabase
             return await SQLiteDatabase.connect(name)
-        case {} if connect:
-            # database settings *not* mentioning sqlite, use PostgreSQLDatabase
-            return await PostgreSQLDatabase.connect(**connect)
         case _:
             raise ValueError('missing database configuration')
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.config = config = confidence.load_name('citatio')
+    # load defaults from citatio module
+    defaults = confidence.loads(resources.read_text('citatio', 'defaults.toml'), format=confidence.TOML)
+    # combine defaults with user-supplied configuration
+    app.state.config = config = defaults | confidence.load_name('citatio', format=confidence.TOML)
 
-    app.state.model = load_model(config.model or DEFAULT_MODEL)
+    app.state.model = load_model(**config.model)
 
     app.state.identification_modes, app.state.authenticate_user = resolve_auth(**config.auth)
 

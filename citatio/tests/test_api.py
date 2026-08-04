@@ -1,13 +1,22 @@
+from hashlib import sha256
+
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+from citatio import api
 from citatio.api import app
 
 
 @pytest.fixture
-async def client(monkeypatch, database_env):
-    # configure a test model to be loaded, avoid calling ASMEmbedder.from_pretrained
-    monkeypatch.setenv('CITATIO_MODEL', '":test:"')
+def mocked_model(monkeypatch):
+    model = TestEmbedder()
+    monkeypatch.setattr(api, 'load_model', lambda **kwargs: model)
+    yield model
+
+
+@pytest.fixture
+async def client(monkeypatch, database_env, mocked_model):
     # add anonymous and client_supplied authentication modes during test
     monkeypatch.setenv('CITATIO_AUTH_ANONYMOUS', 'true')
     monkeypatch.setenv('CITATIO_AUTH_CLIENT__SUPPLIED', 'true')
@@ -22,15 +31,14 @@ def test_get_auth_config(client):
     assert response.json() == {'anonymous': True, 'client_supplied': True, 'oidc': False}
 
 
-def test_get_auth_config_oidc(monkeypatch, database_env):
-    monkeypatch.setenv('CITATIO_MODEL', '":test:"')
+def test_get_auth_config_oidc(monkeypatch, database_env, mocked_model):
     # disable the silly auth
     monkeypatch.setenv('CITATIO_AUTH_ANONYMOUS', 'false')
     monkeypatch.setenv('CITATIO_AUTH_CLIENT__SUPPLIED', 'false')
     # configure an OIDC provider at example.com
-    monkeypatch.setenv('CITATIO_AUTH_OIDC_CLIENT__ID', 'Cl1eNt-1D')
-    monkeypatch.setenv('CITATIO_AUTH_OIDC_BASE__AUTHORIZATION__SERVER__URI', 'https://example.com/auth')
-    monkeypatch.setenv('CITATIO_AUTH_OIDC_ISSUER', 'example.com')
+    monkeypatch.setenv('CITATIO_AUTH_OIDC_CLIENT__ID', '"Cl1eNt-1D"')
+    monkeypatch.setenv('CITATIO_AUTH_OIDC_BASE__AUTHORIZATION__SERVER__URI', '"https://example.com/auth"')
+    monkeypatch.setenv('CITATIO_AUTH_OIDC_ISSUER', '"example.com"')
     # cache ttl is required, but omitted from the response content
     monkeypatch.setenv('CITATIO_AUTH_OIDC_SIGNATURE__CACHE__TTL', '3600')
 
@@ -93,3 +101,25 @@ def test_search_unknown(client, functions):
     for result in results:
         # nothing matches exactly, nothing should come back < 0.0
         assert 0.0 < result['similarity'] < 1.0
+
+
+def test_test_embedder():
+    data = '[[0, ["add x1,x1", "ret"]], [12, ["ret"]], [34, ["b 0"]]]'
+    embedder = TestEmbedder()
+
+    assert len(embedder.encode(data)) == 768
+    assert np.allclose(embedder.encode(data), embedder.encode(data, architecture='mips'))
+    assert np.allclose(TestEmbedder().encode(data), embedder.encode(data))
+    assert not np.allclose(embedder.encode('other data'), embedder.encode(data))
+
+
+class TestEmbedder:
+    def encode(self, cfg, **kwargs):
+        v = np.frombuffer(
+            # string together enough sha256 hashes to gather a deterministic uint8 array of length 768
+            b''.join(sha256(bytes(f'{n}: {cfg}', encoding='utf-8')).digest() for n in range(768 // 32)),
+            dtype=np.uint8,
+        )
+        # normalize the array like a real model would
+        # NB: make sure to explicitly use float32, sqlite assumes 4-byte values
+        return np.divide(v, np.linalg.norm(v), dtype=np.float32)
