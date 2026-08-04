@@ -111,7 +111,7 @@ following steps:
 
 - create an architecture-specific preprocessor in `models/preprocessors`
 - ensure the architecture name is specified in the `Architecture` enumeration in `__init__.py`
-- ensure it is specified in `ASMTokenizer` in `models/multilingual_asmbert/asmbert.py`
+- ensure it is included in `ASMTokenizer` in `models/asmbert.py`
 
 The multilingual code should work equally well when only data from one architecture is inserted.
 
