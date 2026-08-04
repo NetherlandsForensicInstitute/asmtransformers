@@ -109,9 +109,9 @@ TO DO: is this correct? did I miss anything?
 If you want to create your own model for a different assembly architecture using this repo, we recommend you take the
 following steps:
 
-- create an architecture-specific preprocessor in `asmtransformers/preprocessors`
-- ensure the architecture name is specified in the `Architecture` enumeration in `__init__.py`
-- ensure it is included in `ASMTokenizer` in `models/asmbert.py`
+- create an architecture-specific preprocessor in [asmtransformers/preprocessors](../asmtransformers/preprocessors)
+- ensure the architecture name is specified in the `Architecture` enumeration in [asmtransformers/__init__.py](../asmtransformers/__init__.py)
+- ensure it is included in `ASMTokenizer` in [asmtransformers/models/asmbert.py](../asmtransformers/models/asmbert.py)
 
 The multilingual code should work equally well when only data from one architecture is inserted.
 
