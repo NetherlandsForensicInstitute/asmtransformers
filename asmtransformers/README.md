@@ -27,8 +27,8 @@ Dataset
 
 The dataset is built on the official [Debian Repository](https://wiki.debian.org/DebianRepository). To obtain multiple families of
 assembly, we used `apt` to cross-build the same source package to multiple architectures. The idea is that this gives us 
-the same functions for all four architectures. For all four architectures, these functions are compiled with different optimisation
-(O0, O1, O2, O3, Os and manually selected set with advanced instructions further referenced here as Oc for Optimised-Custom).
+the same functions for all four architectures. For all four architectures, these functions are compiled with different optimisation:
+O0, O1, O2, O3, Os and manually selected set with advanced instructions further referenced here as Oc for Optimised-Custom.
 This results in a maximum of 24 (6 optimisation * 4 architectures) different functions 
 which are semantically similar. (i.e. they represent the same functionality but are written differently)
 In practise, it was much easier to obtain amd64 functions than riscv64 functions. Thus, not all functions have 24 semantically similar functions.
