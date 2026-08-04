@@ -36,7 +36,7 @@ public class FunctionDescriptor {
 
 	public JSONObject toJson() {
 		JSONObject jsonFunctionDescriptor = new JSONObject();
-		jsonFunctionDescriptor.put("name", this.name);
+		jsonFunctionDescriptor.put("label", this.name);
 		jsonFunctionDescriptor.put("cfg", this.functionCFG);
 		jsonFunctionDescriptor.put("architecture", this.architecture);
 		jsonFunctionDescriptor.put("binary_name", this.binaryName);
