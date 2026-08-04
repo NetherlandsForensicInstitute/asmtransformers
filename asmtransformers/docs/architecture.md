@@ -110,7 +110,7 @@ If you want to create your own model for a different assembly architecture using
 following steps:
 
 - create an architecture-specific preprocessor in `models/preprocessors`
-- ensure the architecture name is specified in `models/__init__.py`
+- ensure the architecture name is specified in the `Architecture` enumeration in `__init__.py`
 - ensure it is specified in `ASMTokenizer` in `models/multilingual_asmbert/asmbert.py`
 
 The multilingual code should work equally well when only data from one architecture is inserted.
