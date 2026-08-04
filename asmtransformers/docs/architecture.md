@@ -11,7 +11,7 @@ workflow for preprocessing, pretraining, finetuning, evaluation, and embedding g
 ### ISA preprocessing
 
 The ISA-specific preprocessing path is implemented in [asmtransformers.preprocessors](../asmtransformers/preprocessors/__init__.py), with current implementations 
-for ARM64, x86/amd64, and RISC-V. I386 is also supported, but gets preprocessed using the x86 preprocessor.
+for amd64, arm64, i386 and riscv64 (though amd64 and i386 are preprocessed by the same `X86Preprocessor`).
 
 Its responsibilities are:
 
