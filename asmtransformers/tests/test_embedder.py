@@ -98,7 +98,7 @@ def checkpoint_path(tmp_path):
 def test_native_embedder_returns_normalized_embedding(checkpoint_path, cfg):
     embedder = ASMEmbedder.from_pretrained(checkpoint_path)
 
-    embedding = embedder.encode(cfg)
+    embedding = embedder.encode(cfg, architecture='arm64')
 
     assert embedding.shape == (8,)
     assert embedding.dtype == np.float32
@@ -108,8 +108,8 @@ def test_native_embedder_returns_normalized_embedding(checkpoint_path, cfg):
 def test_native_embedder_can_disable_default_normalization(checkpoint_path, cfg):
     embedder = ASMEmbedder.from_pretrained(checkpoint_path, normalize_embeddings=False)
 
-    unnormalized = embedder.encode(cfg)
-    normalized = embedder.encode(cfg, normalize_embeddings=True)
+    unnormalized = embedder.encode(cfg, architecture='arm64')
+    normalized = embedder.encode(cfg, architecture='arm64', normalize_embeddings=True)
 
     assert not np.isclose(np.linalg.norm(unnormalized), 1.0)
     assert np.isclose(np.linalg.norm(normalized), 1.0)
@@ -118,8 +118,8 @@ def test_native_embedder_can_disable_default_normalization(checkpoint_path, cfg)
 def test_native_embedder_batch_size_does_not_change_embeddings(checkpoint_path, cfg):
     embedder = ASMEmbedder.from_pretrained(checkpoint_path)
 
-    single = embedder.encode(cfg)
-    batched = embedder.encode([cfg, cfg], batch_size=2)
+    single = embedder.encode(cfg, architecture='arm64')
+    batched = embedder.encode([cfg, cfg], architecture='arm64', batch_size=2)
 
     assert np.allclose(single, batched[0])
     assert np.allclose(single, batched[1])
@@ -128,8 +128,8 @@ def test_native_embedder_batch_size_does_not_change_embeddings(checkpoint_path, 
 def test_native_embedder_accepts_iterators(checkpoint_path, cfg):
     embedder = ASMEmbedder.from_pretrained(checkpoint_path)
 
-    single = embedder.encode(cfg)
-    batched = embedder.encode((item for item in [cfg, cfg]), batch_size=1)
+    single = embedder.encode(cfg, architecture='arm64')
+    batched = embedder.encode((item for item in [cfg, cfg]), architecture='arm64', batch_size=1)
 
     assert np.allclose(single, batched[0])
     assert np.allclose(single, batched[1])
@@ -172,7 +172,7 @@ def test_mean_pool_ignores_padding():
 def test_hf_embedding_model_loads_natively(anchor):
     embedder = ASMEmbedder.from_pretrained('NetherlandsForensicInstitute/ARM64BERT-embedding')
 
-    embedding = embedder.encode(anchor)
+    embedding = embedder.encode(anchor, architecture='arm64')
 
     assert np.isclose(embedding.sum(), -0.09272218)
     assert np.isclose(embedding.min(), -0.10641833)
