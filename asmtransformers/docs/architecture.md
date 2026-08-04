@@ -100,7 +100,7 @@ The following parts are still ARM64-specific or ARM64-defaulted:
 TO DO: is the second line still correct?
 
 Preprocessing itself is no longer ARM64-only: `ASMTokenizer` also dispatches to x86/amd64 and RISC-V preprocessors.
-The multilingual model can be found on [Huggingface](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
+The multilingual model can be found on [Hugging Face](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
 
 ## What Is Reusable For Other ISAs Today
 
