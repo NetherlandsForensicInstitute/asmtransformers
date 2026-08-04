@@ -1,4 +1,5 @@
 #!/bin/bash
+# This launch-pretrain script is here if you aim to pretrain on a SLURM controlled environment. When pretraining locally this script is not neccesairy. 
 TORCHRUN_ARGS=(
     --nnodes "$NNODES"
     --nproc-per-node "$GPUS_PER_NODE" 
