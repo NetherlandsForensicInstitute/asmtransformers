@@ -35,8 +35,8 @@ class ASMEmbedder:
         self,
         sentences,
         *,
+        architecture,
         batch_size=32,
-        architecture='arm64',
         normalize_embeddings=None,
         convert_to_numpy=True,
     ):

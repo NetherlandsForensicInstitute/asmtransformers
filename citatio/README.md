@@ -18,7 +18,7 @@ The citatio REST API takes 3 configuration options:
 
 Citatio uses [confidence](https://github.com/NetherlandsForensicInstitute/confidence/) to read configuration, so both strategically placed files and environment variables are supported:
 
-- `CITATIO_MODEL`: a local path or huggingface model name (though again, currently only the `ARM64BERT-embedding` model is supported);
+- `CITATIO_MODEL_HF` or `CITATIO_MODEL_PATH`: a local path or huggingface model name (though again, currently only the `ARM64BERT-embedding` model is supported);
 - `CITATIO_AUTH_ANONYMOUS` (allowing operation without identifying a user) and 
   `CITATIO_AUTH_CLIENT__SUPPLIED` (enabling a client to supply a user identity in a request body) can be set to `true` to enable them, 
   OIDC configuration requires at least four values, see below.
