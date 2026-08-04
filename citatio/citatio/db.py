@@ -86,9 +86,7 @@ class SQLiteDatabase(Database):
         binary_name=None,
         binary_sha256=None,
     ):
-        if architecture not in Architecture:
-            raise ValueError(f'unsupported architecture: {architecture}')
-
+        architecture = Architecture(architecture)
         with self.connection:
             cursor = self.connection.cursor()
             function_id = await self._insert_or_get_function(cursor, architecture, cfg, embedding)
@@ -177,9 +175,7 @@ class PostgreSQLDatabase(Database):
         binary_name=None,
         binary_sha256=None,
     ):
-        if architecture not in Architecture:
-            raise ValueError(f'unsupported architecture: {architecture}')
-
+        architecture = Architecture(architecture)
         async with self.connection.transaction():
             function_id = await self.connection.fetchval(
                 # use PostgreSQL's conflict resolution to issue an update-or-get

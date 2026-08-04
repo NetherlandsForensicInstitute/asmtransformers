@@ -26,7 +26,7 @@ async def test_add_architecture(database, functions, embeddings):
     for architecture, function in zip(Architecture, functions, strict=True):
         await database.add_function(function['label'], architecture, function['cfg'], embeddings[function['label']])
 
-    with pytest.raises(ValueError, match='unsupported architecture'):
+    with pytest.raises(ValueError, match='not a valid Architecture'):
         # reuse an unrelated embedding from the last iteration above
         await database.add_function('conquer_world', 'mips', [0, ['ret']], embeddings[function['label']])
 
