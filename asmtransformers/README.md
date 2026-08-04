@@ -2,6 +2,7 @@ ASM Transformers
 ================
 
 Binary code similarity models using Transformers. Pronounced: _awesome transformers_.
+The actual model can be found [here](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
 
 Background
 ----------
@@ -119,8 +120,7 @@ by Wang et al. in the jTrans paper (referred to above), is implicitly included i
 JUMP-token, the correct token to predict is the correct jump address. This is the token index of the place the code was
 supposed to jump to, materialised in the vocabulary as JUMP_ADDR_n `(n = 1, len(max_token_lenght))`.
 
-TO DO: remove if we don't publish our current zero model, otherwise replace link
-TO DO: INSERT LINK TO MULTILINGUAL MODEL
+TO DO: if we publish our current zero model, add link
 
 You can also find our monolingual, ARM64BERT model on Huggingface:
 <a href='https://huggingface.co/NetherlandsForensicInstitute/ARM64Bert'>NetherlandsForensicInstitute/ARM64Bert</a>
@@ -146,9 +146,7 @@ trained such that the anchor and the positive example are closer to each other i
 Cosine distance) than the anchor and the negative examples. We use [BatchSemiHardTripletLoss](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#batchsemihardtripletloss)
 to train the model.
 
-
-TO DO: remove if we don't publish our current zero model, otherwise replace link
-INSERT LINK TO MULTILINGUAL MODEL!
+Our multilingual model can be found on [Huggingface](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
 
 You can also find our monolingual, ARM64BERT semantic search model on Huggingface:
 <a href='https://huggingface.co/NetherlandsForensicInstitute/ARM64bert-embedding'>NetherlandsForensicInstitute/ARM64bert-embedding</a>
