@@ -12,8 +12,8 @@ TRAINIG_ARGS=(
     --config "/app/asmtransformers/models/multilingual_asmbert/config_large.json"
     --epoch 19
     --batch-size 192
-    --gradient-accumulation-steps 1
-    --mlm-prob 0.15
+    --gradient-accumulation-steps 4
+    --mlm-prob 0.4
     --save-steps 5000
     --dataloader-num-workers 4
     --bf16
