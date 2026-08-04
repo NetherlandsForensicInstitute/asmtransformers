@@ -154,7 +154,7 @@ to train the model.
 
 Our multilingual model can be found on [Huggingface](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
 
-You can also find our monolingual, ARM64BERT semantic search model on Huggingface:
+You can also find our monolingual, ARM64BERT semantic search model on Hugging Face:
 <a href='https://huggingface.co/NetherlandsForensicInstitute/ARM64bert-embedding'>NetherlandsForensicInstitute/ARM64bert-embedding</a>
 
 Evaluation
