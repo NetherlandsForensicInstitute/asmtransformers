@@ -2,6 +2,7 @@ from itertools import pairwise
 
 import numpy
 import pytest
+from asmtransformers import Architecture
 
 from citatio.db import PostgreSQLDatabase, SQLiteDatabase
 
@@ -22,10 +23,10 @@ async def filled_database(database, functions, embeddings):
 
 
 async def test_add_architecture(database, functions, embeddings):
-    for architecture, function in zip(('amd64', 'arm64', 'i386', 'riscv64'), functions, strict=True):
+    for architecture, function in zip(Architecture, functions, strict=True):
         await database.add_function(function['label'], architecture, function['cfg'], embeddings[function['label']])
 
-    with pytest.raises(ValueError, match='unsupported architecture'):
+    with pytest.raises(ValueError, match='not a valid Architecture'):
         # reuse an unrelated embedding from the last iteration above
         await database.add_function('conquer_world', 'mips', [0, ['ret']], embeddings[function['label']])
 

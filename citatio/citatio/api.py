@@ -3,6 +3,7 @@ from importlib import resources
 from typing import Annotated
 
 import confidence
+from asmtransformers import Architecture
 from asmtransformers.models.embedder import ASMEmbedder
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.params import Body
@@ -126,7 +127,7 @@ async def add_function(
     request: Request,
     label: Annotated[str, Body()],
     cfg: Annotated[ControlFlowGraph, Body()],
-    architecture: Annotated[str, Body()] = 'arm64',
+    architecture: Annotated[Architecture, Body()],
     binary_name: Annotated[str | None, Body()] = None,
     binary_sha256: Annotated[str | None, Body()] = None,
     user_id: Annotated[str | None, Depends(identify_user)] = None,
@@ -147,7 +148,7 @@ async def add_function(
 async def search_function(
     request: Request,
     cfg: Annotated[ControlFlowGraph, Body()],
-    architecture: Annotated[str, Body()] = 'arm64',
+    architecture: Annotated[Architecture, Body()],
     top_n: Annotated[int, Body()] = 25,
 ):
     embedding = request.app.state.model.encode(ControlFlowGraph.to_str(cfg), architecture=architecture)

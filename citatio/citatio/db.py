@@ -4,12 +4,10 @@ from importlib import resources
 import asyncpg
 import numpy as np
 import sqlite_vec
+from asmtransformers import Architecture
 from pgvector.asyncpg import register_vector
 
 from citatio.models import ControlFlowGraph
-
-
-SUPPORTED_ARCHITECTURES = frozenset({'amd64', 'arm64', 'i386', 'riscv64'})
 
 
 class Database:
@@ -20,7 +18,7 @@ class Database:
     async def add_function(
         self,
         name: str,
-        architecture: str,
+        architecture: Architecture,
         cfg: dict[int, list[str]],
         embedding: np.ndarray,
         *,
@@ -88,9 +86,7 @@ class SQLiteDatabase(Database):
         binary_name=None,
         binary_sha256=None,
     ):
-        if architecture not in SUPPORTED_ARCHITECTURES:
-            raise ValueError(f'unsupported architecture: {architecture}')
-
+        architecture = Architecture(architecture)
         with self.connection:
             cursor = self.connection.cursor()
             function_id = await self._insert_or_get_function(cursor, architecture, cfg, embedding)
@@ -179,9 +175,7 @@ class PostgreSQLDatabase(Database):
         binary_name=None,
         binary_sha256=None,
     ):
-        if architecture not in SUPPORTED_ARCHITECTURES:
-            raise ValueError(f'unsupported architecture: {architecture}')
-
+        architecture = Architecture(architecture)
         async with self.connection.transaction():
             function_id = await self.connection.fetchval(
                 # use PostgreSQL's conflict resolution to issue an update-or-get

@@ -6,7 +6,7 @@ from transformers import BertForMaskedLM, BertModel, BertTokenizer
 from transformers.modeling_outputs import MaskedLMOutput
 from transformers.models.bert.modeling_bert import BertOnlyMLMHead, BertPreTrainedModel
 
-from asmtransformers import operands
+from asmtransformers import Architecture, operands
 from asmtransformers.preprocessors import arm64, riscv, x86
 
 
@@ -181,10 +181,10 @@ class ASMTokenizer(BertTokenizer):
             operands.format_offset_log,
         )
         self.preprocessors = {
-            'amd64': x86.X86Preprocessor(operand_formatters=formatters),
-            'arm64': arm64.ARM64Preprocessor(operand_formatters=formatters),
-            'i386': x86.X86Preprocessor(operand_formatters=formatters),
-            'riscv64': riscv.RISCVPreprocessor(operand_formatters=formatters),
+            Architecture.AMD64: x86.X86Preprocessor(operand_formatters=formatters),
+            Architecture.ARM64: arm64.ARM64Preprocessor(operand_formatters=formatters),
+            Architecture.I386: x86.X86Preprocessor(operand_formatters=formatters),
+            Architecture.RISCV64: riscv.RISCVPreprocessor(operand_formatters=formatters),
         }
 
         super().__init__(
@@ -202,7 +202,7 @@ class ASMTokenizer(BertTokenizer):
             **kwargs,
         )
 
-    def tokenize(self, texts, architecture='arm64', split_special_tokens=False, **kwargs):
+    def tokenize(self, texts, architecture: Architecture, split_special_tokens=False, **kwargs):
         encoded_inputs = []
         texts = [texts] if isinstance(texts, str) else texts
         preprocessor = self.preprocessors[architecture]

@@ -88,7 +88,7 @@ def test_finetuning_model_can_be_saved_and_reloaded(checkpoint_path, tmp_path):
 
     model.save(output_path, create_model_card=False)
     reloaded = SentenceTransformer(str(output_path))
-    embedding = reloaded.encode('[[4096, ["ret"]]]')
+    embedding = reloaded.encode('[[4096, ["ret"]]]', architecture='arm64')
 
     assert (output_path / 'modules.json').is_file()
     assert (output_path / '0_ASMTransformerModule' / 'model.safetensors').is_file()

@@ -1,6 +1,7 @@
 import pytest
 from datasets import Dataset
 
+from asmtransformers import Architecture
 from asmtransformers.models import asmbert
 from scripts.mktokenizer import extract_tokens_map
 
@@ -37,3 +38,9 @@ def test_extract_tokens_map(dataset):
     assert len(list(tokens)) == 6
     assert 'ret' in tokens
     assert isinstance(tokens, set)
+
+
+def test_preprocessors_for_all_supported_architectures():
+    tokenizer = asmbert.ASMTokenizer(vocab_file=None)
+    assert len(tokenizer.preprocessors) == len(Architecture)
+    assert all(architecture in tokenizer.preprocessors for architecture in Architecture)
