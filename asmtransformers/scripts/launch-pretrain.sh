@@ -5,7 +5,8 @@ TORCHRUN_ARGS=(
     --rdzv-backend "c10d" 
     --rdzv-endpoint "$MASTER_ADDR":"$MASTER_PORT" 
 )
-
+# All arguments below are hardcoded here, they should be an ENV variable so that they can be set from outside the container.
+# This is recommended for anyone who aims to run pretrain.py from a container.
 TRAINIG_ARGS=(
     --data "/data/dataset"
     --tokenizer "/data/tokenizer"
