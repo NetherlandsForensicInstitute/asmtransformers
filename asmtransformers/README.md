@@ -44,35 +44,6 @@ either the train or the test set, not both. We have not performed any deduplicat
 | RISCV64	     |3 791 434 |
 -------------------------
 
-#### Amount of functions per architecture per optimization
-
-|Architecture | Optimization | # functions |
-|------------|--------------|-------------|
-|amd64 |	O0 | 	1762442    |
-|amd64 |	O1 | 	1448046    |
-|amd64 |	O2 | 	1403180    |
-|amd64 |	O3 |	1308199 |
-|amd64 |	Oc |	899892 |
-|amd64 |	Os |	1380405 |
-|arm64 |	O0 |	918402 |
-|arm64 |	O1 |	824291 |
-|arm64 |	O2 |	790679 |
-|arm64 |	O3 |	741057 |
-|arm64 |	Oc |	331736 |
-|arm64 |	Os |	815603 |
-|i386 |	O0 |	1081475 |
-|i386 |	O1 |	873128 |
-|i386 |	O2 |	845943 |
-|i386 |	O3 |	816186 |
-|i386 |	Oc |	412503 |
-|i386 |	Os |	839296 |
-|riscv64 |	O0 |	845154 |
-|riscv64 |	O1 |	689670 |
-|riscv64 |	O2 |	670651 |
-|riscv64 |	O3 |	641428 |
-|riscv64 |	Oc |	259691 |
-|riscv64  |	Os |	684840 |
-
 
 Pipeline
 --------

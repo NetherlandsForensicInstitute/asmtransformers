@@ -14,8 +14,6 @@ The current released model assets are optimized for ARM64 assembly, but not ever
 
 ### ISA preprocessing
 
-TO DO: i386 is processed by which preprocessor?
-
 The ISA-specific preprocessing path is implemented in [asmtransformers.preprocessors](../asmtransformers/preprocessors/__init__.py), with current implementations 
 for ARM64, x86/amd64, and RISC-V. I386 is also supported, but gets preprocessed using the x86 preprocessor.
 
