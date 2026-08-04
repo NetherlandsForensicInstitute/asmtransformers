@@ -90,18 +90,6 @@ The current end-to-end flow is:
 6. Finetuning wraps the transformer in a sentence-transformers pipeline (TODO is this still accurate?) and optimizes embedding similarity.
 7. Inference uses the native embedder to encode previously unseen functions for downstream similarity search.
 
-## What Is Still ARM64-Specific Today
-
-The following parts are still ARM64-specific or ARM64-defaulted:
-
-- packaged model assets in `models/arm64bert/`
-- scripts and runtime paths that default to `arm64` when no architecture is supplied
-
-TO DO: is the second line still correct?
-
-Preprocessing itself is no longer ARM64-only: `ASMTokenizer` also dispatches to x86/amd64 and RISC-V preprocessors.
-The multilingual model can be found on [Hugging Face](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
-
 ## What Is Reusable For Other ISAs Today
 
 TO DO: is this correct? did I miss anything?
