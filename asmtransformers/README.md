@@ -31,7 +31,7 @@ assembly, we used `apt` to cross-build the same source package to multiple archi
 the same functions for all four architectures. For all four architectures, these functions are compiled with different optimisation:
 O0, O1, O2, O3, Os and manually selected set with advanced instructions further referenced here as Oc for Optimised-Custom.
 This results in a maximum of 24 (6 optimisation * 4 architectures) different functions 
-which are semantically similar. (i.e. they represent the same functionality but are written differently)
+which are semantically similar. (i.e. they represent the same source code but are compiled differently)
 In practise, it was much easier to obtain amd64 functions than riscv64 functions. Thus, not all functions have 24 semantically similar functions.
 
 The dataset is split into a train, test and an evaluation set. This in done on source package, so all binaries and functions belonging to one source package are part of
