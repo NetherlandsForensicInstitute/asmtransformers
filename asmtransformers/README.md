@@ -8,7 +8,7 @@ Background
 ----------
 Inspired by [jTrans](https://github.com/vul337/jTrans), which implements a _jump-aware_ BERT-model for x86-assembly code
 similarity.
-For details on jTrans see Wang, Hao, et al. "Jtrans: Jump-aware transformer for binary code similarity detection." 
+For details on jTrans see Wang, Hao, et al. "JTrans: Jump-Aware Transformer for Binary Code Similarity Detection" 
 _Proceedings of the 31st ACM SIGSOFT International Symposium on Software Testing and Analysis_. 2022.
 
 This project started focussed on implementing the concepts from jTrans for ARM-assembly code in a clean and concise way
