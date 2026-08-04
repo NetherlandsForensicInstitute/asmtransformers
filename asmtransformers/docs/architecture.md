@@ -46,7 +46,7 @@ The main layers are:
 TO DO: I believe the below is up to date but let's check
 
 - `ASMBertForMaskedLM` and `ASMBertModel` adapt Hugging Face BERT classes to the jTrans-style setup, including shared word/position embeddings and jump-target prediction support during pretraining.
-- `ASMTransformerModule` adapts the pretrained transformer into a plain `SentenceTransformer` model for triplet-loss finetuning.
+- `build_finetuning_model` in `asmsentencebert.py` adapts the pretrained transformer into a plain `SentenceTransformer` model for triplet-loss finetuning.
 - `ASMEmbedder` provides native inference without requiring sentence-transformers at deployment time.
 
 Tokenizer integration is handled by `ASMTokenizer`:
@@ -119,8 +119,6 @@ The multilingual code should work equally well when only data from one architect
 
 ## Testing And Regression Coverage
 
-TO DO: this needs updating
-
 The current architecture is anchored by tests in:
 
 - [tests/test_arm64.py](../tests/test_arm64.py) for ARM64-specific parsing, tokenization, jump handling, and prefix-token behavior
@@ -134,8 +132,5 @@ The current architecture is anchored by tests in:
 - [tests/test_riscv.py](../tests/test_riscv.py) for RISC-V specific parsing
 - [tests/test_sentencelabel.py](../tests/test_sentencelabel.py) for Transformers-Sentence Transformers compatibility
 - [tests/test_x86.py](../tests/test_x86.py) and x68-specific parsing
-- 
-- 
-
 
 Contributor changes that affect preprocessing, tokenization, or model composition should preserve the invariants covered there or extend the suite accordingly.
