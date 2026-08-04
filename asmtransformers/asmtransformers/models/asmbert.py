@@ -6,8 +6,7 @@ from transformers import BertForMaskedLM, BertModel, BertTokenizer
 from transformers.modeling_outputs import MaskedLMOutput
 from transformers.models.bert.modeling_bert import BertOnlyMLMHead, BertPreTrainedModel
 
-from asmtransformers import operands
-from asmtransformers.models import Architecture
+from asmtransformers import Architecture, operands
 from asmtransformers.preprocessors import arm64, riscv, x86
 
 

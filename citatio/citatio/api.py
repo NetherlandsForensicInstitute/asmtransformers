@@ -3,7 +3,7 @@ from importlib import resources
 from typing import Annotated
 
 import confidence
-from asmtransformers.models import Architecture
+from asmtransformers import Architecture
 from asmtransformers.models.embedder import ASMEmbedder
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.params import Body
