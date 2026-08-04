@@ -122,7 +122,7 @@ supposed to jump to, materialised in the vocabulary as JUMP_ADDR_n `(n = 1, len(
 
 TO DO: if we publish our current zero model, add link
 
-You can also find our monolingual, ARM64BERT model on Huggingface:
+You can also find our monolingual, pretrained only ARM64BERT model on Huggingface:
 <a href='https://huggingface.co/NetherlandsForensicInstitute/ARM64Bert'>NetherlandsForensicInstitute/ARM64Bert</a>
 
 Finetuning
