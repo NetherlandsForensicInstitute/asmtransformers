@@ -37,7 +37,7 @@ In practise, it was much easier to obtain amd64 functions than riscv64 functions
 The dataset is split into a train, test and an evaluation set. This in done on source package, so all binaries and functions belonging to one source package are part of
 either the train or the test set, not both.
 
-#### Total amount of functions per architecture
+### Total amount of functions per architecture
 
 | Architecture | # functions|
 |--------------|------------|
