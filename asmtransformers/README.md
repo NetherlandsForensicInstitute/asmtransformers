@@ -12,7 +12,7 @@ For details on jTrans see Wang, Hao, et al. "JTrans: Jump-Aware Transformer for 
 _Proceedings of the 31st ACM SIGSOFT International Symposium on Software Testing and Analysis_. 2022.
 
 This project started focussed on implementing the concepts from jTrans for ARM-assembly code in a clean and concise way
-(see release v.1.0.0). The current version of this repo consists of the code to train, finetune and evaluate a 
+(see release v1.0.0). The current version of this repo consists of the code to train, finetune and evaluate a 
 multilingual model of amd64, arm64, i386 and riscv64 assembly code.
 
 Applications
