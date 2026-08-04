@@ -66,9 +66,15 @@ Pretraining
 For cluster-oriented multi-architecture pretraining with CUDA bf16 mixed precision, see
 [docs/pretraining.md](docs/pretraining.md). Run `scripts/pretrain.py --help` for the full current CLI.
 
-    usage: scripts/pretrain.py [-h] [--model-path MODEL_PATH] [--data DATA] [--tokenizer TOKENIZER] [--config CONFIG] [--epoch EPOCH] [--max-steps MAX_STEPS] [--batch-size BATCH_SIZE] [--gradient-accumulation-steps GRADIENT_ACCUMULATION_STEPS] [--save-steps SAVE_STEPS] [--logging-steps LOGGING_STEPS] [--mlm-prob MLM_PROB]
-                   [--learning-rate LEARNING_RATE] [--warmup-steps WARMUP_STEPS] [--bf16] [--tf32] [--dataloader-num-workers DATALOADER_NUM_WORKERS] [--save-total-limit SAVE_TOTAL_LIMIT] [--eval-samples EVAL_SAMPLES] [--seed SEED] [--resume-from-checkpoint RESUME_FROM_CHECKPOINT] [--run-id RUN_ID]
+    usage: pretrain.py [-h] [--model-path MODEL_PATH] [--data DATA] [--tokenizer TOKENIZER] [--config CONFIG]
+                   [--epoch EPOCH] [--max-steps MAX_STEPS] [--batch-size BATCH_SIZE]
+                   [--gradient-accumulation-steps GRADIENT_ACCUMULATION_STEPS] [--save-steps SAVE_STEPS]
+                   [--logging-steps LOGGING_STEPS] [--mlm-prob MLM_PROB] [--learning-rate LEARNING_RATE]
+                   [--warmup-steps WARMUP_STEPS] [--bf16] [--tf32] [--dataloader-num-workers DATALOADER_NUM_WORKERS]
+                   [--save-total-limit SAVE_TOTAL_LIMIT] [--eval-samples EVAL_SAMPLES] [--seed SEED]
+                   [--resume-from-checkpoint RESUME_FROM_CHECKPOINT] [--run-id RUN_ID]
                    output_dir
+
 
     ASM-Pretrain
     
