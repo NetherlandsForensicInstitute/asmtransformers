@@ -87,12 +87,10 @@ The current end-to-end flow is:
 3. Operand formatters normalize large numeric values to reduce vocabulary growth.
 4. A tokenizer converts the token stream into model inputs with the expected context length.
 5. Pretraining uses those inputs for masked language modeling plus jump target prediction.
-6. Finetuning wraps the transformer in a sentence-transformers pipeline (TODO is this still accurate?) and optimizes embedding similarity.
+6. Finetuning wraps the transformer in a sentence-transformers pipeline and optimizes embedding similarity.
 7. Inference uses the native embedder to encode previously unseen functions for downstream similarity search.
 
 ## What Is Reusable For Other ISAs Today
-
-TO DO: is this correct? did I miss anything?
 
 If you want to create your own model for a different assembly architecture using this repo, we recommend you take the
 following steps:
@@ -114,7 +112,7 @@ The current architecture is anchored by tests in:
 - [tests/test_evaluation.py](../tests/test_evaluation.py) for evaluation metrics and evaluation anchor/positive/negatives generation
 - [tests/test_mktokenizer.py](../tests/test_mktokenizer.py) for extracting tokens
 - [tests/test_operand_formatters.py](../tests/test_operand_formatters.py) for numeric normalization behavior
-- [tests/test_pretrain.py](../tests/test_pretrain.py) for machine learning processes, training environment requirements (TODO: is that an accurate description?)
+- [tests/test_pretrain.py](../tests/test_pretrain.py) for machine learning processes, training environment requirements
 - [tests/test_riscv.py](../tests/test_riscv.py) for RISC-V specific parsing
 - [tests/test_sentencelabel.py](../tests/test_sentencelabel.py) for Transformers-Sentence Transformers compatibility
 - [tests/test_x86.py](../tests/test_x86.py) and x68-specific parsing
