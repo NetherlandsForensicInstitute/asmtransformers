@@ -12,7 +12,7 @@ This mono-repo consists of three different sections, for more information about 
 
 The multilingual model, called `Multilingual ASMBERT` is available on [Hugging Face 🤗](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
 
-The  older, monolingual models, called `ARM64BERT` and `ARM64BERT-embedding` are also still available on [Hugging Face 🤗](https://huggingface.co/collections/NetherlandsForensicInstitute/arm64bert-6825cca70b6b855fbe4b347b). These models were created using the v1.0.0 release of this repo.
+The  older, monolingual models, called `ARM64BERT` and `ARM64BERT-embedding` are also still available on [Hugging Face 🤗](https://huggingface.co/collections/NetherlandsForensicInstitute/arm64bert). These models were created using the v1.0.0 release of this repo.
 
 Examples
 --------
