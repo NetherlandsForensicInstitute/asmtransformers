@@ -150,7 +150,7 @@ trained such that the anchor and the positive example are closer to each other i
 Cosine distance) than the anchor and the negative examples. We use [BatchSemiHardTripletLoss](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#batchsemihardtripletloss)
 to train the model.
 
-Our multilingual model can be found on [Huggingface](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
+Our multilingual model can be found on [Hugging Face](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
 
 You can also find our monolingual, ARM64BERT semantic search model on Hugging Face:
 <a href='https://huggingface.co/NetherlandsForensicInstitute/ARM64bert-embedding'>NetherlandsForensicInstitute/ARM64bert-embedding</a>
