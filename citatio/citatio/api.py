@@ -14,7 +14,6 @@ from citatio.models import ControlFlowGraph
 
 
 SUPPORTED_AUTH_MODES = frozenset({'anonymous', 'client_supplied', 'oidc'})
-DEFAULT_MODEL = 'NetherlandsForensicInstitute/Multilingual-ASMBERT'
 
 
 def resolve_auth(**auth):
