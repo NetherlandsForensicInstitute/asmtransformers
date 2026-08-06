@@ -10,7 +10,7 @@
 
 [model]
 # default model configuration uses the published ARM64BERT-embedding model from HuggingFace
-hf = "NetherlandsForensicInstitute/ARM64BERT-embedding"
+hf = "NetherlandsForensicInstitute/Multilingual-ASMBERT"
 # alternatively, a model to be loaded from path can be configured as that path (see ASMEmbedder.from_pretrained):
 #
 # path = "/path/to/model/"
