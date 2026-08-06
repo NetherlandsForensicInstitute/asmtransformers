@@ -170,16 +170,15 @@ is actually the same as the positive example as this would result in a false neg
 Inference
 ---------
 
-    scripts/inference.py -d DATA_FOLDER -o OUTPUT_FOLDER -m MODEL_PATH
+    usage: inference.py [-h] data_folder output_folder model_path
 
+    positional arguments:
+      data_folder    folder with input data
+      output_folder  folder to leave output data
+      model_path     model
+    
     options:
-      -h, --help            show this help message and exit
-      -d DATA_FOLDER, --data-folder DATA_FOLDER
-                        folder containing to be inferenced data
-      -o OUTPUT_FOLDER, --output-folder OUTPUT_FOLDER
-                        folder to save embeddings
-      -m MODEL_PATH, --model-path MODEL_PATH
-                        (path to) model that should be used for inference
+      -h, --help     show this help message and exit
 
 inference.py adds a column to the given dataset, called 'embeddings', containing the embeddings
 corresponding to each function, and writes it to the output folder.
