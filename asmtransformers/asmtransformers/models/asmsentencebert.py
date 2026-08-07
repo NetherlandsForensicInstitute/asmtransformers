@@ -10,7 +10,7 @@ from asmtransformers.models.asmbert import ASMBertModel, ASMTokenizer
 
 
 class ASMTransformerModule(Module):
-    """Minimal sentence-transformers module for ARM64BERT finetuning."""
+    """Minimal sentence-transformers module for ASMBERT finetuning."""
 
     def __init__(
         self,

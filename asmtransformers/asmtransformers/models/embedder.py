@@ -8,7 +8,7 @@ from asmtransformers.models.asmbert import ASMBertModel, ASMTokenizer
 
 
 class ASMEmbedder:
-    """Native inference wrapper for ARM64BERT-style embedding checkpoints."""
+    """Native inference wrapper for ASMBERT-style embedding checkpoints."""
 
     def __init__(self, model, tokenizer, *, device=None, normalize_embeddings=True):
         self.model = model
