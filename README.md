@@ -1,7 +1,7 @@
 ASMTransformers 🦾
 ==================
 
-ASMTransformers is a project to train and use a machine learning model to compare assembly (currently only ARM64)
+ASMTransformers is a project to train and use a machine learning model to compare assembly (ARM64, AMD64, i386, RISC-V)
 functions to a database of known functions, to aid in the process of reverse engineering.
 
 This mono-repo consists of three different sections, for more information about each of these check their respective READMEs:
@@ -10,7 +10,9 @@ This mono-repo consists of three different sections, for more information about 
 - [**citatio**](./citatio) - A FastAPI backend for the project (this depends on *asmtransformers*)
 - [**sententia**](./sententia) - A Ghidra frontend to interface with the service and model mentioned above
 
-The corresponding models, called `ARM64BERT` and `ARM64BERT-embedding` are available on [Hugging Face 🤗](https://huggingface.co/collections/NetherlandsForensicInstitute/arm64bert-6825cca70b6b855fbe4b347b).
+The multilingual model, called `Multilingual ASMBERT` is available on [Hugging Face 🤗](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
+
+The  older, monolingual models, called `ARM64BERT` and `ARM64BERT-embedding` are also still available on [Hugging Face 🤗](https://huggingface.co/collections/NetherlandsForensicInstitute/arm64bert). These models were created using the v1.0.0 release of this repo.
 
 Examples
 --------
