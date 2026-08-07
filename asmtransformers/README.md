@@ -126,8 +126,8 @@ by Wang et al. in the jTrans paper (referred to above), is implicitly included i
 JUMP-token, the correct token to predict is the correct jump address. This is the token index of the place the code was
 supposed to jump to, materialised in the vocabulary as JUMP_ADDR_n `(n = 1, len(max_token_lenght))`.
 
-You can also find our monolingual, pretrained only ARM64BERT model on Huggingface:
-<a href='https://huggingface.co/NetherlandsForensicInstitute/ARM64Bert'>NetherlandsForensicInstitute/ARM64Bert</a>
+You can also find our monolingual, pretrained only ARM64BERT model on Hugging Face: 
+[NetherlandsForensicInstitute/ARM64Bert](https://huggingface.co/NetherlandsForensicInstitute/ARM64Bert)
 
 Finetuning
 ----------
@@ -152,8 +152,8 @@ to train the model.
 
 Our multilingual model can be found on [Hugging Face](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT)
 
-You can also find our monolingual, ARM64BERT semantic search model on Hugging Face:
-<a href='https://huggingface.co/NetherlandsForensicInstitute/ARM64bert-embedding'>NetherlandsForensicInstitute/ARM64bert-embedding</a>
+You can also find our monolingual, ARM64BERT-embedding semantic search model on Hugging Face:
+[NetherlandsForensicInstitute/ARM64bert-embedding](https://huggingface.co/NetherlandsForensicInstitute/ARM64bert-embedding)
 
 Evaluation
 ----------

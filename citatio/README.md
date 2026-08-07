@@ -2,7 +2,7 @@ Citatio 📜
 ==========
 
 This package provides a REST API to the [`asmtransformers`](../asmtransformers) and its 
-[`ARM64BERT-embedding`](https://huggingface.co/NetherlandsForensicInstitute/ARM64BERT-embedding/) model, 
+[`Multilingual-ASMBERT`](https://huggingface.co/NetherlandsForensicInstitute/Multilingual-ASMBERT/) model, 
 bridging Ghidra to a search index to find similar functions in ARM64 binaries.
 See [`sententia`](../sententia) for the Ghidra plugin that uses this REST API to both add functions to the search index 
 and search for possible function names / labels based on vector similarity.
@@ -12,13 +12,13 @@ Configuration and runtime
 
 The citatio REST API takes 3 configuration options:
 
-- The model to be used for embedding (currently, only `NetherlandsForensicInstitute/ARM64BERT-embedding` is supported);
+- The model to be used for embedding (currently, only `NetherlandsForensicInstitute/Multilingual-ASMBERT` is supported);
 - The authentication modes to support, any of `anonymous`, `client_supplied` and `oidc`;
 - The database to store both assembly and embeddings in, either SQLite+sqlitevec or PostgreSQL+pgvector;
 
 Citatio uses [confidence](https://github.com/NetherlandsForensicInstitute/confidence/) to read configuration, so both strategically placed files and environment variables are supported:
 
-- `CITATIO_MODEL_HF` or `CITATIO_MODEL_PATH`: a local path or huggingface model name (though again, currently only the `ARM64BERT-embedding` model is supported);
+- `CITATIO_MODEL_HF` or `CITATIO_MODEL_PATH`: a local path or huggingface model name (though again, currently only the `NetherlandsForensicInstitute/Multilingual-ASMBERT` model is supported);
 - `CITATIO_AUTH_ANONYMOUS` (allowing operation without identifying a user) and 
   `CITATIO_AUTH_CLIENT__SUPPLIED` (enabling a client to supply a user identity in a request body) can be set to `true` to enable them, 
   OIDC configuration requires at least four values, see below.
