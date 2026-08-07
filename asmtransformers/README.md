@@ -211,21 +211,15 @@ evaluation-static-dataset.py, was used to evaluate this dataset, in order to not
 Inference
 ---------
 
-    usage: scripts/evaluation.py [-h] [--pool-size POOL_SIZE] [--seed SEED] [--repeats REPEATS] [--static-pool] input_path output_path
+    usage: inference.py [-h] data_folder output_folder model_path
 
-    evaluation
-    
     positional arguments:
-      input_path            the path to the anchors/positives/negative pools
-      output_path           the path to write the final scores to
+      data_folder    folder with input data
+      output_folder  folder to leave output data
+      model_path     model
     
     options:
-      -h, --help            show this help message and exit
-      --pool-size POOL_SIZE
-                            the poolsize to pick the positive example from
-      --seed SEED           seed random evaluation sampling
-      --repeats REPEATS     number of static-pool evaluation repeats
-      --static-pool         keep the negatives pool or refresh for every anchor-pos pair
+      -h, --help     show this help message and exit
 
 inference.py adds a column to the given dataset, called 'embeddings', containing the embeddings
 corresponding to each function, and writes it to the output folder.
