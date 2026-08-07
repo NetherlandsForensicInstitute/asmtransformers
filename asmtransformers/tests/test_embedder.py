@@ -170,10 +170,10 @@ def test_mean_pool_ignores_padding():
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason="don't run this test on CI")
 def test_hf_embedding_model_loads_natively(anchor):
-    embedder = ASMEmbedder.from_pretrained('NetherlandsForensicInstitute/ARM64BERT-embedding')
+    embedder = ASMEmbedder.from_pretrained('NetherlandsForensicInstitute/Multilingual-ASMBERT')
 
     embedding = embedder.encode(anchor, architecture='arm64')
 
-    assert np.isclose(embedding.sum(), -0.09272218)
-    assert np.isclose(embedding.min(), -0.10641833)
-    assert np.isclose(embedding.max(), 0.116405316)
+    assert np.isclose(embedding.sum(), -0.0179356)
+    assert np.isclose(embedding.min(), -0.1113021)
+    assert np.isclose(embedding.max(), 0.12490158)

@@ -2,7 +2,7 @@ Citatio 📜
 ==========
 
 This package provides a REST API to the [`asmtransformers`](../asmtransformers) and its 
-[`ARM64BERT-embedding`](https://huggingface.co/NetherlandsForensicInstitute/ARM64BERT-embedding/) model, 
+[`ASMBERT-embedding`](https://huggingface.co/NetherlandsForensicInstitute/ARM64BERT-embedding/) model, 
 bridging Ghidra to a search index to find similar functions in ARM64 binaries.
 See [`sententia`](../sententia) for the Ghidra plugin that uses this REST API to both add functions to the search index 
 and search for possible function names / labels based on vector similarity.
