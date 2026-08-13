@@ -1,0 +1,21 @@
+[project]
+requires-python = ">=3.13,<3.14"
+
+[dependency-groups]
+check = [
+    "ruff>=0.11.9",
+]
+test = [
+    "coverage>=7.8.0",
+    "httpx2",  # avoid deprecation warnings for fastapi / starlette tests
+    "pytest>=8.3.5",
+    "pytest-asyncio>=1.4.0",
+    "testcontainers[postgres]>=4.14.2",
+]
+
+[tool.pdm.workspace]
+members = ["asmtransformers", "citatio"]
+
+[[tool.pdm.source]]
+name = "pytorch-xpu"
+url = "https://download.pytorch.org/whl/xpu"
