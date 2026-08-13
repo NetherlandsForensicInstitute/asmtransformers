@@ -6,6 +6,7 @@ import pytest
 import torch
 from transformers import BertConfig
 
+from asmtransformers.models import default_device
 from asmtransformers.models.asmbert import ASMBertModel
 from asmtransformers.models.embedder import ASMEmbedder
 
@@ -93,6 +94,10 @@ def checkpoint_path(tmp_path):
     model = ASMBertModel(config)
     model.save_pretrained(tmp_path)
     return tmp_path
+
+
+def test_default_device():
+    assert isinstance(default_device(), torch.device)
 
 
 def test_native_embedder_returns_normalized_embedding(checkpoint_path, cfg):
