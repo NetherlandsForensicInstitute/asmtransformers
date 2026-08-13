@@ -1,6 +1,5 @@
-from contextlib import suppress
 from functools import cache
-from importlib import import_module, resources
+from importlib import resources
 
 
 def model_resource(name):
@@ -20,3 +19,21 @@ def default_device():
 
     # fall back to using cpu
     return torch.device('cpu')
+
+
+def default_model_kwargs(*, model_kwargs=None, device=None):
+    import torch
+
+    model_kwargs = model_kwargs or {}
+
+    match device:
+        case None:
+            device = default_device()
+        case str():
+            device = torch.device(device)
+
+    if device.type == 'xpu':
+        # SPDA might cause runtime errors on xpu, default to eager attention to avoid it
+        model_kwargs.setdefault('attn_implementation', 'eager')
+
+    return model_kwargs

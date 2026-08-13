@@ -6,6 +6,7 @@ from sentence_transformers.sentence_transformer.model_card import SentenceTransf
 from sentence_transformers.sentence_transformer.modules import Module, Pooling
 
 from asmtransformers import Architecture
+from asmtransformers.models import default_model_kwargs
 from asmtransformers.models.asmbert import ASMBertModel, ASMTokenizer
 
 
@@ -101,7 +102,7 @@ def build_finetuning_model(
     freeze_embeddings=True,
     freeze_layer_count=10,
 ):
-    embedding_model = ASMTransformerModule(base_model_name_or_path, model_args=model_args)
+    embedding_model = ASMTransformerModule(base_model_name_or_path, model_args=model_args or default_model_kwargs())
     pooling_model = Pooling(embedding_model.get_embedding_dimension())
     model = SentenceTransformer(
         modules=[embedding_model, pooling_model],

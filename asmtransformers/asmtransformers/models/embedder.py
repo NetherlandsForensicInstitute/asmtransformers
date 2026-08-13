@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from asmtransformers.models import default_device
+from asmtransformers.models import default_device, default_model_kwargs
 from asmtransformers.models.asmbert import ASMBertModel, ASMTokenizer
 
 
@@ -23,14 +23,8 @@ class ASMEmbedder:
     def from_pretrained(
         cls, model_name_or_path, *, model_args=None, tokenizer_args=None, device=None, normalize_embeddings=True
     ):
-        device = device or default_device()
-        model_args = model_args or {}
-        if device.type == 'xpu':
-            # SPDA might cause runtime errors on xpu, default to eager attention to avoid it
-            model_args.setdefault('attn_implementation', 'eager')
-
         tokenizer = ASMTokenizer.from_pretrained(model_name_or_path, **(tokenizer_args or {}))
-        model = ASMBertModel.from_pretrained(model_name_or_path, **model_args)
+        model = ASMBertModel.from_pretrained(model_name_or_path, **(model_args or default_model_kwargs()))
         return cls(model, tokenizer, device=device, normalize_embeddings=normalize_embeddings)
 
     @staticmethod
