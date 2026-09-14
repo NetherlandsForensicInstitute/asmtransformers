@@ -18,13 +18,13 @@ authors = [
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "asmtransformers @ file:///${PROJECT_ROOT}/../asmtransformers",
-    "asyncpg>=0.31.0",
     "confidence>=0.17.2",
     "datasets",
     "fastapi[all]>=0.115.12",
     "fastapi-oidc>=0.1.0",
     "numpy",
     "pgvector>=0.4.2",
+    "psycopg[binary]>=3.3.5",
     "pydantic>=2.11.5",
     "scipy",
     "sqlite-vec>=0.1.6",

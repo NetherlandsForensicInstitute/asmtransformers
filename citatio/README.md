@@ -23,8 +23,7 @@ Citatio uses [confidence](https://github.com/NetherlandsForensicInstitute/confid
   `CITATIO_AUTH_CLIENT__SUPPLIED` (enabling a client to supply a user identity in a request body) can be set to `true` to enable them, 
   OIDC configuration requires at least four values, see below.
 - when using SQLite: `CITATIO_DATABASE_SQLITE`: either `:memory:` or a local path to a SQLite database (will be created if it doesn't currently exist).
-- when using PostgreSQL: either `CITATIO_DATABASE_HOST`, `..._PORT`, `..._USER`, `..._PASSWORD`, `..._DATABASE` to connect to the database in question,
-  or `CITATIO_DATABASE_DSN` with the full connection url to connect to that same database.
+- when using PostgreSQL: either `CITATIO_DATABASE_HOST`, `…_PORT`, `…_USER`, `…_PASSWORD`, `…_DBNAME` to connect to the database in question.
 
 The authentication and database configuration is required, the default model to be loaded is `NetherlandsForensicInstitute/ARM64BERT-embedding`.
 

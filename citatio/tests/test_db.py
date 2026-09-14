@@ -130,7 +130,8 @@ async def test_add_user_id(filled_database, functions, embeddings):
         case SQLiteDatabase():
             users = {row[0] for row in filled_database.connection.execute("""SELECT user_id FROM labels""")}
         case PostgreSQLDatabase():
-            users = {row[0] for row in await filled_database.connection.fetch("""SELECT user_id FROM labels""")}
+            users = await filled_database.connection.execute("""SELECT user_id FROM labels""")
+            users = {row[0] for row in await users.fetchall()}
         case _:
             pytest.fail('unknown type of database implementation')
 
