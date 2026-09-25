@@ -45,7 +45,7 @@ public class SententiaAPI {
         ArrayList<SententiaResult> results = new ArrayList<>();
         
         // Construct the full URL
-        URI targetURI = new URI(this.serverURL.toString() + API_URL + "/search");
+        URI targetURI = new URI(this.serverURL.toString() + API_URL + "/functions/search");
 
         // Prepare the JSON payload
         String jsonPayload = descriptor.toJson().toJSONString();
@@ -67,9 +67,9 @@ public class SententiaAPI {
         // Process the response
         for (Object result : jsonResponse) {
             JSONObject jsonResult = (JSONObject) result;
-            if (jsonResult.get("function") instanceof String && jsonResult.get("similarity") instanceof Double) {
+            if (jsonResult.get("label") instanceof String && jsonResult.get("similarity") instanceof Double) {
                 results.add(new SententiaResult(
-                    (String) jsonResult.get("function"),
+                    (String) jsonResult.get("label"),
                     (Double) jsonResult.get("similarity")
                 ));
             } else {
@@ -85,7 +85,7 @@ public class SententiaAPI {
     }
 
     public void addSignatureToDB(FunctionDescriptor descriptor) throws IOException, URISyntaxException, InterruptedException {
-        URI targetURI = new URI(serverURL.toString() + API_URL + "/add");
+        URI targetURI = new URI(serverURL.toString() + API_URL + "/functions");
 
         // Prepare the JSON payload
         String jsonPayload = descriptor.toJson().toJSONString();

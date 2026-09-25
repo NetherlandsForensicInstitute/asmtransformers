@@ -8,6 +8,7 @@ import ghidra.program.model.address.AddressRangeIterator;
 import ghidra.program.model.address.AddressSet;
 import ghidra.program.model.block.CodeBlock;
 import ghidra.program.model.block.SimpleBlockModel;
+import ghidra.program.model.lang.LanguageID;
 import ghidra.program.model.listing.CodeUnit;
 import ghidra.program.model.listing.Function;
 import ghidra.util.exception.CancelledException;
@@ -41,5 +42,10 @@ public class SententiaUtil {
 		}
 		
 		return functionCFG;
+	}
+
+	public static String toArchitecture(LanguageID languageId) {
+	    // TODO: translate languageId (e.g. x86:LE:32:default) to one of (amd64, arm64, i386, riscv64)
+        return languageId.getIdAsString();
 	}
 }
