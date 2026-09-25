@@ -1,11 +1,11 @@
 import sqlite3
 from importlib import resources
 
-import asyncpg
 import numpy as np
 import sqlite_vec
 from asmtransformers import Architecture
-from pgvector.asyncpg import register_vector
+from pgvector.psycopg import register_vector_async
+from psycopg import AsyncConnection
 
 from citatio.models import ControlFlowGraph
 
@@ -145,16 +145,10 @@ class PostgreSQLDatabase(Database):
         self.connection = connection
 
     @classmethod
-    async def connect(cls, **kwargs):
-        connect = {
-            # str-type values that were read from a TOML file using tomlkit are str, but cause type errors inside
-            # asyncpg, coercing them to str here alleviates this (see https://github.com/MagicStack/asyncpg/issues/1340)
-            key: str(value) if isinstance(value, str) else value
-            for key, value in kwargs.items()
-        }
-        connection = await asyncpg.connect(**connect)
+    async def connect(cls, **connect):
+        connection = await AsyncConnection.connect(**connect)
         await connection.execute('CREATE EXTENSION IF NOT EXISTS vector')
-        await register_vector(connection)
+        await register_vector_async(connection)
         await connection.execute(resources.read_text('citatio', 'schema-postgresql.sql'))
         return cls(connection)
 
@@ -177,48 +171,55 @@ class PostgreSQLDatabase(Database):
     ):
         architecture = Architecture(architecture)
         async with self.connection.transaction():
-            function_id = await self.connection.fetchval(
+            function_id = await self.connection.execute(
                 # use PostgreSQL's conflict resolution to issue an update-or-get
-                # NB: the conflict resolution update is idempotent, but needed to make sure RETURNING id works
+                # NB: the DO UPDATE SET below is effectively useless, but needed to make sure RETURNING id works
                 """
-                INSERT INTO functions (architecture, cfg, embedding) VALUES ($1, $2, $3)
+                INSERT INTO functions (architecture, cfg, embedding) VALUES (%(architecture)s, %(cfg)s, %(embedding)s)
                 ON CONFLICT (cfg) DO UPDATE SET cfg = EXCLUDED.cfg RETURNING id
                 """,
-                architecture,
-                ControlFlowGraph.to_str(cfg),
-                embedding,
+                {
+                    'architecture': architecture,
+                    'cfg': ControlFlowGraph.to_str(cfg),
+                    'embedding': embedding,
+                },
             )
+            function_id = await function_id.fetchone()
             await self.connection.execute(
                 """
                 INSERT INTO
                     labels (function_id, label, user_id, binary_name, binary_sha256)
                 VALUES
-                    ($1, $2, $3, $4, $5)
+                    (%(function_id)s, %(name)s, %(user_id)s, %(binary_name)s, %(binary_sha256)s)
                 ON CONFLICT (function_id, user_id) DO UPDATE
-                    SET label = $2, binary_name = $4, binary_sha256 = $5
+                    SET label = %(name)s, binary_name = %(binary_name)s, binary_sha256 = %(binary_sha256)s
                 """,
-                function_id,
-                name,
-                user_id,
-                binary_name,
-                binary_sha256,
+                {
+                    'function_id': function_id[0],
+                    'name': name,
+                    'user_id': user_id,
+                    'binary_name': binary_name,
+                    'binary_sha256': binary_sha256,
+                },
             )
 
         return function_id
 
     async def search_functions(self, embedding, top_n=25):
-        results = await self.connection.fetch(
+        results = await self.connection.execute(
             """
-            SELECT label, (2 - (embedding <=> $1)) / 2 AS similarity, binary_name, binary_sha256
+            SELECT label, (2 - (embedding <=> %(embedding)s)) / 2 AS similarity, binary_name, binary_sha256
             FROM labels
                 JOIN functions ON labels.function_id = functions.id 
             ORDER BY similarity DESC
-            LIMIT $2
+            LIMIT %(limit)s
             """,
-            embedding,
-            top_n,
+            {
+                'embedding': embedding,
+                'limit': top_n,
+            },
         )
-
+        results = await results.fetchall()
         return [
             dict(
                 zip(

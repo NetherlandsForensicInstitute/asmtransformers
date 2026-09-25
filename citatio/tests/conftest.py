@@ -2,10 +2,10 @@ import json
 from os import environ
 from pathlib import Path
 
-import asyncpg
 import numpy as np
 import pytest
 from confidence import Configuration
+from psycopg import AsyncConnection
 from testcontainers.community.postgres import PostgresContainer
 
 from citatio.db import PostgreSQLDatabase, SQLiteDatabase
@@ -43,7 +43,7 @@ def connect_pgvector(request, monkeypatch):
                 'port': environ.get('POSTGRES_PORT', 5432),
                 'user': environ.get('POSTGRES_USER', 'postgres'),
                 'password': environ.get('POSTGRES_PASSWORD'),
-                'database': environ.get('POSTGRES_DATABASE', 'postgres'),
+                'dbname': environ.get('POSTGRES_DBNAME', 'postgres'),
             }
         case _:
             # running locally, provide connection details to local pgvector container
@@ -53,7 +53,7 @@ def connect_pgvector(request, monkeypatch):
                 'port': container.get_exposed_port(5432),
                 'user': container.username,
                 'password': container.password,
-                'database': container.dbname,
+                'dbname': container.dbname,
             }
 
 
@@ -84,7 +84,7 @@ async def database_config(request):
             connect = request.getfixturevalue('connect_pgvector')
             yield Configuration({'database': {'engine': 'postgresql', 'postgresql': connect}})
             # empty the database after use
-            connection = await asyncpg.connect(**connect)
+            connection = await AsyncConnection.connect(**connect)
             await connection.execute("""
                 DROP TABLE IF EXISTS labels CASCADE;
                 DROP TABLE IF EXISTS functions CASCADE;
