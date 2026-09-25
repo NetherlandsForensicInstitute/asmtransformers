@@ -173,7 +173,7 @@ class PostgreSQLDatabase(Database):
         async with self.connection.transaction():
             function_id = await self.connection.execute(
                 # use PostgreSQL's conflict resolution to issue an update-or-get
-                # NB: the conflict resolution update is idempotent, but needed to make sure RETURNING id works
+                # NB: the DO UPDATE SET below is effectively useless, but needed to make sure RETURNING id works
                 """
                 INSERT INTO functions (architecture, cfg, embedding) VALUES (%(architecture)s, %(cfg)s, %(embedding)s)
                 ON CONFLICT (cfg) DO UPDATE SET cfg = EXCLUDED.cfg RETURNING id
