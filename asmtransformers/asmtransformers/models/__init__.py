@@ -21,10 +21,11 @@ def default_device():
     return torch.device('cpu')
 
 
-def default_model_kwargs(*, model_kwargs=None, device=None):
+def augment_model_kwargs(model_kwargs=None, device=None):
     import torch
 
-    model_kwargs = model_kwargs or {}
+    # leave the argument intact, augment a local copy
+    model_kwargs = dict(model_kwargs or {})
 
     match device:
         case None:

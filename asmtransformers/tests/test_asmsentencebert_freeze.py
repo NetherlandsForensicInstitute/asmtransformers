@@ -5,7 +5,7 @@ import pytest
 from sentence_transformers import SentenceTransformer
 from transformers import BertConfig
 
-from asmtransformers.models import default_model_kwargs
+from asmtransformers.models import augment_model_kwargs
 from asmtransformers.models.asmbert import ASMBertModel
 from asmtransformers.models.asmsentencebert import build_finetuning_model
 
@@ -88,7 +88,7 @@ def test_finetuning_model_can_be_saved_and_reloaded(checkpoint_path, tmp_path):
     output_path = tmp_path / 'saved-model'
 
     model.save(output_path, create_model_card=False)
-    reloaded = SentenceTransformer(str(output_path), model_kwargs=default_model_kwargs())
+    reloaded = SentenceTransformer(str(output_path), model_kwargs=augment_model_kwargs())
     embedding = reloaded.encode('[[4096, ["ret"]]]', architecture='arm64')
 
     assert (output_path / 'modules.json').is_file()
