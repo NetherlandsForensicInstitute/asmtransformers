@@ -24,7 +24,7 @@ class ASMEmbedder:
         cls, model_name_or_path, *, model_args=None, tokenizer_args=None, device=None, normalize_embeddings=True
     ):
         tokenizer = ASMTokenizer.from_pretrained(model_name_or_path, **(tokenizer_args or {}))
-        model = ASMBertModel.from_pretrained(model_name_or_path, **augment_model_kwargs(model_args))
+        model = ASMBertModel.from_pretrained(model_name_or_path, **augment_model_kwargs(model_args, device))
         return cls(model, tokenizer, device=device, normalize_embeddings=normalize_embeddings)
 
     @staticmethod
