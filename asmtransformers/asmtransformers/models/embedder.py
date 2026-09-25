@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
+from asmtransformers.models import augment_model_kwargs, default_device
 from asmtransformers.models.asmbert import ASMBertModel, ASMTokenizer
 
 
@@ -14,7 +15,7 @@ class ASMEmbedder:
         self.model = model
         self.tokenizer = tokenizer
         self.normalize_embeddings = normalize_embeddings
-        self.device = torch.device(device or ('cuda' if torch.cuda.is_available() else 'cpu'))
+        self.device = torch.device(device or default_device())
         self.model.to(self.device)
         self.model.eval()
 
@@ -23,7 +24,7 @@ class ASMEmbedder:
         cls, model_name_or_path, *, model_args=None, tokenizer_args=None, device=None, normalize_embeddings=True
     ):
         tokenizer = ASMTokenizer.from_pretrained(model_name_or_path, **(tokenizer_args or {}))
-        model = ASMBertModel.from_pretrained(model_name_or_path, **(model_args or {}))
+        model = ASMBertModel.from_pretrained(model_name_or_path, **augment_model_kwargs(model_args))
         return cls(model, tokenizer, device=device, normalize_embeddings=normalize_embeddings)
 
     @staticmethod
